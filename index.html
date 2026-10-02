@@ -165,6 +165,18 @@ function render(rows){
     best.map(x=>`<tr data-dyn><td>${esc(x.r.producer||"—")} · ${esc(x.r.opName||x.r.opNick||"")} / ${esc(x.r.model||"")} · ${esc(x.r.city)}</td><td class="${scoreCls(x.n)}">${x.n}/8</td><td><span class="chip ${chipCls[x.r.verdict]||"c-warn"}">${esc(x.r.verdict)}</span></td></tr>`).join("")}</tbody></table>` : `<div class="empty">Нет данных</div>`;
 }
 
+function jsonp(){
+  return new Promise((resolve, reject) => {
+    const cb = "__dashcb_" + Math.random().toString(36).slice(2);
+    window[cb] = data => { resolve(data); cleanup(); };
+    const s = document.createElement("script");
+    s.src = CONFIG.API_URL + "?key=" + encodeURIComponent(CONFIG.API_KEY) + "&callback=" + cb;
+    s.onerror = () => { reject(new Error("не удалось загрузить данные")); cleanup(); };
+    function cleanup(){ delete window[cb]; s.remove(); }
+    document.head.appendChild(s);
+  });
+}
+
 async function load(){
   const dot = document.getElementById("livedot"), txt = document.getElementById("livetext");
   if (!CONFIG.API_KEY) {
@@ -173,8 +185,7 @@ async function load(){
     else { dot.className = "dot-off"; txt.textContent = "Нет ключа — данные не загружаются. Открой ссылку, которую тебе выдали (с ?key=...)"; return; }
   }
   try {
-    const res = await fetch(CONFIG.API_URL + "?key=" + encodeURIComponent(CONFIG.API_KEY));
-    const j = await res.json();
+    const j = await jsonp();
     if (j.error) throw new Error(j.error);
     dot.className = "dot-live";
     txt.textContent = "Живые данные из Google-таблицы · обновлено " + new Date().toLocaleTimeString("ru-RU");
