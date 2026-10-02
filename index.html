@@ -92,12 +92,32 @@
   .addform input,.addform select{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font:inherit;font-size:13px;box-sizing:border-box}
   .abtn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 20px;font:inherit;font-weight:600;cursor:pointer}
   .abtn2{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 14px;cursor:pointer;font:inherit}
+
+  .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:flex-start;justify-content:center;overflow:auto}
+  .modal-ov.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-top:8vh;width:min(720px,94vw);position:relative}
+  .modal h3{font-size:16px;margin-bottom:16px}
+  .modal .x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--faint);font-size:20px;cursor:pointer}
+  .modal .x:hover{color:var(--ink)}
+  .mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+  .mrow .ff label{display:block;color:var(--dim);font-size:11.5px;margin-bottom:4px}
+  .mrow input,.mrow select{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:9px 10px;font:inherit;font-size:13px;box-sizing:border-box}
+  .toast{position:fixed;top:18px;right:18px;z-index:99;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--ok);border-radius:10px;padding:12px 18px;font-size:13px;opacity:0;transform:translateY(-8px);
+    transition:all .25s;max-width:340px}
+  .toast.show{opacity:1;transform:none}
+  .toast.err{border-left-color:var(--bad)}
+  .screen-prev{max-width:100%;border-radius:8px;border:1px solid var(--line);margin-top:6px;display:block}
+  .op-avg{font-weight:700}
+  .loginbox{display:flex;flex-direction:column;gap:10px;max-width:320px}
+  .loginbox input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:9px 10px;font:inherit;font-size:13px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="addbtn" class="abtn2">＋ Смена</button>
+    <button id="loginbtn" class="abtn2">🔑 Войти</button>
     <button id="refresh" style="margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:6px 14px;cursor:pointer;font:inherit">⟳ Обновить</button>
   </div>
   <div class="addform" id="addform">
@@ -121,6 +141,39 @@
   <div class="tabs" id="tabs"></div>
   <div id="content"></div>
 
+  <div class="modal-ov" id="addmodal">
+    <div class="modal">
+      <button class="x" id="add-x">✕</button>
+      <h3>＋ Новая смена</h3>
+      <div class="mrow">
+        <div class="ff"><label>Город</label><select id="a-city"><option>Томск</option><option>Новосибирск</option><option>Онлайн</option></select></div>
+        <div class="ff"><label>Продюсер</label><select id="a-prod"></select></div>
+      </div>
+      <div class="mrow" id="a-newrow" style="display:none">
+        <div class="ff"><label>Имя нового продюсера</label><input id="a-prod-new" placeholder="Фамилия"></div>
+      </div>
+      <div class="mrow">
+        <div class="ff"><label>Никнейм CB</label><input id="a-nick" placeholder="никнейм оператора на CB"></div>
+        <div class="ff"><label>Опер (фамилия)</label><input id="a-opname" placeholder="фамилия оператора"></div>
+        <div class="ff"><label>Модель (фамилия)</label><input id="a-model" placeholder="фамилия модели"></div>
+      </div>
+      <button class="abtn" id="a-save">Добавить смену</button>
+      <span id="a-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+    </div>
+  </div>
+  <div class="modal-ov" id="loginmodal">
+    <div class="modal" style="width:min(380px,94vw)">
+      <button class="x" id="login-x">✕</button>
+      <h3>🔑 Вход редактора</h3>
+      <div class="loginbox">
+        <input id="l-user" placeholder="Логин" autocomplete="username">
+        <input id="l-pass" type="password" placeholder="Пароль" autocomplete="current-password">
+        <button class="abtn" id="l-go">Войти</button>
+        <span id="l-msg" style="color:var(--dim);font-size:12.5px"></span>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
   <p class="note">Данные: Google-таблица «продюсеры» (приватная) → Apps Script (доступ только по ключу) → этот дашборд. Обновление каждые 5 минут.</p>
 </div>
 
@@ -137,15 +190,24 @@ const CONFIG = {
 })();
 CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
 
+// залогиненный редактор (localStorage)
+const AUTH = {
+  get user(){ return localStorage.getItem("dash_user") || ""; },
+  get pass(){ return localStorage.getItem("dash_pass") || ""; },
+  get ok(){ return !!(this.user && this.pass); },
+  set(u,p){ localStorage.setItem("dash_user",u); localStorage.setItem("dash_pass",p); },
+  clear(){ localStorage.removeItem("dash_user"); localStorage.removeItem("dash_pass"); }
+};
+
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
-const CITIES = ["Обзор","Томск","Новосибирск","Онлайн","Динамика"];
+const CITIES = ["Обзор","Томск","Новосибирск","Онлайн","Операторы"];
 const PRODUCERS = {
   "Томск": ["Фуад","Минько","Дащинский","Кравчук","Соколов","Валов"],
   "Новосибирск": ["Иванов","Пирожков","Козлов","Фаткулин","Васильченко","Пышков","Глушков","Белых","Бологов","Феоктистов","Черников"],
   "Онлайн": ["Калдузов","Салихов","Околот","Шевченко","Гаврилов","Неустроев","Капитонов","Замирбек"]
 };
-const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо)", "i");
+const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
 const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{} };
@@ -172,9 +234,33 @@ function rowStats(r){
   return {st, ok, bad, score, verdict};
 }
 const scoreCls = n => n>=6 ? "score-ok" : n>=3 ? "score-warn" : "score-bad";
-const chipCls = {"норма":"c-ok","замечание":"c-warn","критично":"c-bad","ново":"c-bad","в работе":"c-wip","исправлено":"c-ok","—":"c-warn"};
+const chipCls = {"норма":"c-ok","замечание":"c-warn","критично":"c-bad"};
 function esc(s){ return (s||"").split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ return (tab==="Обзор"||tab==="Динамика") ? state.rows : state.rows.filter(r=>r.city===tab); }
+function rowsOf(tab){ return tab==="Обзор"||tab==="Операторы" ? state.rows : state.rows.filter(r=>r.city===tab); }
+
+let toastTimer = null;
+function toast(msg, isErr){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.className = "toast", 3500);
+}
+function openModal(id){ document.getElementById(id).classList.add("show"); }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); }
+["addmodal","loginmodal"].forEach(id=>{
+  document.addEventListener("click", e=>{
+    const ov = document.getElementById(id);
+    if (ov && ov.classList.contains("show") && e.target === ov) closeModal(id);
+  });
+});
+document.addEventListener("keydown", e=>{
+  if (e.key === "Escape"){ closeModal("addmodal"); closeModal("loginmodal"); }
+});
+
+function updateLoginBtn(){
+  document.getElementById("loginbtn").textContent = AUTH.ok ? "👤 " + AUTH.user + " · выйти" : "🔑 Войти редактору";
+}
 
 function render(){
   document.getElementById("tabs").innerHTML = CITIES.map(c=>{
@@ -187,16 +273,16 @@ function render(){
   const st = rows.map(rowStats);
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
-  if (state.tab==="Динамика"){ renderDynamics(rows, st); return; }
+
+  if (state.tab==="Операторы"){ renderOperators(rows, st); return; }
 
   const prods = [...new Set(rows.map(r=>r.producer).filter(Boolean))].sort();
-  const dl = document.getElementById("prodlist");
-  if (dl) dl.innerHTML = prods.map(p=>`<option value="${esc(p)}">`).join("");
   const sel = `<select id="f-prod"><option value="">все продюсеры</option>${prods.map(p=>`<option ${state.producer===p?"selected":""}>${esc(p)}</option>`).join("")}</select>`;
 
   document.getElementById("content").innerHTML = `
     <div class="tiles">
-      <div class="tile"><div class="n">${rows.length}</div><div class="l">смен проверено</div></div>
+      <div class="tile"><div class="n">${withScore.length}</div><div class="l">смен проверено</div></div>
+      <div class="tile"><div class="n" style="color:var(--faint)">${rows.length - withScore.length}</div><div class="l">не проверено</div></div>
       <div class="tile ok"><div class="n">${withScore.filter(x=>x.verdict==="норма").length}</div><div class="l">в норме</div></div>
       <div class="tile warn"><div class="n">${withScore.filter(x=>x.verdict==="замечание").length}</div><div class="l">есть замечания</div></div>
       <div class="tile bad"><div class="n">${withScore.filter(x=>x.verdict==="критично").length}</div><div class="l">критично</div></div>
@@ -208,10 +294,8 @@ function render(){
                             : '<div class="card"><h2>Вердикты</h2><div id="donut"></div></div>'}
     </div>
     <div class="card">
-      <h2>Смены <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: отредактируй и сохрани прямо в таблицу</span></h2>
+      <h2>Смены <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.ok?" и редактирование":""}</span></h2>
       <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту…" style="width:240px" value="${esc(state.search)}">
-        <button class="abtn2" id="btn-report">📋 Отчёт в Discord</button>
-        <button class="abtn2" id="btn-csv">⬇ CSV</button>
         <label><input type="checkbox" id="f-bad" ${state.onlyBad?"checked":""}> только проблемные</label>
         <span class="count" id="f-count"></span>
       </div>
@@ -220,9 +304,7 @@ function render(){
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;render();};
   document.getElementById("f-bad").onchange = e=>{state.onlyBad=e.target.checked;render();};
   const fs=document.getElementById("f-search");
-  if (fs) fs.oninput = e=>{state.search=e.target.value;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
-  const br=document.getElementById("btn-report"); if (br) br.onclick = copyReport;
-  const bc=document.getElementById("btn-csv"); if (bc) bc.onclick = exportCSV;
+  fs.oninput = e=>{state.search=e.target.value;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
 
   const catCounts = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length}));
   catCounts.sort((a,b)=>b.c-a.c);
@@ -231,7 +313,7 @@ function render(){
     `<div class="bar-row"><span class="lbl">${x.n}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.c/mx*100)}%;background:${x.c>=mx*0.8?"var(--bad)":x.c>=mx*0.4?"#d67f42":"var(--ok)"}"></div></div><span class="val">${x.c}</span></div>`).join("");
 
   if (state.tab==="Обзор"){
-    const cities = CITIES.slice(1);
+    const cities = CITIES.slice(1,4);
     const counts = cities.map(c=>({
       c,
       ok: st.filter((x,i)=>rows[i].city===c&&x.verdict==="норма").length,
@@ -261,33 +343,40 @@ function render(){
 
   let view = rows.map((r,i)=>({r, s:st[i]}));
   if (state.producer) view = view.filter(x=>x.r.producer===state.producer);
-  if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
   if (state.onlyBad) view = view.filter(x=>x.s.verdict==="критично" || x.s.verdict==="замечание");
+  if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
   view.sort((a,b)=>(a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score));
   state.lastView = view;
   document.getElementById("f-count").textContent = "показано " + view.length + " из " + rows.length;
 
   document.getElementById("table").innerHTML = view.length ? `<table>
-    <thead><tr><th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${
+    <thead><tr><th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>${AUTH.ok?"":""}</th></tr></thead><tbody>${
     view.map((x,key)=>{
-      const det = CATS.map((n,j)=>{
+      const readDet = CATS.map((n,j)=>{
+        const t = (x.r.cats[j]||"").trim();
+        if (!t) return "";
+        const mark = x.s.st[j]==="ok" ? "✅" : x.s.st[j]==="bad" ? "❌" : "·";
+        return `<div class="drow"><b>${mark} ${n}</b><span>${esc(t)}</span></div>`;
+      }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${esc(x.r.obs)}</span></div>` : "");
+      const editDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}">${esc(t)}</textarea></div>`;
-      }).join("");
-      const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
-      return `<tr class="r" data-i="${key}"><td>${esc(x.r.producer||"—")}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}${x.r.opNick&&x.r.opName?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td><td>${esc(x.r.model||"")}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:""}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
-      <tr class="detail" data-d="${key}"><td colspan="8"><div class="detail-in">
-        <div class="edit-grid">${det}
-          <div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(x.r.obs||"")}</textarea></div>
-          <div class="f"><b>Статус смены</b><select id="ed${key}_status">${["","ново","в работе","исправлено"].map(s=>`<option ${((x.r.status||"")===s)?"selected":""}>${s}</option>`).join("")}</select></div>
-        </div>
+      }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(x.r.obs||"")}</textarea></div>
+        <div class="f"><b>📸 Ссылка на скрин смены</b><input id="ed${key}_screen" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" value="${esc(x.r.screen||"")}" placeholder="https://…"></div>`;
+      const inner = AUTH.ok ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
-        <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
-      </div></td></tr>`;
+        <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
+        : `<div class="dgrid">${readDet}</div>` +
+          (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
+      const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
+      return `<tr class="r" data-i="${key}"><td>${esc(x.r.producer||"—")}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}${x.r.opNick&&x.r.opName?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td><td>${esc(x.r.model||"")}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      <tr class="detail" data-d="${key}"><td colspan="7"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("")}</tbody></table>` : `<div class="empty">Нет данных по фильтру</div>`;
 
   document.querySelectorAll("tr.r").forEach(tr=>tr.onclick=()=>{
-    document.querySelector(`tr.detail[data-d="${tr.dataset.i}"]`).classList.toggle("open");
+    const d = document.querySelector(`tr.detail[data-d="${tr.dataset.i}"]`);
+    d.classList.toggle("open");
+    if (d.classList.contains("open")) d.scrollIntoView({behavior:"smooth", block:"nearest"});
   });
   document.querySelectorAll(".qbtn").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
@@ -299,6 +388,43 @@ function render(){
   });
 }
 
+// ---------- страница «Операторы» ----------
+function renderOperators(rows, st){
+  const map = {};
+  rows.forEach((r,i)=>{
+    const name = (r.opName || r.opNick || "").trim() || "—";
+    const s = st[i];
+    if (!map[name]) map[name] = {checks:0, sum:0, crit:0, cities:new Set(), prods:new Set(), last:null, rows:[]};
+    const o = map[name];
+    o.checks++;
+    if (s.score!==null){ o.sum += s.score; }
+    if (s.verdict==="критично") o.crit++;
+    o.cities.add(r.city); o.prods.add(r.producer||"—");
+    o.rows.push({r, s});
+  });
+  const ops = Object.entries(map).map(([name,o])=>({
+    name, checks:o.checks, avg: o.sum>0 ? o.sum/o.checks : null,
+    crit:o.crit, cities:[...o.cities], prods:[...o.prods], rows:o.rows
+  })).sort((a,b)=>(b.avg??-1)-(a.avg??-1));
+
+  document.getElementById("content").innerHTML = `
+    <div class="card"><h2>Рейтинг операторов <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по оперу: вся история проверок</span></h2>
+      ${ops.length ? `<table><thead><tr><th>Оператор</th><th>Ник CB</th><th>Проверок</th><th>Средняя оценка</th><th>Критичных</th><th>Города</th><th>Продюсеры</th></tr></thead><tbody>${
+        ops.map((o,i)=>{
+          const nick = o.rows.find(x=>x.r.opNick);
+          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)}</td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*12.5)+"% ("+o.avg.toFixed(1)+"/8)":"–"}</td><td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
+          <tr class="opdet" data-o="${i}" style="display:none"><td colspan="7"><div style="padding:10px 6px">${
+            o.rows.map(x=>`<div class="drow"><b>${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")} · ${esc(x.r.city)} · ${x.s.verdict?x.s.verdict:"не проверено"}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
+          }</div></td></tr>`;
+        }).join("")}</tbody></table>` : `<div class="empty">Нет данных</div>`}
+    </div>`;
+  document.querySelectorAll("tr.op").forEach(tr=>tr.onclick=()=>{
+    const d = document.querySelector(`tr.opdet[data-o="${tr.dataset.i}"]`);
+    d.style.display = d.style.display==="none" ? "" : "none";
+  });
+}
+
+// ---------- запись ----------
 function jsonp(params){
   return new Promise((resolve,reject)=>{
     const cb="__dashcb_"+Math.random().toString(36).slice(2);
@@ -314,7 +440,8 @@ function jsonp(params){
 }
 
 async function saveRow(x, key){
-  const btn = document.getElementById("sv"+key), msg = document.getElementById("svmsg"+key);
+  if (!AUTH.ok){ toast("Сначала войди редактором (🔑)", true); return; }
+  const btn = document.getElementById("sv"+key);
   const changes = [];
   for (let j=0;j<8;j++){
     const val = document.getElementById("ed"+key+"_"+j).value;
@@ -322,36 +449,43 @@ async function saveRow(x, key){
   }
   const com = document.getElementById("ed"+key+"_comment").value;
   if (com !== (x.r.obs||"")) changes.push(["comment", com]);
-  const stv = document.getElementById("ed"+key+"_status").value;
-  if (stv !== (x.r.status||"")) changes.push(["status", stv]);
-  if (!changes.length){ msg.textContent = "Изменений нет"; return; }
-  btn.disabled = true; msg.textContent = "Сохраняю…";
+  const scr = document.getElementById("ed"+key+"_screen").value.trim();
+  if (scr !== (x.r.screen||"")) changes.push(["screen", scr]);
+  if (!changes.length){ toast("Изменений нет", true); return; }
+  btn.disabled = true;
   try {
-    const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row) };
+    const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass };
     changes.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
     const res = await jsonp(params);
     if (res.error) throw new Error(res.error);
-    msg.textContent = "✔ Сохранено в таблицу (" + res.saved + " полей)";
+    toast("✔ Сохранено в таблицу (" + res.saved + " полей)");
     setTimeout(load, 800);
   } catch(e){
-    msg.textContent = "Ошибка: " + e.message;
+    toast("Ошибка: " + e.message, true);
   } finally { btn.disabled = false; }
 }
 
-document.getElementById("addbtn").onclick = ()=>{
-  document.getElementById("addform").classList.toggle("show");
-};
+// ---------- форма новой смены (модалка) ----------
 function updateProdList(){
   const city = document.getElementById("a-city").value;
-  const dl = document.getElementById("prodlist");
   const list = [...new Set([...(PRODUCERS[city]||[]), ...state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean)])];
-  if (dl) dl.innerHTML = list.map(p=>`<option value="${esc(p)}">`).join("");
+  const sel = document.getElementById("a-prod");
+  sel.innerHTML = list.map(p=>`<option>${esc(p)}</option>`).join("") + `<option value="__new">➕ Другой продюсер…</option>`;
+  document.getElementById("a-newrow").style.display = "none";
+  document.getElementById("a-prod-new").value = "";
 }
 document.getElementById("a-city").onchange = updateProdList;
+document.getElementById("a-prod").onchange = e=>{
+  document.getElementById("a-newrow").style.display = e.target.value==="__new" ? "" : "none";
+};
+document.getElementById("addbtn").onclick = ()=>{ updateProdList(); openModal("addmodal"); };
+document.getElementById("add-x").onclick = ()=>closeModal("addmodal");
 document.getElementById("a-save").onclick = async ()=>{
+  if (!AUTH.ok){ toast("Добавлять смены может только редактор — войди (🔑)", true); return; }
   const msg = document.getElementById("a-msg");
   const city = document.getElementById("a-city").value;
-  const prod = document.getElementById("a-prod").value.trim();
+  const prodSel = document.getElementById("a-prod").value;
+  const prod = prodSel==="__new" ? document.getElementById("a-prod-new").value.trim() : prodSel;
   const nick = document.getElementById("a-nick").value.trim();
   const opname = document.getElementById("a-opname").value.trim();
   const model = document.getElementById("a-model").value.trim();
@@ -360,86 +494,40 @@ document.getElementById("a-save").onclick = async ()=>{
   if (!any){ msg.textContent = "На листе " + city + " пока нет строк — создай блок продюсера в таблице"; return; }
   msg.textContent = "Добавляю…";
   try {
-    const res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model });
+    const res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass });
     if (res.error) throw new Error(res.error);
-    msg.textContent = "✔ Смена добавлена (строка " + res.row + ")";
+    closeModal("addmodal");
+    toast("✔ Смена добавлена в " + city + " (строка " + res.row + ")");
+    ["a-nick","a-opname","a-model","a-prod-new"].forEach(id=>document.getElementById(id).value="");
     setTimeout(load, 800);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
 
+// ---------- вход ----------
+document.getElementById("loginbtn").onclick = ()=>{
+  if (AUTH.ok){ AUTH.clear(); updateLoginBtn(); toast("Вышел из режима редактора"); render(); return; }
+  openModal("loginmodal");
+  document.getElementById("l-user").focus();
+};
+document.getElementById("login-x").onclick = ()=>closeModal("loginmodal");
+document.getElementById("l-go").onclick = doLogin;
+document.getElementById("l-pass").onkeydown = e=>{ if (e.key==="Enter") doLogin(); };
+function doLogin(){
+  const u = document.getElementById("l-user").value.trim();
+  const p = document.getElementById("l-pass").value;
+  // проверка на сервере: запрос read с user/pass — если редактор неверный, save всё равно не пройдёт
+  jsonp({ action:"check", user:u, pass:p }).then(res=>{
+    if (res.error || !res.editor){ document.getElementById("l-msg").textContent = res.error || "Неверный логин или пароль"; return; }
+    AUTH.set(u,p); closeModal("loginmodal"); updateLoginBtn();
+    toast("✔ Вошёл как редактор: " + u);
+    render();
+  }).catch(()=>{ document.getElementById("l-msg").textContent = "Не удалось проверить — попробуй ещё раз"; });
+}
+
 function isFresh(r){
   if (!r.updated) return false;
-  const today = new Date().toLocaleDateString("ru-RU").slice(0,5); // "дд.мм"
+  const today = new Date().toLocaleDateString("ru-RU").slice(0,5);
   return r.updated.slice(0,5) === today;
-}
-
-function renderDynamics(rows, st){
-  const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))];
-  weeks.sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
-  const data = weeks.map(w=>{
-    const idx = rows.map((r,i)=>r.week===w?i:-1).filter(i=>i>=0);
-    const checked = idx.map(i=>st[i]).filter(x=>x.score!==null);
-    return { w, total: idx.length, checked: checked.length,
-      ok: checked.filter(x=>x.verdict==="норма").length,
-      warn: checked.filter(x=>x.verdict==="замечание").length,
-      bad: checked.filter(x=>x.verdict==="критично").length };
-  });
-  const maxShare = Math.max(1,...data.map(d=>d.checked?Math.round(d.bad/d.checked*100):0));
-  document.getElementById("content").innerHTML = `
-    <div class="card"><h2>Недели: сколько проверено и сколько критичного</h2>
-      ${data.map(d=>{
-        const share = d.checked ? Math.round(d.bad/d.checked*100) : 0;
-        return `<div class="bar-row" style="grid-template-columns:120px 1fr 200px"><span class="lbl">${esc(d.w)}</span>
-          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.checked/Math.max(1,d.total)*100)}%;background:var(--accent)"></div></div>
-          <span style="color:var(--dim);font-size:12px">проверено ${d.checked} из ${d.total} · 🔴 ${share}%</span></div>`;
-      }).join("")}
-      <p style="color:var(--faint);font-size:12px;margin-top:10px">Синяя полоса — доля проверенных смен недели. Заведёшь в таблице лист новой недели — он появится здесь сам.</p>
-    </div>
-    <div class="card" style="margin-top:14px"><h2>Доля критичных проверок по неделям, %</h2>
-      <svg width="100%" height="150" viewBox="0 0 500 150">
-        ${data.map((d,i)=>{
-          const x = 40 + i*(420/Math.max(1,data.length-1||1));
-          const share = d.checked ? Math.round(d.bad/d.checked*100) : 0;
-          const y = 120 - share*1.0;
-          return `<circle cx="${x}" cy="${y}" r="5" fill="#e5655f"></circle><text x="${x}" y="${y-10}" fill="#9aa1ad" font-size="11" text-anchor="middle">${share}%</text><text x="${x}" y="142" fill="#6b7280" font-size="10" text-anchor="middle">${esc(d.w)}</text>`;
-        }).join("")}
-        <polyline points="${data.map((d,i)=>{const x=40+i*(420/Math.max(1,data.length-1||1));const share=d.checked?Math.round(d.bad/d.checked*100):0;return x+","+(120-share);}).join(" ")}" fill="none" stroke="#e5655f" stroke-width="2.5"></polyline>
-      </svg>
-      <p style="color:var(--faint);font-size:12px">Цель — линия ползёт вниз.</p>
-    </div>`;
-}
-
-function copyReport(){
-  const view = state.lastView || [];
-  const crit = view.filter(x=>x.s.verdict==="критично");
-  const warn = view.filter(x=>x.s.verdict==="замечание");
-  const ok = view.filter(x=>x.s.verdict==="норма");
-  const L = [];
-  L.push("📊 ПРОВЕРКА СМЕН — " + (document.getElementById("weeklabel").textContent || ""));
-  L.push("Проверено: " + (view.filter(x=>x.s.score!==null).length) + " · 🔴 критично: " + crit.length + " · 🟡 замечания: " + warn.length + " · 🟢 норма: " + ok.length);
-  if (crit.length){ L.push(""); L.push("🔴 КРИТИЧНО:"); crit.forEach(x=>L.push("• " + (x.r.producer||"—") + " — " + (x.r.opName||x.r.opNick||"—") + " / " + (x.r.model||"—") + " (" + x.r.city + ")" + (x.r.obs ? ": " + x.r.obs : ""))); }
-  if (warn.length){ L.push(""); L.push("🟡 ЗАМЕЧАНИЯ:"); warn.forEach(x=>L.push("• " + (x.r.producer||"—") + " — " + (x.r.opName||x.r.opNick||"—") + " / " + (x.r.model||"—") + " (" + x.r.city + ")" + (x.r.obs ? ": " + x.r.obs : ""))); }
-  const text = L.join("\n");
-  navigator.clipboard.writeText(text).then(
-    ()=>{ const b=document.getElementById("btn-report"); b.textContent="✔ Скопировано"; setTimeout(()=>b.textContent="📋 Отчёт в Discord",2000); },
-    ()=>{ const w=window.open("","_blank"); w.document.write("<pre style='white-space:pre-wrap'>"+text.replace(/</g,"&lt;")+"</pre>"); }
-  );
-}
-
-function exportCSV(){
-  const view = state.lastView || [];
-  const head = ["Город","Неделя","Продюсер","Ник CB","Опер","Модель"].concat(CATS).concat(["Доп. комментарий","Оценка","Вердикт","Обновлено"]);
-  const q = v => '"' + String(v==null?"":v).split('"').join('""') + '"';
-  const lines = [head.map(q).join(";")];
-  view.forEach(x=>{
-    const row = [x.r.city,x.r.week,x.r.producer,x.r.opNick,x.r.opName,x.r.model].concat(x.r.cats).concat([x.r.obs, x.s.score!==null?x.s.score+"/8":"", x.s.verdict||"", x.r.updated||""]);
-    lines.push(row.map(q).join(";"));
-  });
-  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "producers_" + (document.getElementById("weeklabel").textContent||"").replace(/[^0-9a-zA-Z.-]+/g,"_") + ".csv";
-  a.click();
 }
 
 async function load(){
@@ -454,10 +542,11 @@ async function load(){
     if(j.error)throw new Error(j.error);
     state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
     dot.className="dot-live";
-    txt.textContent="Живые данные из Google-таблицы · обновлено "+new Date().toLocaleTimeString("ru-RU");
-    document.getElementById("updated").textContent="источник: таблица «продюсеры» · редактирование включено";
+    txt.textContent="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+(AUTH.ok?" · редактор: "+AUTH.user:" · просмотр");
+    document.getElementById("updated").textContent="источник: таблица «продюсеры»";
+    updateLoginBtn();
     render();
-    updateProdList();
+    if (typeof updateProdList === "function" && document.getElementById("a-prod")) updateProdList();
   }catch(e){
     dot.className="dot-off";
     txt.textContent="Ошибка загрузки: "+e.message+". Возможно, нужно войти в Google-аккаунт в этом браузере.";
