@@ -105,9 +105,9 @@
       <select id="a-city"><option>Томск</option><option>Новосибирск</option><option>Онлайн</option></select>
       <input id="a-prod" placeholder="Продюсер (фамилия)" list="prodlist">
       <datalist id="prodlist"></datalist>
-      <input id="a-nick" placeholder="Никнейм CB">
-      <input id="a-opname" placeholder="Опер (фамилия)">
-      <input id="a-model" placeholder="Модель (фамилия)">
+      <input id="a-nick" placeholder="Ник оператора (CB)">
+      <input id="a-opname" placeholder="Опер (ФИО)">
+      <input id="a-model" placeholder="Модель">
     </div>
     <button class="abtn" id="a-save">Добавить смену</button>
     <span id="a-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
@@ -139,11 +139,16 @@ CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
 
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
-const CITIES = ["Обзор","Томск","Новосибирск","Онлайн"];
+const CITIES = ["Обзор","Томск","Новосибирск","Онлайн","Динамика"];
+const PRODUCERS = {
+  "Томск": ["Фуад","Минько","Дащинский","Кравчук","Соколов","Валов"],
+  "Новосибирск": ["Иванов","Пирожков","Козлов","Фаткулин","Васильченко","Пышков","Глушков","Белых","Бологов","Феоктистов","Черников"],
+  "Онлайн": ["Калдузов","Салихов","Околот","Шевченко","Гаврилов","Неустроев","Капитонов","Замирбек"]
+};
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", onlyBad:false, rows:[], open:{} };
+const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{} };
 
 function catState(t){
   const s = (t||"").trim();
@@ -169,7 +174,7 @@ function rowStats(r){
 const scoreCls = n => n>=6 ? "score-ok" : n>=3 ? "score-warn" : "score-bad";
 const chipCls = {"норма":"c-ok","замечание":"c-warn","критично":"c-bad","ново":"c-bad","в работе":"c-wip","исправлено":"c-ok","—":"c-warn"};
 function esc(s){ return (s||"").split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ return tab==="Обзор" ? state.rows : state.rows.filter(r=>r.city===tab); }
+function rowsOf(tab){ return (tab==="Обзор"||tab==="Динамика") ? state.rows : state.rows.filter(r=>r.city===tab); }
 
 function render(){
   document.getElementById("tabs").innerHTML = CITIES.map(c=>{
@@ -182,6 +187,7 @@ function render(){
   const st = rows.map(rowStats);
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
+  if (state.tab==="Динамика"){ renderDynamics(rows, st); return; }
 
   const prods = [...new Set(rows.map(r=>r.producer).filter(Boolean))].sort();
   const dl = document.getElementById("prodlist");
@@ -190,8 +196,7 @@ function render(){
 
   document.getElementById("content").innerHTML = `
     <div class="tiles">
-      <div class="tile"><div class="n">${withScore.length}</div><div class="l">смен проверено</div></div>
-      <div class="tile"><div class="n" style="color:var(--faint)">${rows.length - withScore.length}</div><div class="l">не проверено</div></div>
+      <div class="tile"><div class="n">${rows.length}</div><div class="l">смен проверено</div></div>
       <div class="tile ok"><div class="n">${withScore.filter(x=>x.verdict==="норма").length}</div><div class="l">в норме</div></div>
       <div class="tile warn"><div class="n">${withScore.filter(x=>x.verdict==="замечание").length}</div><div class="l">есть замечания</div></div>
       <div class="tile bad"><div class="n">${withScore.filter(x=>x.verdict==="критично").length}</div><div class="l">критично</div></div>
@@ -204,7 +209,9 @@ function render(){
     </div>
     <div class="card">
       <h2>Смены <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: отредактируй и сохрани прямо в таблицу</span></h2>
-      <div class="filters">${sel}
+      <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту…" style="width:240px" value="${esc(state.search)}">
+        <button class="abtn2" id="btn-report">📋 Отчёт в Discord</button>
+        <button class="abtn2" id="btn-csv">⬇ CSV</button>
         <label><input type="checkbox" id="f-bad" ${state.onlyBad?"checked":""}> только проблемные</label>
         <span class="count" id="f-count"></span>
       </div>
@@ -212,6 +219,10 @@ function render(){
     </div>`;
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;render();};
   document.getElementById("f-bad").onchange = e=>{state.onlyBad=e.target.checked;render();};
+  const fs=document.getElementById("f-search");
+  if (fs) fs.oninput = e=>{state.search=e.target.value;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
+  const br=document.getElementById("btn-report"); if (br) br.onclick = copyReport;
+  const bc=document.getElementById("btn-csv"); if (bc) bc.onclick = exportCSV;
 
   const catCounts = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length}));
   catCounts.sort((a,b)=>b.c-a.c);
@@ -250,22 +261,25 @@ function render(){
 
   let view = rows.map((r,i)=>({r, s:st[i]}));
   if (state.producer) view = view.filter(x=>x.r.producer===state.producer);
+  if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
   if (state.onlyBad) view = view.filter(x=>x.s.verdict==="критично" || x.s.verdict==="замечание");
   view.sort((a,b)=>(a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score));
+  state.lastView = view;
   document.getElementById("f-count").textContent = "показано " + view.length + " из " + rows.length;
 
   document.getElementById("table").innerHTML = view.length ? `<table>
-    <thead><tr><th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th></th></tr></thead><tbody>${
+    <thead><tr><th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${
     view.map((x,key)=>{
       const det = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}">${esc(t)}</textarea></div>`;
       }).join("");
       const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
-      return `<tr class="r" data-i="${key}"><td>${esc(x.r.producer||"—")}</td><td>${esc(x.r.opName||x.r.opNick||"")}${x.r.opNick&&x.r.opName?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td><td>${esc(x.r.model||"")}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
-      <tr class="detail" data-d="${key}"><td colspan="7"><div class="detail-in">
+      return `<tr class="r" data-i="${key}"><td>${esc(x.r.producer||"—")}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}${x.r.opNick&&x.r.opName?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td><td>${esc(x.r.model||"")}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:""}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      <tr class="detail" data-d="${key}"><td colspan="8"><div class="detail-in">
         <div class="edit-grid">${det}
           <div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(x.r.obs||"")}</textarea></div>
+          <div class="f"><b>Статус смены</b><select id="ed${key}_status">${["","ново","в работе","исправлено"].map(s=>`<option ${((x.r.status||"")===s)?"selected":""}>${s}</option>`).join("")}</select></div>
         </div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
@@ -308,6 +322,8 @@ async function saveRow(x, key){
   }
   const com = document.getElementById("ed"+key+"_comment").value;
   if (com !== (x.r.obs||"")) changes.push(["comment", com]);
+  const stv = document.getElementById("ed"+key+"_status").value;
+  if (stv !== (x.r.status||"")) changes.push(["status", stv]);
   if (!changes.length){ msg.textContent = "Изменений нет"; return; }
   btn.disabled = true; msg.textContent = "Сохраняю…";
   try {
@@ -325,6 +341,13 @@ async function saveRow(x, key){
 document.getElementById("addbtn").onclick = ()=>{
   document.getElementById("addform").classList.toggle("show");
 };
+function updateProdList(){
+  const city = document.getElementById("a-city").value;
+  const dl = document.getElementById("prodlist");
+  const list = [...new Set([...(PRODUCERS[city]||[]), ...state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean)])];
+  if (dl) dl.innerHTML = list.map(p=>`<option value="${esc(p)}">`).join("");
+}
+document.getElementById("a-city").onchange = updateProdList;
 document.getElementById("a-save").onclick = async ()=>{
   const msg = document.getElementById("a-msg");
   const city = document.getElementById("a-city").value;
@@ -344,6 +367,81 @@ document.getElementById("a-save").onclick = async ()=>{
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
 
+function isFresh(r){
+  if (!r.updated) return false;
+  const today = new Date().toLocaleDateString("ru-RU").slice(0,5); // "дд.мм"
+  return r.updated.slice(0,5) === today;
+}
+
+function renderDynamics(rows, st){
+  const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))];
+  weeks.sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+  const data = weeks.map(w=>{
+    const idx = rows.map((r,i)=>r.week===w?i:-1).filter(i=>i>=0);
+    const checked = idx.map(i=>st[i]).filter(x=>x.score!==null);
+    return { w, total: idx.length, checked: checked.length,
+      ok: checked.filter(x=>x.verdict==="норма").length,
+      warn: checked.filter(x=>x.verdict==="замечание").length,
+      bad: checked.filter(x=>x.verdict==="критично").length };
+  });
+  const maxShare = Math.max(1,...data.map(d=>d.checked?Math.round(d.bad/d.checked*100):0));
+  document.getElementById("content").innerHTML = `
+    <div class="card"><h2>Недели: сколько проверено и сколько критичного</h2>
+      ${data.map(d=>{
+        const share = d.checked ? Math.round(d.bad/d.checked*100) : 0;
+        return `<div class="bar-row" style="grid-template-columns:120px 1fr 200px"><span class="lbl">${esc(d.w)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.checked/Math.max(1,d.total)*100)}%;background:var(--accent)"></div></div>
+          <span style="color:var(--dim);font-size:12px">проверено ${d.checked} из ${d.total} · 🔴 ${share}%</span></div>`;
+      }).join("")}
+      <p style="color:var(--faint);font-size:12px;margin-top:10px">Синяя полоса — доля проверенных смен недели. Заведёшь в таблице лист новой недели — он появится здесь сам.</p>
+    </div>
+    <div class="card" style="margin-top:14px"><h2>Доля критичных проверок по неделям, %</h2>
+      <svg width="100%" height="150" viewBox="0 0 500 150">
+        ${data.map((d,i)=>{
+          const x = 40 + i*(420/Math.max(1,data.length-1||1));
+          const share = d.checked ? Math.round(d.bad/d.checked*100) : 0;
+          const y = 120 - share*1.0;
+          return `<circle cx="${x}" cy="${y}" r="5" fill="#e5655f"></circle><text x="${x}" y="${y-10}" fill="#9aa1ad" font-size="11" text-anchor="middle">${share}%</text><text x="${x}" y="142" fill="#6b7280" font-size="10" text-anchor="middle">${esc(d.w)}</text>`;
+        }).join("")}
+        <polyline points="${data.map((d,i)=>{const x=40+i*(420/Math.max(1,data.length-1||1));const share=d.checked?Math.round(d.bad/d.checked*100):0;return x+","+(120-share);}).join(" ")}" fill="none" stroke="#e5655f" stroke-width="2.5"></polyline>
+      </svg>
+      <p style="color:var(--faint);font-size:12px">Цель — линия ползёт вниз.</p>
+    </div>`;
+}
+
+function copyReport(){
+  const view = state.lastView || [];
+  const crit = view.filter(x=>x.s.verdict==="критично");
+  const warn = view.filter(x=>x.s.verdict==="замечание");
+  const ok = view.filter(x=>x.s.verdict==="норма");
+  const L = [];
+  L.push("📊 ПРОВЕРКА СМЕН — " + (document.getElementById("weeklabel").textContent || ""));
+  L.push("Проверено: " + (view.filter(x=>x.s.score!==null).length) + " · 🔴 критично: " + crit.length + " · 🟡 замечания: " + warn.length + " · 🟢 норма: " + ok.length);
+  if (crit.length){ L.push(""); L.push("🔴 КРИТИЧНО:"); crit.forEach(x=>L.push("• " + (x.r.producer||"—") + " — " + (x.r.opName||x.r.opNick||"—") + " / " + (x.r.model||"—") + " (" + x.r.city + ")" + (x.r.obs ? ": " + x.r.obs : ""))); }
+  if (warn.length){ L.push(""); L.push("🟡 ЗАМЕЧАНИЯ:"); warn.forEach(x=>L.push("• " + (x.r.producer||"—") + " — " + (x.r.opName||x.r.opNick||"—") + " / " + (x.r.model||"—") + " (" + x.r.city + ")" + (x.r.obs ? ": " + x.r.obs : ""))); }
+  const text = L.join("\n");
+  navigator.clipboard.writeText(text).then(
+    ()=>{ const b=document.getElementById("btn-report"); b.textContent="✔ Скопировано"; setTimeout(()=>b.textContent="📋 Отчёт в Discord",2000); },
+    ()=>{ const w=window.open("","_blank"); w.document.write("<pre style='white-space:pre-wrap'>"+text.replace(/</g,"&lt;")+"</pre>"); }
+  );
+}
+
+function exportCSV(){
+  const view = state.lastView || [];
+  const head = ["Город","Неделя","Продюсер","Ник CB","Опер","Модель"].concat(CATS).concat(["Доп. комментарий","Оценка","Вердикт","Обновлено"]);
+  const q = v => '"' + String(v==null?"":v).split('"').join('""') + '"';
+  const lines = [head.map(q).join(";")];
+  view.forEach(x=>{
+    const row = [x.r.city,x.r.week,x.r.producer,x.r.opNick,x.r.opName,x.r.model].concat(x.r.cats).concat([x.r.obs, x.s.score!==null?x.s.score+"/8":"", x.s.verdict||"", x.r.updated||""]);
+    lines.push(row.map(q).join(";"));
+  });
+  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "producers_" + (document.getElementById("weeklabel").textContent||"").replace(/[^0-9a-zA-Z.-]+/g,"_") + ".csv";
+  a.click();
+}
+
 async function load(){
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
   if(!CONFIG.API_KEY){
@@ -359,6 +457,7 @@ async function load(){
     txt.textContent="Живые данные из Google-таблицы · обновлено "+new Date().toLocaleTimeString("ru-RU");
     document.getElementById("updated").textContent="источник: таблица «продюсеры» · редактирование включено";
     render();
+    updateProdList();
   }catch(e){
     dot.className="dot-off";
     txt.textContent="Ошибка загрузки: "+e.message+". Возможно, нужно войти в Google-аккаунт в этом браузере.";
