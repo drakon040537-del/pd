@@ -234,15 +234,7 @@ const CONFIG = {
 })();
 CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
 
-// сессия: user, pass, edit, cities
-(function(){
-  const q = new URLSearchParams(location.search);
-  const u = q.get("u"), p = q.get("p");
-  if (u && p){
-    localStorage.setItem("dash_user", u);
-    localStorage.setItem("dash_pass", p);
-  }
-})();
+
 const AUTH = {
   user: localStorage.getItem("dash_user") || "",
   pass: localStorage.getItem("dash_pass") || "",
@@ -839,7 +831,7 @@ async function doLogin(){
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
     try {
       const q2 = new URLSearchParams(location.search);
-      q2.set("u", u); q2.set("p", p);
+      q2.delete("u"); q2.delete("p");
       history.replaceState(null, "", location.pathname + "?" + q2.toString());
     } catch(e){}
     hideGate();
