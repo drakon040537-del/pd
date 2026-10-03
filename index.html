@@ -235,6 +235,14 @@ const CONFIG = {
 CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
 
 // сессия: user, pass, edit, cities
+(function(){
+  const q = new URLSearchParams(location.search);
+  const u = q.get("u"), p = q.get("p");
+  if (u && p){
+    localStorage.setItem("dash_user", u);
+    localStorage.setItem("dash_pass", p);
+  }
+})();
 const AUTH = {
   user: localStorage.getItem("dash_user") || "",
   pass: localStorage.getItem("dash_pass") || "",
@@ -251,15 +259,6 @@ const AUTH = {
   canCity(c){ return this.cities.includes("all") || this.cities.includes(c); }
 };
 
-
-(function(){
-  const q = new URLSearchParams(location.search);
-  const u = q.get("u"), p = q.get("p");
-  if (u && p){
-    localStorage.setItem("dash_user", u);
-    localStorage.setItem("dash_pass", p);
-  }
-})();
 
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
