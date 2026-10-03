@@ -1440,23 +1440,9 @@ async function doLogin(){
   }
   document.getElementById("l-msg").textContent = "Проверяю…";
   try {
-    const res = await jsonp({ action:"login", user:u, pass:p });
-    if (res.error === "unknown action"){
-      // старый скрипт без action=login — прежний путь (check + read)
-      const chk = await jsonp({ action:"check", user:u, pass:p });
-      if (chk.error || !chk.ok){
-        if (chk.error === "forbidden"){ localStorage.removeItem("dash_key"); CONFIG.API_KEY = ""; }
-        document.getElementById("l-msg").textContent = chk.error==="forbidden" ? "Неверный ключ доступа — открой ссылку с ?key=... или введи ключ заново" : (chk.error || "Неверный логин или пароль");
-        return;
-      }
-      AUTH.set(u, p, !!chk.editor, chk.cities || [], chk.name || u);
-      state.lastCheck = Date.now();
-      historyClean();
-      hideGate(); updateLoginBtn();
-      toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
-      load();
-      return;
-    }
+    // вход = маленький check (надёжен даже на мобильных) + read в load();
+    // большой ответ (105КБ) одним JSONP-скриптом на мобильном WebKit ненадёжен
+    const res = await jsonp({ action:"check", user:u, pass:p });
     if (res.error || !res.ok){
       if (res.error === "forbidden"){ localStorage.removeItem("dash_key"); CONFIG.API_KEY = ""; }
       document.getElementById("l-msg").textContent =
@@ -1467,10 +1453,10 @@ async function doLogin(){
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
     state.lastCheck = Date.now();
     historyClean();
-    applyData(res);
     hideGate();
     updateLoginBtn();
     toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
+    load();
   } catch(e){
     const m = String(e && e.message || e);
     document.getElementById("l-msg").textContent = (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0)
