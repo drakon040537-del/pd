@@ -526,6 +526,8 @@ function render(){
 
   let rows = rowsOf(state.tab);
   if (state.search) rows = state.rows.slice(); // глобальный поиск: все города и недели
+  // «все недели»: одна строка на команду (самая свежая), иначе команды удваиваются копиями
+  if (!state.week && state.tab!=="Сравнение") rows = dedupeRows(rows);
   const st = rows.map(rowStats);
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
@@ -693,7 +695,7 @@ function render(){
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
         : `<div class="dgrid">${readDet}</div>` +
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
-      const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
+      const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(x.r.city)}${!state.week&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
         ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${x.s.score*12.5}%"></div></div></div>`
@@ -1472,6 +1474,22 @@ function dueInfo(r){
   return { days, nextDay: next.getDate(), nextMonth: next.getMonth()+1 };
 }
 function isDue(r){ const u = dueInfo(r); return !!u && u.days >= 6; }
+// одна строка на команду (город+опер+модель): берём строку с самой свежей «Обновлено»
+function dedupeRows(rows){
+  const map = {}, out = [];
+  rows.forEach(function(r){
+    if (!(r.opName||r.opNick||r.model)){ out.push(r); return; }
+    const key = r.city+"|"+(r.opName||r.opNick||"").toLowerCase()+"|"+(r.model||"").toLowerCase();
+    const prev = map[key];
+    if (!prev){ map[key] = r; out.push(r); return; }
+    const a = parseUpd(r.updated), b = parseUpd(prev.updated);
+    if ((a && !b) || (a && b && a > b)){
+      map[key] = r;
+      out[out.indexOf(prev)] = r;
+    }
+  });
+  return out;
+}
 // сколько команд просрочили перепроверку (дедупликация по всем неделям, как на доске «Расписание»)
 function overdueCount(){
   const map = {};
