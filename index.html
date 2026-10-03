@@ -139,6 +139,9 @@
   #tabs .tab:hover{color:var(--ink);background:var(--panel2)}
   #tabs .tab.on{background:var(--accent);color:#fff;font-weight:600}
   #tabs .tab .cnt{margin-left:auto;opacity:.75;font-size:11px}
+  #tabs .tab .cnt.crit{color:var(--bad);opacity:1;font-weight:700}
+  .rsect{margin:10px 6px 3px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .rsect:first-child{margin-top:2px}
   #tabs .wtab{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;color:var(--dim);background:none;border:1px solid var(--line);font-size:12.5px;width:100%;cursor:pointer;font:inherit;text-align:left;font-family:inherit}
   #tabs .wtab:hover{color:var(--ink);background:var(--panel2)}
   #tabs .wtab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
@@ -241,7 +244,6 @@
   <header>
     <h1>Проверка смен — дашборд</h1>
     <span class="week" id="weeklabel"></span>
-    <span class="sub" id="updated"></span>
   </header>
   <div class="layout">
     <div class="rail" id="tabs"></div>
@@ -320,7 +322,7 @@
   </div>
   <input type="color" id="colorpick" style="position:absolute;left:-200px;top:-200px">
   <div class="toast" id="toast"></div>
-  <p class="note">Данные: Google-таблица «продюсеры» (приватная) → Apps Script (доступ только по ключу) → этот дашборд. Обновление каждые 5 минут.</p>
+
 </div>
 
 <script>
@@ -479,10 +481,20 @@ function updateLoginBtn(){
 function render(){
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
-  document.getElementById("tabs").innerHTML = tabs().map(c=>{
+  // панель: секции + красная метка на вкладках с критичными сменами
+  const tabBtn = c=>{
     const n = rowsOf(c).length;
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c==="Расписание"?"Расписание проверок":c}</span><span class="cnt">${n||""}</span></button>`;
-  }).join("") + (wks.length>1 ? `<button class="wtab ${!state.week?"on":""}" data-w=""><span>🗓</span><span>все недели</span></button>` + wks.map(w=>`<button class="wtab ${state.week===w?"on":""}" data-w="${esc(w)}"><span>🗓</span><span>${esc(w)}</span></button>`).join("") : "");
+    const crit = rowsOf(c).reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
+    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c==="Расписание"?"Расписание проверок":c}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span></button>`;
+  };
+  const sect = t => `<div class="rsect">${t}</div>`;
+  const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
+  const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
+  const toolTabs = tabs().filter(c=>["Операторы","Сравнение"].includes(c));
+  document.getElementById("tabs").innerHTML = mainTabs.map(tabBtn).join("")
+    + (cityTabs.length?sect("города")+cityTabs.map(tabBtn).join(""):"")
+    + sect("инструменты")+toolTabs.map(tabBtn).join("")
+    + (wks.length>1 ? sect("недели") + `<button class="wtab ${!state.week?"on":""}" data-w=""><span>🗓</span><span>все недели</span></button>` + wks.map(w=>`<button class="wtab ${state.week===w?"on":""}" data-w="${esc(w)}"><span>🗓</span><span>${esc(w)}</span></button>`).join("") : "");
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
   document.querySelectorAll(".wtab").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; render(); });
 
@@ -1463,8 +1475,9 @@ async function load(){
     state.colors = j.colors || {};
     state.plans = j.plans || {};
     dot.className="dot-live";
-    txt.textContent="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
-    document.getElementById("updated").textContent="источник: таблица «продюсеры»";
+    dot.title="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
+    txt.textContent="";
+    document.getElementById("updated").textContent="";
     updateLoginBtn();
     render();
     jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
