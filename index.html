@@ -126,6 +126,9 @@
   .iconbtn:hover{color:var(--ink)}
   .iconbtn{position:relative}
   .badge{position:absolute;top:-7px;right:-7px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;font-weight:700}
+  .cdot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px;cursor:pointer;border:1px solid rgba(255,255,255,.18)}
+  .fchip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:16px;padding:4px 13px;font-size:12px;cursor:pointer;margin-right:6px;font:inherit}
+  .fchip.on{border-color:var(--accent);color:var(--accent);background:rgba(91,157,255,.1)}
   @keyframes flash{0%{background:rgba(91,157,255,.22)}100%{background:transparent}}
   tr.flash td{animation:flash 1.8s ease-out}
   .pwrap{margin:-6px 0 14px}
@@ -212,6 +215,7 @@
       <div id="histlist" style="max-height:60vh;overflow:auto"></div>
     </div>
   </div>
+  <input type="color" id="colorpick" style="position:absolute;left:-200px;top:-200px">
   <div class="toast" id="toast"></div>
   <p class="note">Данные: Google-таблица «продюсеры» (приватная) → Apps Script (доступ только по ключу) → этот дашборд. Обновление каждые 5 минут.</p>
 </div>
@@ -267,7 +271,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null };
+const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null, colors:{}, quick:"" };
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
@@ -413,11 +417,9 @@ function render(){
     <div class="card">
       <h2>Смены <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
       <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту…" style="width:240px" value="${esc(state.search)}">
-        <label><input type="checkbox" id="f-bad" ${state.onlyBad?"checked":""}> только проблемные</label>
-        <label><input type="checkbox" id="f-focus" ${state.focus?"checked":""}> 🎯 фокус</label>
-        <span id="sessinfo" style="color:var(--dim);font-size:12px"></span>
         <span class="count" id="f-count"></span>
       </div>
+      <div id="chipsrow" style="margin:-4px 0 12px"></div>
       <div id="table"></div>
     </div>`;
   document.querySelectorAll("#content .tile .n").forEach(function(el, i){
@@ -429,28 +431,23 @@ function render(){
   });
   const avgEl = document.querySelectorAll("#content .tile .n")[5];
   if (avgEl) animNum(avgEl, withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5) : 0, "%");
+  const chipDefs = [
+    ["crit","🔴 критично", st.filter(x=>x.verdict==="критично").length],
+    ["warn","🟡 замечания", st.filter(x=>x.verdict==="замечание").length],
+    ["none","⚪ не проверено", st.filter(x=>x.score===null).length],
+    ["ok","🟢 норма", st.filter(x=>x.verdict==="норма").length],
+    ["fresh","⏱ правленые сегодня", rows.filter(isFresh).length]
+  ];
+  const cr = document.getElementById("chipsrow");
+  if (cr){
+    cr.innerHTML = chipDefs.map(c=>`<button class="fchip ${state.quick===c[0]?"on":""}" data-q="${c[0]}">${c[1]} · ${c[2]}</button>`).join("");
+    cr.querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{ state.quick = state.quick===b.dataset.q ? "" : b.dataset.q; render(); });
+  }
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;render();};
-  document.getElementById("f-bad").onchange = e=>{state.onlyBad=e.target.checked;render();};
+  
   const fs=document.getElementById("f-search");
   fs.oninput = e=>{state.search=e.target.value;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
-  const ff=document.getElementById("f-focus");
-  if (ff) ff.onchange = e=>{
-    state.focus = e.target.checked;
-    if (state.focus){
-      state.focusStart = Date.now();
-      state.focusBase = new Set(state.rows.filter(r=>rowStats(r).score!==null).map(r=>r._sheet+":"+r._row));
-      toast("🎯 Фокус-режим: показываю только непроверенные");
-    }
-    render();
-  };
-  setInterval(()=>{
-    const el = document.getElementById("sessinfo");
-    if (!el || !state.focus) return;
-    const sec = Math.floor((Date.now() - state.focusStart) / 1000);
-    const mm = String(Math.floor(sec/60)).padStart(2,"0"), ss = String(sec%60).padStart(2,"0");
-    const closed = state.rows.filter(r=>rowStats(r).score!==null && !state.focusBase.has(r._sheet+":"+r._row)).length;
-    el.textContent = "⏱ " + mm + ":" + ss + " · закрыто за сессию: " + closed;
-  }, 1000);
+
 
   const catCounts = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length}));
   catCounts.sort((a,b)=>b.c-a.c);
@@ -489,8 +486,11 @@ function render(){
 
   let view = rows.map((r,i)=>({r, s:st[i]}));
   if (state.producer) view = view.filter(x=>x.r.producer===state.producer);
-  if (state.onlyBad) view = view.filter(x=>x.s.verdict==="критично" || x.s.verdict==="замечание");
-  if (state.focus) view = view.filter(x=>x.s.score===null);
+  if (state.quick==="crit") view = view.filter(x=>x.s.verdict==="критично");
+  else if (state.quick==="warn") view = view.filter(x=>x.s.verdict==="замечание");
+  else if (state.quick==="none") view = view.filter(x=>x.s.score===null);
+  else if (state.quick==="ok") view = view.filter(x=>x.s.verdict==="норма");
+  else if (state.quick==="fresh") view = view.filter(x=>isFresh(x.r));
   if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
   view.sort((a,b)=>(a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score));
   state.lastView = view;
@@ -520,7 +520,7 @@ function render(){
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
       const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
-      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td>${esc(x.r.producer||"—")}${draftMark}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}</td><td>${esc(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td><span class="cdot" data-prod="${esc(x.r.producer||"")}" style="background:${esc(state.colors[x.r.producer]||"#566070")}" title="${esc(x.r.producer||"")} — цвет команды"></span>${esc(x.r.producer||"—")}${draftMark}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}</td><td>${esc(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="8"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("")}</tbody></table>` : `<div class="empty">Нет данных по фильтру</div>`;
 
@@ -742,6 +742,24 @@ document.getElementById("bellbtn").onclick = ()=>{
   state.unread = 0; updateBell();
 };
 document.getElementById("hist-x").onclick = ()=>closeModal("histmodal");
+document.querySelectorAll(".cdot").forEach(d=>d.onclick=(ev)=>{
+  ev.stopPropagation();
+  if (!AUTH.edit){ toast("Цвет может поменять только редактор", true); return; }
+  if (!d.dataset.prod) return;
+  const cp = document.getElementById("colorpick");
+  cp.dataset.prod = d.dataset.prod;
+  cp.value = state.colors[d.dataset.prod] || "#5b9dff";
+  cp.click();
+});
+document.getElementById("colorpick").onchange = async function(){
+  if (!this.dataset.prod) return;
+  try {
+    const res = await jsonp({ action:"setcolor", producer: this.dataset.prod, color: this.value, user: AUTH.user, pass: AUTH.pass });
+    if (res.error) throw new Error(res.error);
+    toast("✔ Цвет команды «" + this.dataset.prod + "» сохранён");
+    setTimeout(load, 500);
+  } catch(e){ toast("Ошибка: " + e.message, true); }
+};
 document.getElementById("weekbtn").onclick = ()=>{
   const weeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   const sel = document.getElementById("w-base");
@@ -872,6 +890,7 @@ async function load(){
     const j=await jsonp({action:"read", user:AUTH.user, pass:AUTH.pass});
     if(j.error)throw new Error(j.error);
     state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
+    state.colors = j.colors || {};
     dot.className="dot-live";
     txt.textContent="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
     document.getElementById("updated").textContent="источник: таблица «продюсеры»";
