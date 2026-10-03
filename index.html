@@ -171,10 +171,13 @@
   .sbar{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;max-width:90px}
   .sfill{height:100%;border-radius:4px}
   .sf-g{background:var(--ok)} .sf-y{background:var(--warn)} .sf-r{background:var(--bad)}
-  .planbtn{background:none;border:none;cursor:pointer;font-size:12px;opacity:.65;padding:0 2px}
-  .planbtn:hover{opacity:1}
-  .delbtn{background:none;border:none;cursor:pointer;font-size:12px;opacity:.65;padding:0 2px}
-  .delbtn:hover{opacity:1;color:var(--bad)}
+  .gbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:4px 10px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}
+  .gbtn:hover{color:var(--ink);border-color:var(--dim)}
+  .delbtn:hover{color:var(--bad);border-color:var(--bad)}
+  .rowbtns{display:inline-flex;gap:5px}
+  .rbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;font-family:inherit}
+  .rbtn:hover{color:var(--ink);border-color:var(--dim)}
+  .rbtn-del:hover{color:var(--bad);border-color:var(--bad)}
   .gauge{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--panel2);width:90px;flex:none}
   .gauge i{display:block;height:100%}
   .fchip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:16px;padding:4px 13px;font-size:12px;cursor:pointer;margin-right:6px;font:inherit}
@@ -259,6 +262,19 @@
       <p style="color:var(--faint);font-size:12px;margin-bottom:12px">Создаст листы всех твоих городов с теми же командами, но с чистыми полями проверки.</p>
       <button class="abtn" id="w-go">Создать</button>
       <span id="w-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+    </div>
+  </div>
+  <div class="modal-ov" id="opmodal">
+    <div class="modal" style="width:min(480px,94vw)">
+      <button class="x" id="op-x">✕</button>
+      <h3>👥 Сменить оператора/модель — <span id="o-who"></span></h3>
+      <div class="mrow">
+        <div class="ff"><label>Никнейм</label><input id="o-nick" placeholder="никнейм"></div>
+        <div class="ff"><label>Опер (фамилия)</label><input id="o-opname" placeholder="фамилия оператора"></div>
+        <div class="ff"><label>Модель (фамилия)</label><input id="o-model" placeholder="фамилия модели"></div>
+      </div>
+      <button class="abtn" id="o-save">Сохранить</button>
+      <span id="o-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
     </div>
   </div>
   <div class="modal-ov" id="delmodal">
@@ -610,7 +626,7 @@ function render(){
         ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${x.s.score*12.5}%"></div></div></div>`
         : '<span style="color:var(--faint)">–</span>';
       const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/8">⭐</span>`:"") + `</span>`;
-      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td>${AUTH.edit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span style="color:var(--accent);font-weight:700">✎</span>`}</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?7:6}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}" style="border-left:4px solid ${esc(state.colors[g.producer]||"#566070")}">
@@ -619,8 +635,8 @@ function render(){
         <span class="arrow">${open?"▾":"▸"}</span><b>${esc(g.producer)}</b>
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
-        ${AUTH.edit?`<button class="planbtn" data-plan="${gkeyEsc}" title="план работ">📝</button><button class="delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑</button>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
+        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
       </div>
       <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
@@ -650,6 +666,29 @@ function render(){
     document.getElementById("d-city").textContent = parts[0] || "";
     document.getElementById("d-msg").textContent = "";
     openModal("delmodal");
+  });
+  document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const x = state.lastView[b.dataset.rop]; if (!x) return;
+    const ov = document.getElementById("opmodal");
+    ov.dataset.key = b.dataset.rop;
+    document.getElementById("o-who").textContent = (x.r.opName||x.r.opNick||"—")+" · "+x.r.city+(x.r.week?" · "+x.r.week:"");
+    document.getElementById("o-nick").value = x.r.opNick||"";
+    document.getElementById("o-opname").value = x.r.opName||"";
+    document.getElementById("o-model").value = x.r.model||"";
+    document.getElementById("o-msg").textContent = "";
+    openModal("opmodal");
+  });
+  document.querySelectorAll(".rbtn-del").forEach(b=>b.onclick=async (ev)=>{
+    ev.stopPropagation();
+    const x = state.lastView[b.dataset.rdel]; if (!x) return;
+    if (!confirm("Удалить смену "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+x.r._sheet+", строка "+x.r._row+")? Действие необратимо.")) return;
+    try {
+      const res = await jsonp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass });
+      if (res.error) throw new Error(res.error);
+      toast("✔ Смена удалена");
+      setTimeout(load, 600);
+    } catch(e){ toast("Ошибка: " + e.message, true); }
   });
   const mb = document.getElementById("morebtn");
   if (mb) mb.onclick = ()=>{ state.page++; render(); };
@@ -1029,6 +1068,25 @@ async function doDelTeam(all){
 }
 document.getElementById("d-one").onclick = ()=>doDelTeam(false);
 document.getElementById("d-all").onclick = ()=>doDelTeam(true);
+document.getElementById("op-x").onclick = ()=>closeModal("opmodal");
+document.getElementById("o-save").onclick = async ()=>{
+  const ov = document.getElementById("opmodal");
+  const x = state.lastView[ov.dataset.key]; if (!x) return;
+  const msg = document.getElementById("o-msg");
+  const nick = document.getElementById("o-nick").value.trim();
+  const opname = document.getElementById("o-opname").value.trim();
+  const model = document.getElementById("o-model").value.trim();
+  if (!nick && !opname && !model){ msg.textContent = "Заполни хотя бы одно поле"; return; }
+  msg.textContent = "Сохраняю…";
+  try {
+    const res = await jsonp({ action:"setoper", sheet: x.r._sheet, row: String(x.r._row), nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass });
+    if (res.error) throw new Error(res.error);
+    x.r.opNick = nick; x.r.opName = opname; x.r.model = model;
+    closeModal("opmodal");
+    toast("✔ Оператор/модель обновлены");
+    render();
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+};
 document.getElementById("w-go").onclick = async ()=>{
   const msg = document.getElementById("w-msg");
   const base = document.getElementById("w-base").value;
