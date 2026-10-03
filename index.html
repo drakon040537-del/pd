@@ -283,6 +283,7 @@
     <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Мониторинг</button>
     <button id="weekbtn" class="abtn2" style="display:none">🗓 Неделя</button>
+    <select id="viewas" class="abtn2" style="display:none" title="посмотреть глазами другого пользователя"></select>
     <button id="loginbtn" class="abtn2">🔑 Вход</button>
   </div>
   <header>
@@ -397,7 +398,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.21"
+  VER: "2026-10-03.22"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -445,7 +446,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, thumbCache:{} };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, thumbCache:{}, viewAs:null };
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"); }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
@@ -555,8 +556,63 @@ document.addEventListener("keydown", e=>{
   }
 });
 
+// ---------- режим «посмотреть глазами» (только для редактора) ----------
+function viewAsActive(){ return !!state.viewAs; }
+function filterViewData(){
+  if (!state.viewAs || state.viewAs.type!=="prod") return;
+  const name = state.viewAs.name;
+  state.rows = state.rows.filter(r=>r.producer===name);
+  const cities = [...new Set(state.rows.map(r=>r.city).filter(Boolean))];
+  if (cities.length) AUTH.cities = cities;
+  const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[1]===name) o[k]=m[k]; }); return o; };
+  state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
+  state.links = (state.links||[]).filter(l=>String(l.key).split("|")[1]===name);
+  const okRows = {}; state.rows.forEach(r=>okRows[r._sheet+"|"+r._row]=1);
+  const sc = {}; Object.keys(state.screens||{}).forEach(k=>{ if (okRows[k]) sc[k]=state.screens[k]; });
+  state.screens = sc;
+}
+function startViewAs(mode){ // "" — свой вид, "dir" — директор, "prod:Имя" — продюсер
+  if (!AUTH.edit && !viewAsActive()) return; // из режима «глазами» выходить можно всегда
+  if (!mode){
+    if (!viewAsActive()) return;
+    Object.assign(AUTH, realAuthSnap); // вернуть настоящий доступ
+    state.viewAs = null;
+    toast("Вернулся в свой режим");
+    load();
+    return;
+  }
+  if (!viewAsActive()) realAuthSnap = { user:AUTH.user, pass:AUTH.pass, edit:AUTH.edit, cities:AUTH.cities.slice(), prod:AUTH.prod, name:AUTH.name };
+  if (mode === "dir"){
+    state.viewAs = { type:"dir" };
+    AUTH.edit = false; AUTH.prod = false; AUTH.cities = ["all"];
+    toast("👁 Вид: Директор — только просмотр");
+  } else {
+    state.viewAs = { type:"prod", name: mode.slice(5) };
+    AUTH.edit = false; AUTH.prod = true;
+    toast("👁 Вид: " + state.viewAs.name + " — только просмотр");
+  }
+  filterViewData();
+  const lt = document.getElementById("livetext");
+  if (lt) lt.textContent = state.viewAs.type==="prod" ? "режим продюсера · видишь только свои команды" : "режим директора · только просмотр";
+  render(); updateLoginBtn(); updateViewAs();
+}
+function updateViewAs(){
+  const sel = document.getElementById("viewas");
+  if (!sel) return;
+  if (!AUTH.edit && !viewAsActive()){ sel.style.display = "none"; return; } // в режиме «глазами» селектор остаётся — им же выходим
+  const prods = [];
+  state.rows.forEach(r=>{ if (r.producer && !prods.includes(r.producer)) prods.push(r.producer); });
+  sel.innerHTML = ['<option value="">👁 вид: я (редактор)</option>']
+    .concat(prods.sort().map(p=>`<option value="prod:${esc(p)}">👤 как ${esc(p)}</option>`))
+    .concat(['<option value="dir">🎩 как Директор (просмотр)</option>']).join("");
+  sel.style.display = "";
+  sel.value = state.viewAs ? (state.viewAs.type==="dir" ? "dir" : "prod:"+state.viewAs.name) : "";
+}
+document.getElementById("viewas").onchange = function(){ startViewAs(this.value); };
+let realAuthSnap = null;
 function updateLoginBtn(){
-  document.getElementById("loginbtn").textContent = AUTH.ok() ? "👤 " + (AUTH.name || AUTH.user) + " · сменить вход" : "🔑 Вход";
+  const nm = state.viewAs ? (state.viewAs.type==="dir" ? "Директор (просмотр)" : state.viewAs.name + " (просмотр)") : (AUTH.name || AUTH.user);
+  document.getElementById("loginbtn").textContent = AUTH.ok() ? "👤 " + nm + (state.viewAs ? " · выйти из режима" : " · сменить вход") : "🔑 Вход";
   const ab = document.getElementById("addbtn");
   if (ab) ab.style.display = AUTH.edit ? "" : "none";
   const wb = document.getElementById("weekbtn");
@@ -1804,6 +1860,7 @@ function showGate(){
 }
 function hideGate(){ document.getElementById("gate").classList.add("hide"); }
 document.getElementById("loginbtn").onclick = ()=>{
+  if (viewAsActive()){ startViewAs(""); return; } // в режиме «глазами» кнопка сначала выводит из режима
   if (AUTH.ok() && anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Сменить вход?")) return;
   AUTH.clear(); showGate();
 };
@@ -2002,16 +2059,19 @@ function applyData(j){
   state.recs = j.recs || {};
   state.links = j.links || [];
   state.screens = j.screens || {};
+  filterViewData(); // если включён режим «глазами» — маскируем данные сразу после загрузки
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
   dot.className="dot-live";
   dot.title="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
   txt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
   updateLoginBtn();
+  updateViewAs();
   render();
   if (document.getElementById("a-prod")) updateProdList();
 }
 async function load(){
   if (!AUTH.ok()){ showGate(); return; }
+  hideGate(); // вход сохранён — после перезагрузки не показываем окно логина
   if (!CONFIG.API_KEY){
     const k=prompt("Введи ключ доступа к дашборду:");
     if(k){try{localStorage.setItem("dash_key",k);}catch(e){} CONFIG.API_KEY=k;}
@@ -2043,7 +2103,7 @@ async function load(){
     applyData(j);
     try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans })); }catch(e){}
     // проверка ролей не чаще раза в 5 минут (после логина уже была)
-    if (Date.now()-(state.lastCheck||0) > 5*60*1000){
+    if (Date.now()-(state.lastCheck||0) > 5*60*1000 && !viewAsActive()){ // в режиме «глазами» не переобновляем права
       state.lastCheck = Date.now();
       jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
         if (!res.error){
