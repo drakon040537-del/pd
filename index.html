@@ -148,7 +148,7 @@
 <body>
 <div class="gate" id="gate">
   <div class="gate-card">
-    <div class="logo">Проверка смен</div>
+    <div class="logo">Вход</div>
     <div class="sub">вход по личному логину — увидишь только свои города</div>
     <input id="l-user" placeholder="Логин" autocomplete="username">
     <input id="l-pass" type="password" placeholder="Пароль" autocomplete="current-password">
@@ -249,7 +249,7 @@ const AUTH = {
     this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; },
   canCity(c){ return this.cities.includes("all") || this.cities.includes(c); }
 };
-const state = Object.assign(state || {}, { focus:false, focusStart:0, focusBase:new Set(), notifs:[], unread:0 });
+
 
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
@@ -271,7 +271,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null, colors:{}, quick:"" };
+const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null, colors:{}, quick:"", notifs:[], unread:0 };
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
