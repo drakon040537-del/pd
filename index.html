@@ -297,6 +297,11 @@
       <p style="color:var(--faint);font-size:12px;margin-bottom:12px">Создаст листы всех твоих городов с теми же командами, но с чистыми полями проверки.</p>
       <button class="abtn" id="w-go">Создать</button>
       <span id="w-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+      <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px">
+        <div class="ff"><label>🗑 Удалить неделю (полностью, со всеми проверками)</label><select id="w-del" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font:inherit;font-size:13px"></select></div>
+        <button class="abtn2" id="w-del-go" style="margin-top:8px;color:var(--bad);border-color:var(--bad)">🗑 Удалить неделю</button>
+        <span id="w-delmsg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+      </div>
     </div>
   </div>
   <div class="modal-ov" id="opmodal">
@@ -1324,6 +1329,9 @@ document.getElementById("weekbtn").onclick = ()=>{
   const weeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   const sel = document.getElementById("w-base");
   sel.innerHTML = weeks.map(w=>`<option>${esc(w)}</option>`).join("") || "<option>— нет недель —</option>";
+  const del = document.getElementById("w-del");
+  del.innerHTML = weeks.map(w=>`<option>${esc(w)}</option>`).join("") || "<option value=\"\">— нет недель —</option>";
+  document.getElementById("w-delmsg").textContent = "";
   document.getElementById("w-name").value = nextWeekLabel(weeks[weeks.length-1] || "");
   openModal("weekmodal");
 };
@@ -1384,6 +1392,22 @@ document.getElementById("w-go").onclick = async ()=>{
     closeModal("weekmodal");
     toast("✔ Неделя " + name + " создана (" + (viaFallback ? "смотри вкладки" : res.created + " листов") + ")");
     setTimeout(load, 1000);
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+};
+document.getElementById("w-del-go").onclick = async ()=>{
+  const week = document.getElementById("w-del").value;
+  const msg = document.getElementById("w-delmsg");
+  if (!week){ msg.textContent = "Выбери неделю"; return; }
+  const nSheets = new Set(state.rows.filter(r=>r.week===week).map(r=>r._sheet)).size;
+  if (!confirm("Удалить неделю «"+week+"» во всех твоих городах ("+nSheets+" листов) со ВСЕМИ проверками? Действие необратимо!")) return;
+  msg.textContent = "Удаляю…";
+  try {
+    const res = await jsonp({ action:"delweek", week: week, user: AUTH.user, pass: AUTH.pass });
+    if (res.error) throw new Error(res.error);
+    if (state.week === week) state.week = "";
+    closeModal("weekmodal");
+    toast("✔ Удалено листов: " + (res.removed||0));
+    setTimeout(load, 800);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
 
