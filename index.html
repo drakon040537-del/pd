@@ -386,7 +386,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.12"
+  VER: "2026-10-03.13"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -401,14 +401,15 @@ const AUTH = {
   name: localStorage.getItem("dash_name") || "",
   edit: localStorage.getItem("dash_edit") === "1",
   cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
+  prod: localStorage.getItem("dash_prod") === "1",
   ok(){ return !!(this.user && this.pass); },
   set(u,p,edit,cities,name){ this.user=u; this.pass=p; this.edit=edit; this.cities=cities; this.name=name||u;
     try{ localStorage.setItem("dash_user",u); sessionStorage.setItem("dash_pass",p);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
     localStorage.setItem("dash_name",this.name); }catch(e){} // приватный режим iOS — хранилище может бросать
     return true; },
-  clear(){ try{ ["dash_user","dash_edit","dash_cities","dash_name"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
-    this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; }
+  clear(){ try{ ["dash_user","dash_edit","dash_cities","dash_name","dash_prod"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
+    this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; this.prod=false; }
 };
 
 
@@ -489,7 +490,7 @@ function hl(t){
   try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
 }
 function esc(s){ return (s||"").split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week) rs = rs.filter(r=>r.week===state.week); return rs; }
+function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week && tab!=="Сравнение") rs = rs.filter(r=>r.week===state.week); return rs; }
 
 // ---------- черновики ----------
 const dKey = r => "draft:" + r._sheet + ":" + r._row;
@@ -512,7 +513,7 @@ function anyDirty(){
   return [...document.querySelectorAll("tr.detail.open")].some(d=>rowDirty(d.dataset.d));
 }
 
-let toastTimer = null;
+let toastTimer = null, searchTimer = null;
 function toast(msg, isErr){
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -540,7 +541,7 @@ document.addEventListener("keydown", e=>{
 });
 
 function updateLoginBtn(){
-  document.getElementById("loginbtn").textContent = AUTH.ok ? "👤 " + (AUTH.name || AUTH.user) + " · сменить вход" : "🔑 Вход";
+  document.getElementById("loginbtn").textContent = AUTH.ok() ? "👤 " + (AUTH.name || AUTH.user) + " · сменить вход" : "🔑 Вход";
   const ab = document.getElementById("addbtn");
   if (ab) ab.style.display = AUTH.edit ? "" : "none";
   const wb = document.getElementById("weekbtn");
@@ -693,7 +694,15 @@ function render(){
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;state.page=1;render();};
   
   const fs=document.getElementById("f-search");
-  fs.oninput = e=>{state.search=e.target.value;state.page=1;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
+  fs.oninput = e=>{
+    state.search = e.target.value;
+    clearTimeout(searchTimer); // перерисовка не на каждый символ, а 200мс после паузы
+    searchTimer = setTimeout(()=>{
+      state.page = 1; render();
+      const f2=document.getElementById("f-search");
+      if (f2){ f2.focus(); f2.setSelectionRange(f2.value.length,f2.value.length); }
+    }, 200);
+  };
 
 
   const catCounts = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length}));
@@ -812,7 +821,7 @@ function render(){
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
         return `<div style="white-space:nowrap;font-size:12px"><b style="font-weight:600">${esc((x.r.updated||"").slice(0,11))}</b><div style="font-size:11px;color:var(--dim)">${lab} · след. ${nx}</div></div>`;
       })();
-      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${AUTH.edit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${AUTH.edit?`<span class="rowbtns"><input type="checkbox" class="chk" data-selk="${esc(x.r._sheet)}:${x.r._row}" title="выбрать для массовых действий"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn" data-cam="${key}" title="скрин смены">📷</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns">${x.r.screen?`<span class="cam" data-cam="${key}" title="скрин смены">📷</span>`:""}<span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
+      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${AUTH.edit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${AUTH.edit?`<span class="rowbtns"><input type="checkbox" class="chk" data-selk="${esc(x.r._sheet)}|${x.r._row}" title="выбрать для массовых действий"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn" data-cam="${key}" title="скрин смены">📷</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns">${x.r.screen?`<span class="cam" data-cam="${key}" title="скрин смены">📷</span>`:""}<span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?8:7}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}" style="border-left:4px solid ${esc(state.colors[g.producer]||"#566070")}">
@@ -820,7 +829,7 @@ function render(){
         <span class="cdot" data-prod="${esc(g.producer)}" style="background:${esc(state.colors[g.producer]||"#566070")}"></span>
         <span class="arrow">${open?"▾":"▸"}</span><b>${esc(g.producer)}</b>
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
-        ${(state.links||[]).filter(l=>l.key===g.city+"|"+g.producer).map(l=>`<a class="gbtn" href="${esc(l.url)}" target="_blank" rel="noopener" title="открыть ${esc(l.title)}">${esc(l.title||"🔗")}</a>`).join("")}
+        ${(state.links||[]).filter(l=>l.key===g.city+"|"+g.producer && /^https?:\/\//i.test(l.url||"")).map(l=>`<a class="gbtn" href="${esc(l.url)}" target="_blank" rel="noopener" title="открыть ${esc(l.title)}">${esc(l.title||"🔗")}</a>`).join("")}
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
         ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру">＋ мониторинг</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все команды (мониторинги) проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
@@ -913,7 +922,7 @@ function render(){
     if (c.checked) state.selSet.add(k); else state.selSet.delete(k);
     render();
   });
-  const selItems = () => state.lastView.filter(x=>state.selSet.has(x.r._sheet+":"+x.r._row));
+  const selItems = () => state.lastView.filter(x=>state.selSet.has(x.r._sheet+"|"+x.r._row));
   const selTouch = document.getElementById("sel-touch");
   if (selTouch) selTouch.onclick = async ()=>{
     const items = selItems(); if (!items.length) return;
@@ -983,7 +992,7 @@ function render(){
       if (res.error) throw new Error(res.error);
       toast("✔ Мониторинг удалён");
       setTimeout(load, 600);
-    } catch(e){ toast("Ошибка: " + e.message, true); }
+    } catch(e){ toast("Ошибка: " + e.message + " — мониторинг мог быть уже удалён, обновляю данные", true); setTimeout(load, 500); }
   });
   const mb = document.getElementById("morebtn");
   if (mb) mb.onclick = ()=>{ state.page++; render(); };
@@ -1048,7 +1057,7 @@ function render(){
       try {
         const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass });
         if (res.error) throw new Error(res.error);
-        x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
+        x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
         toast("✔ Отмечено проверенной сегодня");
         render();
       } catch(e){ toast("Ошибка: " + e.message, true); }
@@ -1285,14 +1294,16 @@ function gotoRow(goto){
   state.page = 999;
   state.grpOpen[r.city+"|"+(r.producer||"—")] = true;
   render();
-  setTimeout(()=>{
+  // прыжок к строке: ждём завершения рендера (может занять больше 60мс)
+  let jumpTries = 0;
+  (function jump(){
     const idx = state.lastView.findIndex(x=>x.r._sheet===r._sheet && String(x.r._row)===String(r._row));
-    if (idx < 0) return;
+    if (idx < 0){ if (++jumpTries < 20) setTimeout(jump, 60); return; }
     const det = document.querySelector(`tr.detail[data-d="${idx}"]`);
     const rowTr = document.querySelector(`tr.r[data-i="${idx}"]`);
     if (det) det.classList.add("open");
     if (rowTr) rowTr.scrollIntoView({behavior:"smooth", block:"center"});
-  }, 60);
+  })();
 }
 
 // ---------- «Сводка» (для смотрящего) ----------
@@ -1485,8 +1496,12 @@ function jsonp(params, _retry, timeoutMs){
     function cleanup(){ clearTimeout(to); delete window[cb]; if (s) s.remove(); }
     // Apps Script иногда отвечает дольше 10с на холодном старте — один автоповтор
     function retryOrReject(kind){
-      if (!_retry){ jsonp(params, true, timeoutMs).then(resolve, reject); return; }
-      reject(new Error(kind==="JSONP_FAIL" ? "JSONP_FAIL" : "нет ответа от таблицы (таймаут)"));
+      // add и delrow НЕ ретраятся: повтор после таймаута может создать дубль
+      // или удалить уже другую строку (строки ниже сдвигаются после удаления)
+      const a = String(params.action || "");
+      const noRetry = (a === "add" || a === "delrow");
+      if (!_retry && !noRetry){ jsonp(params, true, timeoutMs).then(resolve, reject); return; }
+      reject(new Error(kind==="JSONP_FAIL" ? "JSONP_FAIL" : noRetry ? "нет ответа от таблицы — операция могла выполниться" : "нет ответа от таблицы (таймаут)"));
     }
     document.head.appendChild(s);
   });
@@ -1498,16 +1513,25 @@ async function writePOST(params){
 }
 
 function normLinks(text){
-  // строка → «Название = URL»: без протокола добавляем https://, голая ссылка получает домен как название
+  // строка → «Название = URL»: нормализуем и голую ссылку, и URL справа от «=»
+  // (раньше «CB = chaturbate.com/x» уходил на сервер без протокола — ссылка умирала).
+  // ВАЖНО: голый URL с «=» в параметрах распознаём ДО разбора «Название = URL»,
+  // иначе «https://site.com/x?y=1» режется по «=».
   return String(text||"").split("\n").map(l=>{
     let t = l.trim(); if (!t) return "";
     if (!/^https?:\/\//i.test(t) && /^[\w.-]+\.[a-z]{2,}([\/?#]\S*)?$/i.test(t)) t = "https://" + t;
     if (/^https?:\/\//i.test(t)) return t.replace(/^https?:\/\//i,"").split("/")[0] + " = " + t;
+    const eq = t.match(/^(.+?)\s*=\s*(\S+)$/);
+    if (eq){
+      let url = eq[2];
+      if (!/^https?:\/\//i.test(url) && /^[\w.-]+\.[a-z]{2,}([\/?#]\S*)?$/i.test(url)) url = "https://" + url;
+      return eq[1].trim() + " = " + url;
+    }
     return t;
   }).filter(Boolean).join("\n");
 }
 function linksArrFromText(key, text){
-  return text.split("\n").map(l=>{ const m = l.match(/^(.+?)\s*=\s*(\S+)$/); return m ? { key: key, title: m[1].trim(), url: m[2] } : null; }).filter(Boolean);
+  return text.split("\n").map(l=>{ const m = l.match(/^(.+?)\s*=\s*(\S+)$/); return m ? { key: key, title: m[1].trim(), url: m[2] } : null; }).filter(Boolean).filter(l=>/^https?:\/\//i.test(l.url));
 }
 async function saveRow(x, key){
   if (!AUTH.edit){ toast("Править может только редактор", true); return; }
@@ -1546,7 +1570,7 @@ async function saveRow(x, key){
       x.r.obs = document.getElementById("ed"+key+"_comment").value;
       x.r.scoreM = document.getElementById("ed"+key+"_score").value;
       x.r.verdictM = document.getElementById("ed"+key+"_verdict").value;
-      x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
+      x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
     }
     if (linksChanged){
       const lr = await jsonp({ action:"setlinks", key: lkey, text: linksNew, user: AUTH.user, pass: AUTH.pass });
@@ -1783,7 +1807,7 @@ function showGate(){
 }
 function hideGate(){ document.getElementById("gate").classList.add("hide"); }
 document.getElementById("loginbtn").onclick = ()=>{
-  if (AUTH.ok && anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Сменить вход?")) return;
+  if (AUTH.ok() && anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Сменить вход?")) return;
   AUTH.clear(); showGate();
 };
 document.getElementById("l-go").onclick = doLogin;
@@ -1812,6 +1836,7 @@ async function doLogin(){
     }
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
     AUTH.prod = !!res.prod;
+    try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); }catch(e){}
     state.lastCheck = Date.now();
     try{ localStorage.setItem("dash_last_user",u); localStorage.setItem("dash_pass_keep",p); }catch(e){} // чекбокс убрали — вход запоминаем всегда
     historyClean();
@@ -1973,7 +1998,7 @@ function applyData(j){
   if (document.getElementById("a-prod")) updateProdList();
 }
 async function load(){
-  if (!AUTH.ok){ showGate(); return; }
+  if (!AUTH.ok()){ showGate(); return; }
   if (!CONFIG.API_KEY){
     const k=prompt("Введи ключ доступа к дашборду:");
     if(k){try{localStorage.setItem("dash_key",k);}catch(e){} CONFIG.API_KEY=k;}
@@ -2010,6 +2035,8 @@ async function load(){
       jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
         if (!res.error){
           AUTH.set(AUTH.user, AUTH.pass, !!res.editor, res.cities || [], res.name || AUTH.user);
+          AUTH.prod = !!res.prod;
+          try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); }catch(e){}
           updateLoginBtn();
           render();
         }
@@ -2034,13 +2061,13 @@ setTimeout(function(){
   const sp = document.getElementById("splash");
   if (!sp || sp.classList.contains("hide")) return;
   if (state.rows && state.rows.length){ sp.classList.add("hide"); return; } // данные уже пришли — тихо убрать заставку
-  if (!AUTH.ok){ showGate(); return; }
+  if (!AUTH.ok()){ showGate(); return; }
   sp.querySelector(".stxt").innerHTML = 'Данные грузятся дольше обычного… <button class="gbtn" id="spl-retry" style="margin-left:8px">повторить</button>';
   const rb = document.getElementById("spl-retry");
   if (rb) rb.onclick = function(){ sp.querySelector(".stxt").textContent = "Загружаем данные…"; load(); };
 }, 15000);
 load();
-setInterval(()=>{ if (AUTH.ok && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
+setInterval(()=>{ if (AUTH.ok() && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
 </script>
 </body>
 </html>
