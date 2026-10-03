@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://script.google.com">
 <title>Проверка смен — продюсеры</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 <style>
@@ -387,7 +389,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0 };
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
 
@@ -1438,7 +1440,23 @@ async function doLogin(){
   }
   document.getElementById("l-msg").textContent = "Проверяю…";
   try {
-    const res = await jsonp({ action:"check", user:u, pass:p });
+    const res = await jsonp({ action:"login", user:u, pass:p });
+    if (res.error === "unknown action"){
+      // старый скрипт без action=login — прежний путь (check + read)
+      const chk = await jsonp({ action:"check", user:u, pass:p });
+      if (chk.error || !chk.ok){
+        if (chk.error === "forbidden"){ localStorage.removeItem("dash_key"); CONFIG.API_KEY = ""; }
+        document.getElementById("l-msg").textContent = chk.error==="forbidden" ? "Неверный ключ доступа — открой ссылку с ?key=... или введи ключ заново" : (chk.error || "Неверный логин или пароль");
+        return;
+      }
+      AUTH.set(u, p, !!chk.editor, chk.cities || [], chk.name || u);
+      state.lastCheck = Date.now();
+      historyClean();
+      hideGate(); updateLoginBtn();
+      toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
+      load();
+      return;
+    }
     if (res.error || !res.ok){
       if (res.error === "forbidden"){ localStorage.removeItem("dash_key"); CONFIG.API_KEY = ""; }
       document.getElementById("l-msg").textContent =
@@ -1447,15 +1465,12 @@ async function doLogin(){
       return;
     }
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
-    try {
-      const q2 = new URLSearchParams(location.search);
-      q2.delete("u"); q2.delete("p");
-      history.replaceState(null, "", location.pathname + "?" + q2.toString());
-    } catch(e){}
+    state.lastCheck = Date.now();
+    historyClean();
+    applyData(res);
     hideGate();
     updateLoginBtn();
     toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
-    load();
   } catch(e){
     const m = String(e && e.message || e);
     document.getElementById("l-msg").textContent = (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0)
@@ -1463,6 +1478,8 @@ async function doLogin(){
       : "Не удалось проверить: " + m;
   }
 }
+
+function historyClean(){ try { const q2 = new URLSearchParams(location.search); q2.delete("u"); q2.delete("p"); history.replaceState(null, "", location.pathname + "?" + q2.toString()); } catch(e){} }
 
 function isFresh(r){
   if (!r.updated) return false;
@@ -1566,6 +1583,18 @@ async function uploadScreen(blob, x){
   } catch(err){ toast("Скрин не удался: " + err.message, true); }
 }
 
+function applyData(j){
+  state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
+  state.colors = j.colors || {};
+  state.plans = j.plans || {};
+  const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
+  dot.className="dot-live";
+  dot.title="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
+  txt.textContent="";
+  updateLoginBtn();
+  render();
+  if (document.getElementById("a-prod")) updateProdList();
+}
 async function load(){
   if (!AUTH.ok){ showGate(); return; }
   if (!CONFIG.API_KEY){
@@ -1574,28 +1603,36 @@ async function load(){
     else{ return; }
   }
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
+  // мгновенная отрисовка из кэша прошлой загрузки (свежие данные подтянутся следом)
+  try{
+    const cached = JSON.parse(sessionStorage.getItem("dash_cache") || "null");
+    if (cached && cached.user===AUTH.user && cached.rows && cached.rows.length && !state.rows.length){
+      state.rows = cached.rows; state.colors = cached.colors || {}; state.plans = cached.plans || {};
+      dot.className = "dot-off";
+      txt.textContent = "кэш " + new Date(cached.ts).toLocaleTimeString("ru-RU") + " — обновляю…";
+      render();
+      if (document.getElementById("a-prod")) updateProdList();
+    }
+  }catch(e){}
   try{
     const j=await jsonp({action:"read", user:AUTH.user, pass:AUTH.pass});
     if(j.error)throw new Error(j.error);
-    state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
-    state.colors = j.colors || {};
-    state.plans = j.plans || {};
-    dot.className="dot-live";
-    dot.title="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
-    txt.textContent="";
-    updateLoginBtn();
-    render();
-    jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
-      if (!res.error){
-        AUTH.set(AUTH.user, AUTH.pass, !!res.editor, res.cities || [], res.name || AUTH.user);
-        updateLoginBtn();
-        render();
-      }
-    }).catch(()=>{});
-    if (document.getElementById("a-prod")) updateProdList();
+    applyData(j);
+    try{ sessionStorage.setItem("dash_cache", JSON.stringify({ user:AUTH.user, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans })); }catch(e){}
+    // проверка ролей не чаще раза в 5 минут (после логина уже была)
+    if (Date.now()-(state.lastCheck||0) > 5*60*1000){
+      state.lastCheck = Date.now();
+      jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
+        if (!res.error){
+          AUTH.set(AUTH.user, AUTH.pass, !!res.editor, res.cities || [], res.name || AUTH.user);
+          updateLoginBtn();
+          render();
+        }
+      }).catch(()=>{});
+    }
   }catch(e){
     dot.className="dot-off";
-    txt.textContent="Ошибка загрузки: "+e.message+(String(e.message)==="JSONP_FAIL"?" — нет связи с Apps Script, проверь сеть.":". Возможно, нужно войти в Google-аккаунт в этом браузере.");
+    txt.textContent="Ошибка загрузки: "+e.message+(String(e.message)==="JSONP_FAIL"?" — нет связи с Apps Script, проверь сеть.":". Если повторяется — проверь сеть и обнови страницу.");
   }
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("hide")) sp.classList.add("hide");
