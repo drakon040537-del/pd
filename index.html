@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="https://script.google.com">
-<title>Проверка смен — продюсеры</title>
+<title>Мониторинг команд — продюсеры</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 <style>
   :root{
@@ -272,12 +272,12 @@
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
     <span class="spacer"></span>
-    <button id="addbtn" class="abtn2" style="display:none">＋ Смена</button>
+    <button id="addbtn" class="abtn2" style="display:none">＋ Мониторинг</button>
     <button id="weekbtn" class="abtn2" style="display:none">🗓 Неделя</button>
     <button id="loginbtn" class="abtn2">🔑 Вход</button>
   </div>
   <header>
-    <h1>Проверка смен — дашборд</h1>
+    <h1>Мониторинг команд — дашборд</h1>
     <span class="week" id="weeklabel"></span>
   </header>
   <div class="layout">
@@ -291,7 +291,7 @@
   <div class="modal-ov" id="addmodal">
     <div class="modal">
       <button class="x" id="add-x">✕</button>
-      <h3>＋ Новая смена</h3>
+      <h3>＋ Новый мониторинг</h3>
       <div class="mrow">
         <div class="ff"><label>Город</label><select id="a-city"><option>Томск</option><option>Новосибирск</option><option>Онлайн</option></select></div>
         <div class="ff"><label>Продюсер</label><select id="a-prod"></select></div>
@@ -342,8 +342,8 @@
   <div class="modal-ov" id="cammodal">
     <div class="modal" style="width:min(900px,96vw)">
       <button class="x" id="cam-x">✕</button>
-      <h3>📷 Скрин смены</h3>
-      <img id="cam-img" style="width:100%;border-radius:8px" alt="скрин смены">
+      <h3>📷 Скрин команды</h3>
+      <img id="cam-img" style="width:100%;border-radius:8px" alt="скрин команды">
       <a id="cam-link" href="#" target="_blank" style="color:var(--accent);font-size:12.5px">открыть оригинал в новой вкладке ↗</a>
     </div>
   </div>
@@ -379,7 +379,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.9"
+  VER: "2026-10-03.10"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -621,19 +621,19 @@ function render(){
       const pWs = pSt.filter(x=>x.score!==null);
       const dl = (c,p,goodUp)=>{ const d=c-p; if(!d) return ""; const up=d>0; const good = goodUp ? up : !up; return `<span class="delta ${good?"up":"down"}">${up?"▲":"▼"}${Math.abs(d)}</span>`; };
       tileDelta = { ok: dl(withScore.filter(x=>x.verdict==="норма").length, pWs.filter(x=>x.verdict==="норма").length, true), warn: dl(withScore.filter(x=>x.verdict==="замечание").length, pWs.filter(x=>x.verdict==="замечание").length, false), bad: dl(withScore.filter(x=>x.verdict==="критично").length, pWs.filter(x=>x.verdict==="критично").length, false) };
-      const pAvg = pWs.length ? pWs.reduce((a,x)=>a+x.score,0)/pWs.length*12.5 : null;
-      const cAvg = withScore.length ? withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5 : null;
+      const pAvg = pWs.length ? pWs.reduce((a,x)=>a+x.score,0)/pWs.length*100/9 : null;
+      const cAvg = withScore.length ? withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/9 : null;
       if (pAvg!==null && cAvg!==null){ const d=Math.round(cAvg-pAvg); tileDelta.avg = `<span class="delta ${d>=0?"up":"down"}">${d>0?"▲":"▼"}${Math.abs(d)}%</span>`; }
     }
   }
   document.getElementById("content").innerHTML = `
     <div class="tiles">
-      <div class="tile"><div class="n">${withScore.length}</div><div class="l">смен проверено</div></div>
+      <div class="tile"><div class="n">${withScore.length}</div><div class="l">команд проверено</div></div>
       <div class="tile click ${state.quick==="none"?"on":""}" data-q="none"><div class="n" style="color:var(--faint)">${rows.length - withScore.length}</div><div class="l">не проверено</div></div>
       <div class="tile ok click ${state.quick==="ok"?"on":""}" data-q="ok"><div class="n">${withScore.filter(x=>x.verdict==="норма").length}</div><div class="l">нормально${tileDelta.ok||""}</div></div>
       <div class="tile warn click ${state.quick==="warn"?"on":""}" data-q="warn"><div class="n">${withScore.filter(x=>x.verdict==="замечание").length}</div><div class="l">есть замечания${tileDelta.warn||""}</div></div>
       <div class="tile bad click ${state.quick==="crit"?"on":""}" data-q="crit"><div class="n">${withScore.filter(x=>x.verdict==="критично").length}</div><div class="l">критично${tileDelta.bad||""}</div></div>
-      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5)+"%":"–"}</div><div class="l">средняя оценка</div></div>
+      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/9)+"%":"–"}</div><div class="l">средняя оценка</div></div>
     </div>
     <div class="grid">
       <div class="card"><h2>Топ проблем по категориям</h2><div id="cats"></div></div>
@@ -641,7 +641,7 @@ function render(){
                             : '<div class="card"><h2>Вердикты</h2><div id="donut"></div></div>'}
     </div>
     <div class="card">
-      <h2>Смены <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
+      <h2>Команды <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
       <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем городам и неделям…" style="width:290px" value="${esc(state.search)}">
         <span class="count" id="f-count"></span>
       </div>
@@ -653,7 +653,7 @@ function render(){
     withScore.filter(x=>x.verdict==="норма").length,
     withScore.filter(x=>x.verdict==="замечание").length,
     withScore.filter(x=>x.verdict==="критично").length];
-  const avgVal = withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5) : null;
+  const avgVal = withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/9) : null;
   const prevT = state.tileVals || [];
   document.querySelectorAll("#content .tile .n").forEach(function(el, i){
     const isAvg = i === 5;
@@ -717,7 +717,7 @@ function render(){
       ${segs.map(s=>{const f=s.n/tot*100;const o=acc;acc+=f;
         return `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${s.color}" stroke-width="6" stroke-dasharray="${f.toFixed(2)} ${(100-f).toFixed(2)}" stroke-dashoffset="${(-o).toFixed(2)}" transform="rotate(-90 21 21)"></circle>`;}).join("")}
       <text x="21" y="20.5" text-anchor="middle" fill="#e8eaf0" font-size="7" font-weight="700">${tot}</text>
-      <text x="21" y="26.5" text-anchor="middle" fill="#6b7280" font-size="3.2">смен</text></svg>`;
+      <text x="21" y="26.5" text-anchor="middle" fill="#6b7280" font-size="3.2">команд</text></svg>`;
     document.getElementById("donut").innerHTML = svg +
       `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--dim)">${segs.map(s=>`<div><span class="dot" style="background:${s.color}"></span> ${VLBL[s.v]||s.v}: <b style="color:var(--ink)">${s.n}</b></div>`).join("")}</div>`;
   }
@@ -779,22 +779,22 @@ function render(){
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки на сайты (строки: Название = URL)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/...">${esc((state.links||[]).filter(l=>l.key===x.r.city+"|"+x.r.producer).map(l=>l.title+" = "+l.url).join("\n"))}</textarea></div>
-        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/8</option>`).join("")}</select></div>
+        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
-        <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие смены команды</button>
+        <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие проверки команды</button>
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
         <button class="abtn2" id="lks${key}" style="margin-left:10px">💾 Ссылки</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
         : `<div class="dgrid">${readDet}</div>` +
-          (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
+          (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин команды">` : "");
       const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(x.r.city)}${!state.week&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
-        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${x.s.score*12.5}%"></div></div></div>`
+        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/9</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${(x.s.score*100/9).toFixed(1)}%"></div></div></div>`
         : '<span style="color:var(--faint)">–</span>';
-      const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/8">⭐</span>`:"") + `</span>`;
+      const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/9">⭐</span>`:"") + `</span>`;
       const updCell = (()=>{ const u = dueInfo(x.r); if (!u) return '<span style="color:var(--faint);font-size:11.5px">—</span>';
         const nx = String(u.nextDay).padStart(2,"0")+"."+String(u.nextMonth).padStart(2,"0");
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
@@ -811,7 +811,7 @@ function render(){
         ${(state.links||[]).filter(l=>l.key===g.city+"|"+g.producer).map(l=>`<a class="gbtn" href="${esc(l.url)}" target="_blank" rel="noopener" title="открыть ${esc(l.title)}">${esc(l.title||"🔗")}</a>`).join("")}
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
-        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру">＋ мониторинг</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все смены команды проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
+        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру">＋ мониторинг</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все команды (мониторинги) проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
       </div>
       <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
@@ -844,7 +844,7 @@ function render(){
   });
   document.querySelectorAll(".addg").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
-    if (!AUTH.edit){ toast("Добавлять смены может только редактор", true); return; }
+    if (!AUTH.edit){ toast("Добавлять команды может только редактор", true); return; }
     const parts = b.dataset.addg.split("|");
     document.getElementById("a-city").value = parts[0] || "Томск";
     updateProdList();
@@ -861,7 +861,7 @@ function render(){
     if (!AUTH.edit){ toast("Отмечать может только редактор", true); return; }
     const g = groups.find(x=>x.key===b.dataset.tcall);
     if (!g || !g.items.length) return;
-    if (!confirm("Отметить проверенными сегодня все смены команды «"+g.producer+"» ("+g.items.length+" шт)?")) return;
+    if (!confirm("Отметить проверенными сегодня все мониторинги команды «"+g.producer+"» ("+g.items.length+" шт)?")) return;
     let ok=0;
     for (const it of g.items){
       try {
@@ -869,7 +869,7 @@ function render(){
         if (!res.error){ ok++; it.x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; }
       } catch(e){}
     }
-    toast(ok===g.items.length ? "✔ Отмечено: "+ok+" смен" : "Отмечено "+ok+" из "+g.items.length, ok!==g.items.length);
+    toast(ok===g.items.length ? "✔ Отмечено: "+ok+" команд" : "Отмечено "+ok+" из "+g.items.length, ok!==g.items.length);
     render();
   });
   document.querySelectorAll("[data-stc]").forEach(b=>b.onclick=async (ev)=>{
@@ -965,11 +965,11 @@ function render(){
   document.querySelectorAll(".rbtn-del").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
     const x = state.lastView[b.dataset.rdel]; if (!x) return;
-    if (!confirm("Удалить смену "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+x.r._sheet+", строка "+x.r._row+")? Действие необратимо.")) return;
+    if (!confirm("Удалить мониторинг "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+x.r._sheet+", строка "+x.r._row+")? Действие необратимо.")) return;
     try {
       const res = await jsonp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass });
       if (res.error) throw new Error(res.error);
-      toast("✔ Смена удалена");
+      toast("✔ Мониторинг удалён");
       setTimeout(load, 600);
     } catch(e){ toast("Ошибка: " + e.message, true); }
   });
@@ -1079,7 +1079,7 @@ function renderOperators(rows, st){
       ${ops.length ? `<table><thead><tr><th>Оператор</th><th>Ник CB</th><th>Проверок</th><th>Средняя оценка</th><th>Тренд</th><th>Критичных</th><th>Города</th><th>Продюсеры</th></tr></thead><tbody>${
         ops.map((o,i)=>{
           const nick = o.rows.find(x=>x.r.opNick);
-          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*12.5)+"% ("+o.avg.toFixed(1)+"/8)":"–"}</td>
+          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*100/9)+"% ("+o.avg.toFixed(1)+"/9)":"–"}</td>
           <td>${(()=>{ const pts=o.perWeek.map((v,i)=>{ if(v===null) return null; const x=8+i*(62/Math.max(1,o.perWeek.length-1||1)); const y=20-v*2.2; return x+","+y.toFixed(1); }).filter(Boolean); const arrow = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═"; const ac = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)"; return pts.length>1?`<svg class="spark" width="70" height="22"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg> <span style="color:${ac}">${arrow}</span>`:`<span style="color:var(--faint)">—</span>`; })()}</td>
           <td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
           <tr class="opdet" data-o="${i}" style="display:none"><td colspan="7"><div style="padding:10px 6px">${
@@ -1155,7 +1155,7 @@ function renderSchedule(){
     if (!list.length) return "";
     const groups = [];
     list.forEach(x=>{ const p = x.r.producer || "—"; const g = groups.find(g=>g.p===p); if (g) g.items.push(x); else groups.push({p, items:[x]}); });
-    return groups.map(g=>`<div class="sgrp"><b>${esc(g.p)}</b>${g.items.length>1&&AUTH.edit?`<button class="sbtn allday" data-grptouch="${g.items.map(x=>x.r._sheet+"|"+x.r._row).join(";")}" title="отметить все смены продюсера проверенными сегодня">✅ все</button>`:""}</div>${g.items.map(schedChip).join("")}`).join("");
+    return groups.map(g=>`<div class="sgrp"><b>${esc(g.p)}</b>${g.items.length>1&&AUTH.edit?`<button class="sbtn allday" data-grptouch="${g.items.map(x=>x.r._sheet+"|"+x.r._row).join(";")}" title="отметить все команды продюсера проверенными сегодня">✅ все</button>`:""}</div>${g.items.map(schedChip).join("")}`).join("");
   };
   const col = (title, list, cls, key) => `<div class="sday ${cls||""}"><h3>${title} <span class="cnt">${list.length||""}</span>${key&&list.length&&AUTH.edit?` <button class="sbtn allday" data-daytouch="${key}" title="отметить всех в колонке проверенными сегодня">✅ всё</button>`:""}</h3>${colGroups(list)}</div>`;
   document.getElementById("content").innerHTML = `
@@ -1207,7 +1207,7 @@ function renderSchedule(){
   document.querySelectorAll("[data-grptouch]").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
     const rows = b.dataset.grptouch.split(";").map(s=>s.split("|"));
-    if (!confirm("Отметить проверенными сегодня все смены продюсера ("+rows.length+" шт)?")) return;
+    if (!confirm("Отметить проверенными сегодня все команды продюсера ("+rows.length+" шт)?")) return;
     let ok=0;
     for (const r of rows){
       try{ const res=await jsonp({action:"touch", sheet:r[0], row:r[1], user:AUTH.user, pass:AUTH.pass}); if(!res.error){ ok++; const rr=state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if(rr) rr.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; } }catch(e){}
@@ -1260,11 +1260,11 @@ document.addEventListener("click", e=>{
   closeWeekDrop();
 });
 
-// переход из «Расписания» к правкам конкретной смены
+// переход из «Расписания» к правкам конкретного мониторинга
 function gotoRow(goto){
   const parts = goto.split("|");
   const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
-  if (!r){ toast("Смена не найдена — обнови данные", true); return; }
+  if (!r){ toast("Мониторинг не найден — обнови данные", true); return; }
   state.tab = r.city; state.week = r.week; state.search = ""; state.quick = ""; state.producer = "";
   state.page = 999;
   state.grpOpen[r.city+"|"+(r.producer||"—")] = true;
@@ -1314,7 +1314,7 @@ function renderSummary(rows, st){
         const W=560,H=110,P=24;
         const pts = weeks.map(w=>{ const rs = allR.filter(r=>r.week===w); const ss = rs.map(rowStats).filter(x=>x.score!==null); return { w, avg: ss.length? ss.reduce((a,x)=>a+x.score,0)/ss.length : null }; });
         const valid = pts.filter(x=>x.avg!==null);
-        if (!valid.length) return '<div class="empty">Нет проверенных смен</div>';
+        if (!valid.length) return '<div class="empty">Нет проверенных команд</div>';
         const xs = i => valid.length>1 ? P + i*((W-2*P)/(valid.length-1)) : W/2;
         const ys = v => (H-20-v*11).toFixed(1);
         const pl = valid.map((p,i)=>xs(i).toFixed(1)+","+ys(p.avg)).join(" ");
@@ -1334,7 +1334,7 @@ function renderSummary(rows, st){
         ${topCats.map(x=>`<div class="bar-row"><span class="lbl">${x.n}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.c/mx*100)}%;background:${x.c>=mx*0.8?"var(--bad)":x.c>=mx*0.4?"#d67f42":"var(--ok)"}"></div></div><span class="val">${x.c}</span></div>`).join("")}
       </div>
       <div class="card"><h2>Команды без проверок</h2>
-        ${nogoods.length?nogoods.map(g=>`<div class="drow"><b>${esc(g.producer)}</b><span style="color:var(--dim)">${esc(g.city)} · смен: ${g.tot}</span></div>`).join(""):`<div class="empty">Все команды проверены 🎉</div>`}
+        ${nogoods.length?nogoods.map(g=>`<div class="drow"><b>${esc(g.producer)}</b><span style="color:var(--dim)">${esc(g.city)} · команд: ${g.tot}</span></div>`).join(""):`<div class="empty">Все команды проверены 🎉</div>`}
       </div>
     </div>`;
   document.querySelectorAll("[data-cw]").forEach(td=>td.onclick=()=>{ state.week=td.dataset.cw; state.tab=td.dataset.cc; state.search=""; state.quick=""; state.page=1; render(); toast("Фильтр: "+td.dataset.cc+" · "+td.dataset.cw); });
@@ -1395,12 +1395,12 @@ function renderCompare(rows, st){
   const A = agg(a), B = agg(b);
   const fmt = v => v===null ? "–" : v;
   const rowsM = [
-    ["смен всего", A.total, B.total],
+    ["команд всего", A.total, B.total],
     ["проверено", A.checked, B.checked],
     ["🟢 нормально", A.ok, B.ok, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
     ["🟡 есть замечания", A.warn, B.warn, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
     ["🔴 критично", A.bad, B.bad, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
-    ["средняя оценка", A.avg===null?null:Math.round(A.avg*12.5)+"%", B.avg===null?null:Math.round(B.avg*12.5)+"%"]
+    ["средняя оценка", A.avg===null?null:Math.round(A.avg*100/9)+"%", B.avg===null?null:Math.round(B.avg*100/9)+"%"]
   ];
   const catRows = CATS.map((n,i)=>({ n, a: rows.filter(r=>r.week===a && rowStats(r).st[i]==="bad").length, b: rows.filter(r=>r.week===b && rowStats(r).st[i]==="bad").length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
   document.getElementById("content").innerHTML = `
@@ -1429,8 +1429,8 @@ function renderCompare(rows, st){
 
 async function dupRow(x, key){
   const targets = state.rows.filter(r=>r._sheet===x.r._sheet && r.producer===x.r.producer && r.opNick===x.r.opNick && r._row!==x.r._row);
-  if (!targets.length){ toast("У этой команды нет других смен на неделе", true); return; }
-  if (!confirm("Скопировать замечания на " + targets.length + " других смен команды?")) return;
+  if (!targets.length){ toast("У этой команды нет других проверок на неделе", true); return; }
+  if (!confirm("Скопировать замечания на " + targets.length + " других проверок команды?")) return;
   let done = 0, fb = 0;
   for (const t of targets){
     const params = { action:"save", sheet:t._sheet, row:String(t._row), user:AUTH.user, pass:AUTH.pass };
@@ -1451,7 +1451,7 @@ async function dupRow(x, key){
       done++;
     } catch(e){}
   }
-  toast("✔ Скопировано в " + done + " смен" + (fb ? " (резервный канал — без подтверждения)" : ""));
+  toast("✔ Скопировано в " + done + " проверок" + (fb ? " (резервный канал — без подтверждения)" : ""));
   setTimeout(load, 800);
 }
 
@@ -1520,7 +1520,7 @@ async function saveRow(x, key){
   } finally { btn.disabled = false; }
 }
 
-// ---------- форма новой смены ----------
+// ---------- форма нового мониторинга ----------
 function updateProdList(){
   const city = document.getElementById("a-city").value;
   const list = [...new Set(state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean))].sort();
@@ -1543,7 +1543,7 @@ document.getElementById("a-prod").onchange = e=>{
   document.getElementById("a-newrow").style.display = e.target.value==="__new" ? "" : "none";
 };
 document.getElementById("addbtn").onclick = ()=>{
-  if (!AUTH.edit){ toast("Добавлять смены может только редактор — войди (🔑)", true); return; }
+  if (!AUTH.edit){ toast("Добавлять команды может только редактор — войди (🔑)", true); return; }
   document.getElementById("a-msg").textContent = "";
   updateProdList();
   try{ const last = JSON.parse(localStorage.getItem("dash_addlast")||"null"); if (last && last.city){ document.getElementById("a-city").value = last.city; updateProdList(); const sel0=document.getElementById("a-prod"); if (last.prod && Array.from(sel0.options).some(o=>o.textContent===last.prod)) sel0.value = last.prod; } }catch(e){}
@@ -1700,7 +1700,7 @@ document.getElementById("w-del-go").onclick = async ()=>{
 };
 
 document.getElementById("a-save").onclick = async ()=>{
-  if (!AUTH.edit){ toast("Добавлять смены может только редактор", true); return; }
+  if (!AUTH.edit){ toast("Добавлять команды может только редактор", true); return; }
   const msg = document.getElementById("a-msg");
   const city = document.getElementById("a-city").value;
   const prodSel = document.getElementById("a-prod").value;
@@ -1722,11 +1722,11 @@ document.getElementById("a-save").onclick = async ()=>{
     }
     closeModal("addmodal");
     try{ localStorage.setItem("dash_addlast", JSON.stringify({city:city, prod:prod})); }catch(e){}
-    toast("✔ Смена добавлена в " + city + (viaFallback ? " (резервный канал — без подтверждения)" : " (строка " + res.row + ")"));
+    toast("✔ Мониторинг добавлен в " + city + (viaFallback ? " (резервный канал — без подтверждения)" : " (строка " + res.row + ")"));
     ["a-nick","a-opname","a-model","a-prod-new"].forEach(id=>document.getElementById(id).value="");
     setTimeout(load, 800);
   } catch(e){
-    msg.textContent = "Ошибка: " + e.message + " — смена могла добавиться, обновляю данные";
+    msg.textContent = "Ошибка: " + e.message + " — мониторинг мог добавиться, обновляю данные";
     setTimeout(load, 500);
   }
 };
@@ -1775,6 +1775,8 @@ async function doLogin(){
     state.lastCheck = Date.now();
     try{ localStorage.setItem("dash_last_user",u); if (document.getElementById("l-remember").checked) localStorage.setItem("dash_pass_keep",p); else localStorage.removeItem("dash_pass_keep"); }catch(e){}
     historyClean();
+    // кэш прошлой сессии может содержать чужие/старые строки — на входе всегда сбрасываем
+    try{ sessionStorage.removeItem("dash_cache"); }catch(e){}
     hideGate();
     updateLoginBtn();
     toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
@@ -1801,7 +1803,7 @@ function liveEval(vals){
   const evalN = st.filter(x=>x!==null).length;
   if (!evalN) return "заполни категории — оценка посчитается сама";
   const verdict = bad===0 ? "норма" : bad<=2 ? "замечание" : "критично";
-  return "оценка сейчас: " + ok + "/8 · " + (VLBL[verdict]||verdict);
+  return "оценка сейчас: " + ok + "/9 · " + (VLBL[verdict]||verdict);
 }
 function getPhrases(code){ try{ return (JSON.parse(localStorage.getItem("dash_phrases")||"{}")[code]) || []; }catch(e){ return []; } }
 function addPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); const L=all[code]||[]; if(v && !L.includes(v)){ L.push(v); all[code]=L; localStorage.setItem("dash_phrases",JSON.stringify(all)); } }catch(e){} }
@@ -1908,7 +1910,7 @@ async function uploadScreen(blob, x){
       body: JSON.stringify({ key: CONFIG.API_KEY, user: AUTH.user, pass: AUTH.pass,
         sheet: x.r._sheet, row: x.r._row, data: data })
     });
-    toast("📸 Скрин отправлен — привязываю к смене…");
+    toast("📸 Скрин отправлен — привязываю к проверке…");
     setTimeout(load, 2500);
   } catch(err){ toast("Скрин не удался: " + err.message, true); }
 }
@@ -1948,7 +1950,7 @@ async function load(){
   // мгновенная отрисовка из кэша прошлой загрузки (свежие данные подтянутся следом)
   try{
     const cached = JSON.parse(sessionStorage.getItem("dash_cache") || "null");
-    if (cached && cached.user===AUTH.user && cached.rows && cached.rows.length && !state.rows.length){
+    if (cached && cached.ver===CONFIG.VER && cached.user===AUTH.user && cached.rows && cached.rows.length && !state.rows.length){
       state.rows = cached.rows; state.colors = cached.colors || {}; state.plans = cached.plans || {};
       dot.className = "dot-off";
       txt.textContent = "кэш " + new Date(cached.ts).toLocaleTimeString("ru-RU") + " — обновляю…";
@@ -1960,7 +1962,7 @@ async function load(){
     const j=await jsonp({action:"read", user:AUTH.user, pass:AUTH.pass});
     if(j.error)throw new Error(j.error);
     applyData(j);
-    try{ sessionStorage.setItem("dash_cache", JSON.stringify({ user:AUTH.user, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans })); }catch(e){}
+    try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans })); }catch(e){}
     // проверка ролей не чаще раза в 5 минут (после логина уже была)
     if (Date.now()-(state.lastCheck||0) > 5*60*1000){
       state.lastCheck = Date.now();
