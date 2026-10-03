@@ -98,6 +98,7 @@
   .abtn2{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 14px;cursor:pointer;font:inherit}
 
   .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:flex-start;justify-content:center;overflow:auto}
+  #resetmodal,#rsreqmodal{z-index:120} /* поверх гейта — смена пароля открывается со входа */
   .modal-ov.show{display:flex}
   .uplzone{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--dim);font-size:13px;margin:10px 0;cursor:pointer}
   .uplzone:hover{border-color:var(--accent);color:var(--ink)}
@@ -273,6 +274,7 @@
     <input id="l-user" placeholder="Логин" autocomplete="username">
     <div class="pwrow"><input id="l-pass" type="password" placeholder="Пароль" autocomplete="current-password"><button class="eyebtn" id="l-eye" title="показать/скрыть пароль">👁</button></div>
     <button class="abtn" id="l-go">Войти</button>
+    <button class="gbtn" id="l-forgot" style="margin-top:6px">Забыл / сменить пароль?</button>
     <div class="err" id="l-msg"></div>
   </div>
 </div>
@@ -280,6 +282,7 @@
   <div id="splash"><div class="loadbars"><i></i><i></i><i></i><i></i></div><div class="stxt">Загружаем данные…</div></div>
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
+    <button id="resetbell" class="iconbtn" style="display:none" title="заявки на смену пароля">🔔</button>
     <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Мониторинг</button>
     <button id="weekbtn" class="abtn2" style="display:none">🗓 Неделя</button>
@@ -356,6 +359,34 @@
       <img id="cam-img" style="width:100%;border-radius:8px" alt="скрин">
     </div>
   </div>
+  <div class="modal-ov" id="resetmodal">
+    <div class="modal" style="width:min(440px,94vw)">
+      <button class="x" id="rs-x">✕</button>
+      <h3 id="rs-title">🔑 Забыл / сменить пароль</h3>
+      <div id="rs-step1">
+        <div style="color:var(--dim);font-size:12.5px;margin-bottom:8px">Введи логин — заявку увидит смотрящий, одобрит и передаст тебе одноразовый код.</div>
+        <input id="rs-login" placeholder="твой логин" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
+        <button class="abtn" id="rs-send">Отправить заявку</button>
+      </div>
+      <div id="rs-step2" style="display:none">
+        <div style="color:var(--dim);font-size:12.5px;margin-bottom:8px">Заявка отправлена. Когда дадут код — введи его здесь вместе с новым паролем.</div>
+        <input id="rs-login2" placeholder="твой логин" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
+        <input id="rs-code" placeholder="код от смотрящего" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
+        <input id="rs-pass" type="password" placeholder="новый пароль (мин. 6 символов)" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
+        <input id="rs-pass2" type="password" placeholder="новый пароль ещё раз" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
+        <button class="abtn" id="rs-do">Сменить пароль</button>
+      </div>
+      <div id="rs-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="modal-ov" id="rsreqmodal">
+    <div class="modal" style="width:min(480px,94vw)">
+      <button class="x" id="rsq-x">✕</button>
+      <h3>🔔 Заявки на смену пароля</h3>
+      <div style="color:var(--faint);font-size:12px;margin-bottom:8px">«Разрешить» выдаёт одноразовый код на 15 минут — передай его человеку лично. Без кода сменить пароль нельзя.</div>
+      <div id="rsq-list"></div>
+    </div>
+  </div>
   <div class="modal-ov" id="uplmodal">
     <div class="modal" style="width:min(460px,94vw)">
       <button class="x" id="u-x">✕</button>
@@ -398,7 +429,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.23"
+  VER: "2026-10-03.24"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -1768,6 +1799,82 @@ document.getElementById("u-file").onclick = ()=>{ document.getElementById("u-fil
 document.getElementById("u-zone").onclick = ()=>{ document.getElementById("u-fileinp").click(); };
 document.getElementById("u-fileinp").onchange = function(){ if (this.files && this.files[0]) doUpload(this.files[0]); this.value = ""; };
 document.getElementById("u-x").onclick = ()=>{ uplTarget = null; closeModal("uplmodal"); };
+// ---------- смена пароля с одобрения редактора ----------
+document.getElementById("l-forgot").onclick = ()=>{
+  document.getElementById("rs-step1").style.display = "";
+  document.getElementById("rs-step2").style.display = "none";
+  document.getElementById("rs-msg").textContent = "";
+  document.getElementById("rs-login").value = "";
+  openModal("resetmodal");
+};
+document.getElementById("rs-x").onclick = ()=>closeModal("resetmodal");
+document.getElementById("rs-send").onclick = async ()=>{
+  const login = document.getElementById("rs-login").value.trim();
+  const msg = document.getElementById("rs-msg");
+  if (!login){ msg.textContent = "Введи логин"; return; }
+  msg.textContent = "Отправляю заявку…";
+  try {
+    const res = await jsonp({ action:"resetreq", login: login });
+    if (res.error) throw new Error(res.error);
+    document.getElementById("rs-step1").style.display = "none";
+    document.getElementById("rs-step2").style.display = "";
+    document.getElementById("rs-login2").value = login;
+    msg.textContent = res.pending ? "Такая заявка уже висит — жди кода." : "Заявка отправлена. Жди кода от смотрящего.";
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+};
+document.getElementById("rs-do").onclick = async ()=>{
+  const login = document.getElementById("rs-login2").value.trim();
+  const code = document.getElementById("rs-code").value.trim();
+  const p1 = document.getElementById("rs-pass").value, p2 = document.getElementById("rs-pass2").value;
+  const msg = document.getElementById("rs-msg");
+  if (!login || !code){ msg.textContent = "Введи логин и код"; return; }
+  if (p1 !== p2){ msg.textContent = "Пароли не совпадают"; return; }
+  if (p1.length < 6){ msg.textContent = "Пароль слишком короткий (минимум 6 символов)"; return; }
+  msg.textContent = "Меняю…";
+  try {
+    const res = await jsonp({ action:"resetdo", login: login, code: code, newpass: p1 });
+    if (res.error) throw new Error(res.error);
+    msg.textContent = "✔ Пароль изменён — теперь войди с новым паролем";
+    try { sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); } catch(e){}
+    setTimeout(()=>closeModal("resetmodal"), 1800);
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+};
+function updateResetBell(n){
+  const b = document.getElementById("resetbell");
+  if (!b) return;
+  if (AUTH.edit && AUTH.ok() && n > 0){ b.style.display = ""; b.textContent = "🔔" + n; b.title = "заявки на смену пароля: " + n; }
+  else { b.style.display = "none"; b.textContent = "🔔"; }
+}
+document.getElementById("resetbell").onclick = async ()=>{
+  openModal("rsreqmodal");
+  const list = document.getElementById("rsq-list");
+  list.textContent = "Загружаю…";
+  try {
+    const res = await jsonp({ action:"resetlist", user: AUTH.user, pass: AUTH.pass });
+    if (res.error) throw new Error(res.error);
+    if (!res.list || !res.list.length){ list.innerHTML = '<div class="empty">Заявок нет</div>'; return; }
+    list.innerHTML = res.list.map(r=>`<div class="drow" style="align-items:center"><b>${esc(r.login)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.created)}</span><span><button class="abtn2 rsq-ok" data-row="${r.row}">✅ Разрешить</button> <button class="abtn2 rsq-no" data-row="${r.row}" title="отклонить">✕</button></span></div>`).join("");
+    list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
+      ev.stopPropagation();
+      try {
+        const res = await jsonp({ action:"resetok", row: b.dataset.row, user: AUTH.user, pass: AUTH.pass });
+        if (res.error) throw new Error(res.error);
+        const code = res.code || "";
+        const rowEl = b.closest(".drow");
+        rowEl.querySelector("span:last-child").innerHTML = '<b style="color:var(--ok)">код: ' + esc(code) + '</b> <span style="color:var(--faint);font-size:11px">— передай лично, годен 15 мин</span>';
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(()=>toast("Код скопирован — отправь пользователю")).catch(()=>{});
+      } catch(e){ toast("Ошибка: "+e.message, true); }
+    });
+    list.querySelectorAll(".rsq-no").forEach(b=>b.onclick=async (ev)=>{
+      ev.stopPropagation();
+      try {
+        const res = await jsonp({ action:"resetno", row: b.dataset.row, user: AUTH.user, pass: AUTH.pass });
+        if (res.error) throw new Error(res.error);
+        const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
+      } catch(e){ toast("Ошибка: "+e.message, true); }
+    });
+  } catch(e){ list.textContent = "Ошибка: " + e.message; }
+};
 document.getElementById("o-save").onclick = async ()=>{
   const ov = document.getElementById("opmodal");
   const x = state.lastView[ov.dataset.key]; if (!x) return;
@@ -2080,6 +2187,7 @@ function applyData(j){
   txt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
   updateLoginBtn();
   updateViewAs();
+  updateResetBell(j.resetPending || 0);
   render();
   if (document.getElementById("a-prod")) updateProdList();
 }
