@@ -223,6 +223,13 @@
   .editlive{font-size:11.5px;color:var(--dim);margin:-2px 0 8px}
   .myq{border-color:rgba(91,157,255,.45)}
   .qx{color:var(--bad);font-weight:700;margin-left:3px}
+  .scrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .sthumb{position:relative;display:inline-block;line-height:0}
+  .sthumb img{width:66px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block}
+  .sthumb:hover img{border-color:var(--accent)}
+  .sqx{position:absolute;top:-6px;right:-6px;background:var(--panel);border:1px solid var(--line);border-radius:50%;width:17px;height:17px;line-height:15px;font-size:10px;cursor:pointer;text-align:center;color:var(--dim);z-index:2}
+  .sqx:hover{color:var(--bad);border-color:var(--bad)}
+  .uplrow{margin-top:5px}
   .pwrow{display:flex;gap:6px;align-items:center}
   .pwrow input{flex:1}
   .eyebtn{background:none;border:none;cursor:pointer;color:var(--dim);font-size:15px;padding:0 2px}
@@ -379,7 +386,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.10"
+  VER: "2026-10-03.11"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -436,7 +443,7 @@ function tabs(){
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
-  return ["Обзор"].concat(AUTH.edit?["Сводка"]:[]).concat(["Расписание"]).concat(cities).concat(["Операторы","Сравнение"]);
+  return ["Обзор"].concat(AUTH.edit?["Сводка"]:[]).concat(["Расписание"]).concat(cities).concat(["Операторы","Сравнение","Чек","Рекомендации"]);
 }
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
 
@@ -543,7 +550,7 @@ function updateLoginBtn(){
 function render(){
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week})); }catch(e){}
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
-  const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
+  const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡"};
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
     const raw = rowsOf(c);
@@ -558,7 +565,7 @@ function render(){
   const sect = t => `<div class="rsect">${t}</div>`;
   const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
   const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
-  const toolTabs = tabs().filter(c=>["Операторы","Сравнение"].includes(c));
+  const toolTabs = tabs().filter(c=>["Операторы","Сравнение","Чек","Рекомендации"].includes(c));
   const weeksHtml = wks.length
     ? sect("недели") + `<button class="wtab" id="weekdrop-btn" title="выбрать неделю"><span>🗓</span><span>Неделя</span><span class="cnt">${esc(state.week||"все")}</span></button>`
     : "";
@@ -603,6 +610,8 @@ function render(){
   if (state.tab==="Сводка"){ renderSummary(rows, st); return; }
   if (state.tab==="Операторы"){ renderOperators(rows, st); return; }
   if (state.tab==="Сравнение"){ renderCompare(rows, st); return; }
+  if (state.tab==="Чек"){ renderNotes("check"); return; }
+  if (state.tab==="Рекомендации"){ renderNotes("recs"); return; }
   const checkedN = withScore.length;
   document.getElementById("pbar").innerHTML = rows.length ? `<div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(checkedN/rows.length*100)}%"></div></div>
     <div style="color:var(--faint);font-size:11.5px;margin-top:4px">прогресс проверки: ${checkedN} из ${rows.length} (${Math.round(checkedN/rows.length*100)}%)</div>` : "";
@@ -765,18 +774,21 @@ function render(){
     const gkeyEsc = esc(g.key);
     const rowsHtml = g.items.map(({x,key})=>{
       const dr = getDraft(x.r);
+      const rowScreens = (state.screens||{})[x.r._sheet+"|"+x.r._row] || [];
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img src="${esc(s.link)}" data-big="${esc(s.link)}" alt="скрин: ${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
-        if (!t) return "";
+        const scr = rowScreens.filter(s=>String(s.cat)===n);
+        if (!t && !scr.length) return "";
         const mark = x.s.st[j]==="ok" ? "✅" : x.s.st[j]==="bad" ? "❌" : "·";
-        return `<div class="drow"><b>${mark} ${n}</b><span>${hl(t)}</span></div>`;
+        return `<div class="drow"><b>${mark} ${n}</b><span>${hl(t)}</span>${scrThumbs(scr,n,false)}</div>`;
       }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${hl(x.r.obs)}</span></div>` : "") +
         ((state.plans||{})[x.r.city+"|"+x.r.producer] ? `<div class="drow"><b>🗓 План работ</b><span>${esc(state.plans[x.r.city+"|"+x.r.producer])}</span></div>` : "") +
         (x.r.updated ? `<div class="drow"><b>🕐 Последняя проверка/правка</b><span>${esc(x.r.updated)}</span></div>` : "");
       const lv0 = liveEval(CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"")));
       const editDet = `<div class="editlive" id="live${key}">${lv0}</div>` + CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
-        return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div></div>`;
+        return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки на сайты (строки: Название = URL)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/...">${esc((state.links||[]).filter(l=>l.key===x.r.city+"|"+x.r.producer).map(l=>l.title+" = "+l.url).join("\n"))}</textarea></div>
         <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
@@ -940,7 +952,7 @@ function render(){
     document.getElementById("cam-link").href = im.getAttribute("data-big") || im.src;
     openModal("cammodal");
   });
-  document.querySelectorAll(".qx[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
+  document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
     ev.stopPropagation();
     try {
       const res = await jsonp({ action:"delscreen", key: x.dataset.dsk, link: x.dataset.dlink, user: AUTH.user, pass: AUTH.pass });
@@ -1892,9 +1904,9 @@ document.addEventListener("paste", function(e){
   }
 });
 
-async function uploadScreen(blob, x){
+async function uploadScreen(blob, x, catIdx){
   try {
-    toast("📸 Скрин: сжимаю…");
+    toast("📸 Скрин"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":"")+": сжимаю…");
     const img = await createImageBitmap(blob);
     const scale = Math.min(1, 1600/Math.max(img.width, img.height));
     const cv = document.createElement("canvas");
@@ -1908,9 +1920,10 @@ async function uploadScreen(blob, x){
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ key: CONFIG.API_KEY, user: AUTH.user, pass: AUTH.pass,
-        sheet: x.r._sheet, row: x.r._row, data: data })
+        sheet: x.r._sheet, row: x.r._row, data: data,
+        cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
     });
-    toast("📸 Скрин отправлен — привязываю к проверке…");
+    toast("📸 Скрин отправлен"+(catIdx!==undefined&&catIdx!==null?" — категория ["+CATS[catIdx]+"]":"")+" — привязываю к проверке…");
     setTimeout(load, 2500);
   } catch(err){ toast("Скрин не удался: " + err.message, true); }
 }
