@@ -63,8 +63,8 @@
   td{padding:8px;border-bottom:1px solid var(--line)}
   tr.r:hover td{background:var(--panel2);cursor:pointer}
   tr.detail td{background:#191c21;padding:0}
-  .detail-in{padding:14px 18px 18px;display:none}
-  tr.detail.open .detail-in{display:block}
+  .detail-in{padding:14px 18px 18px;overflow:hidden;max-height:0;transition:max-height .35s ease}
+  tr.detail.open .detail-in{max-height:3000px}
   .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
   @media(max-width:900px){.dgrid{grid-template-columns:1fr}}
   .drow{border-bottom:1px dashed var(--line);padding:6px 0;font-size:12.5px}
@@ -76,6 +76,7 @@
   .score-ok{color:var(--ok);font-weight:700} .score-bad{color:var(--bad);font-weight:700} .score-warn{color:var(--warn);font-weight:700}
   .note{margin-top:18px;color:var(--faint);font-size:12px}
   .empty{color:var(--faint);font-size:13px;padding:10px 0}
+  mark{background:rgba(229,180,85,.4);color:var(--ink);border-radius:2px;padding:0 1px}
 
   .qbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:12px}
   .qbtn:hover{color:var(--ink)}
@@ -128,6 +129,14 @@
   .iconbtn{position:relative}
   .badge{position:absolute;top:-7px;right:-7px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;font-weight:700}
   .cdot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px;cursor:pointer;border:1px solid rgba(255,255,255,.18)}
+  #splash{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
+  #splash.hide{opacity:0;pointer-events:none}
+  .spin{width:44px;height:44px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .slogo{font-size:34px}
+  .stxt{color:var(--dim);font-size:13px}
+  .planbtn{background:none;border:none;cursor:pointer;font-size:12px;opacity:.65;padding:0 2px}
+  .planbtn:hover{opacity:1}
   .fchip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:16px;padding:4px 13px;font-size:12px;cursor:pointer;margin-right:6px;font:inherit}
   .fchip.on{border-color:var(--accent);color:var(--accent);background:rgba(91,157,255,.1)}
   @keyframes flash{0%{background:rgba(91,157,255,.22)}100%{background:transparent}}
@@ -158,6 +167,7 @@
   </div>
 </div>
 <div class="wrap">
+  <div id="splash"><div class="slogo">📊</div><div class="spin"></div><div class="stxt">Загружаем данные…</div></div>
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
     <button id="bellbtn" class="iconbtn" title="уведомления">🔔<span class="badge" id="bellbadge" style="display:none">0</span></button>
@@ -217,6 +227,15 @@
     </div>
   </div>
   <input type="color" id="colorpick" style="position:absolute;left:-200px;top:-200px">
+  <div class="modal-ov" id="planmodal">
+    <div class="modal" style="width:min(560px,94vw)">
+      <button class="x" id="plan-x">✕</button>
+      <h3>🗓 План работ — <span id="pl-prod"></span> <span id="pl-city" style="color:var(--faint);font-size:12px"></span></h3>
+      <textarea id="pl-text" style="width:100%;min-height:140px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="план работ на неделю по команде"></textarea>
+      <button class="abtn" id="pl-save" style="margin-top:10px">Сохранить план</button>
+      <span id="pl-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+    </div>
+  </div>
   <div class="toast" id="toast"></div>
   <p class="note">Данные: Google-таблица «продюсеры» (приватная) → Apps Script (доступ только по ключу) → этот дашборд. Обновление каждые 5 минут.</p>
 </div>
@@ -316,8 +335,14 @@ function animNum(el, to, suffix){
   }
   requestAnimationFrame(step);
 }
+function hl(t){
+  const s = esc(t||"");
+  if (!state.search) return s;
+  const q = esc(state.search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
+}
 function esc(s){ return (s||"").split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ return tab==="Обзор"||tab==="Операторы"||tab==="Сравнение" ? state.rows : state.rows.filter(r=>r.city===tab); }
+function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week) rs = rs.filter(r=>r.week===state.week); return rs; }
 
 // ---------- черновики ----------
 const dKey = r => "draft:" + r._sheet + ":" + r._row;
@@ -381,11 +406,14 @@ function updateLoginBtn(){
 }
 
 function render(){
+  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   document.getElementById("tabs").innerHTML = tabs().map(c=>{
     const n = rowsOf(c).length;
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}">${c}<span class="cnt">${n||""}</span></button>`;
-  }).join("");
+  }).join("") + (wks.length>1 ? `<select id="weeksel" title="неделя"><option value="">все недели</option>${wks.map(w=>`<option ${state.week===w?"selected":""}>${esc(w)}</option>`).join("")}</select>` : "");
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
+  const ws=document.getElementById("weeksel");
+  if (ws) ws.onchange = e=>{ state.week = e.target.value; render(); };
 
   const rows = rowsOf(state.tab);
   const st = rows.map(rowStats);
@@ -505,8 +533,9 @@ function render(){
         const t = (x.r.cats[j]||"").trim();
         if (!t) return "";
         const mark = x.s.st[j]==="ok" ? "✅" : x.s.st[j]==="bad" ? "❌" : "·";
-        return `<div class="drow"><b>${mark} ${n}</b><span>${esc(t)}</span></div>`;
-      }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${esc(x.r.obs)}</span></div>` : "");
+        return `<div class="drow"><b>${mark} ${n}</b><span>${hl(t)}</span></div>`;
+      }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${hl(x.r.obs)}</span></div>` : "") +
+        ((state.plans||{})[x.r.city+"|"+x.r.producer] ? `<div class="drow"><b>🗓 План работ</b><span>${esc(state.plans[x.r.city+"|"+x.r.producer])}</span></div>` : "");
       const editDet = CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}</div></div>`;
@@ -516,12 +545,13 @@ function render(){
         <div class="f" style="grid-column:1/-1"><b>📋 Скрин из буфера</b><div class="paste" id="pz${key}">Открой скрин → Ctrl+C → сюда Ctrl+V (уедет на диск и привяжется к смене)</div></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
+        <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие смены команды</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
         : `<div class="dgrid">${readDet}</div>` +
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
       const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
-      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td><span class="cdot" data-prod="${esc(x.r.producer||"")}" style="background:${esc(state.colors[x.r.producer]||"#566070")}" title="${esc(x.r.producer||"")} — цвет команды"></span>${esc(x.r.producer||"—")}${draftMark}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}</td><td>${esc(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td><span class="cdot" data-prod="${esc(x.r.producer||"")}" style="background:${esc(state.colors[x.r.producer]||"#566070")}" title="${esc(x.r.producer||"")} — цвет команды"></span>${esc(x.r.producer||"—")}${draftMark}${AUTH.edit?` <button class="planbtn" data-plan="${esc(x.r.city)}|${esc(x.r.producer||"")}" title="план работ">📝</button>`:""}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="8"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("")}</tbody></table>` : `<div class="empty">Нет данных по фильтру</div>`;
 
@@ -559,6 +589,8 @@ function render(){
   view.forEach((x,key)=>{
     const btn = document.getElementById("sv"+key);
     if (btn) btn.onclick = ()=>saveRow(x, key);
+    const dup = document.getElementById("dup"+key);
+    if (dup) dup.onclick = ()=>dupRow(x, key);
   });
 }
 
@@ -659,18 +691,52 @@ function renderCompare(rows, st){
   sb.onchange=e=>{state.cmpB=e.target.value;renderCompare(rows,st);};
 }
 
+async function dupRow(x, key){
+  const targets = state.rows.filter(r=>r._sheet===x.r._sheet && r.producer===x.r.producer && r.opNick===x.r.opNick && r._row!==x.r._row);
+  if (!targets.length){ toast("У этой команды нет других смен на неделе", true); return; }
+  if (!confirm("Скопировать замечания на " + targets.length + " других смен команды?")) return;
+  let done = 0;
+  for (const t of targets){
+    const params = { action:"save", sheet:t._sheet, row:String(t._row), user:AUTH.user, pass:AUTH.pass };
+    let n = 1;
+    for (let j=0;j<8;j++){
+      const v = (x.r.cats[j]||"").trim();
+      if (!v) continue;
+      params["f"+n] = FIELDCODES[j]; params["v"+n] = v; n++;
+    }
+    try {
+      let res = null;
+      try { res = await jsonp(params); if (res.error) throw new Error(res.error); }
+      catch(e1){
+        if (String(e1.message).indexOf("прав") >= 0) throw e1;
+        await writePOST(Object.assign({ action:"save" }, params));
+      }
+      done++;
+    } catch(e){}
+  }
+  toast("✔ Скопировано в " + done + " смен");
+  setTimeout(load, 800);
+}
+
 function jsonp(params){
   return new Promise((resolve,reject)=>{
     const cb="__dashcb_"+Math.random().toString(36).slice(2);
-    window[cb]=d=>{resolve(d);cleanup();};
+    let done=false;
+    window[cb]=d=>{ if(done) return; done=true; resolve(d); cleanup(); };
     const q = new URLSearchParams(params);
     q.set("callback", cb); q.set("key", CONFIG.API_KEY);
     const s=document.createElement("script");
     s.src=CONFIG.API_URL+"?"+q.toString();
-    s.onerror=()=>{reject(new Error("не удалось связаться с таблицей"));cleanup();};
-    function cleanup(){delete window[cb];s.remove();}
+    s.onerror=()=>{ if(done) return; done=true; reject(new Error("JSONP_FAIL")); cleanup(); };
+    const to=setTimeout(()=>{ if(done) return; done=true; reject(new Error("нет ответа от таблицы")); cleanup(); }, 10000);
+    function cleanup(){ clearTimeout(to); delete window[cb]; s.remove(); }
     document.head.appendChild(s);
   });
+}
+async function writePOST(params){
+  await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
+    headers:{ "Content-Type":"text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ key:CONFIG.API_KEY, user:AUTH.user, pass:AUTH.pass }, params)) });
 }
 
 async function saveRow(x, key){
@@ -692,15 +758,20 @@ async function saveRow(x, key){
   try {
     const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass };
     changes.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
-    const res = await jsonp(params);
-    if (res.error) throw new Error(res.error);
+    let res = null, viaFallback = false;
+    try { res = await jsonp(params); if (res.error) throw new Error(res.error); }
+    catch(e1){
+      if (String(e1.message).indexOf("прав") >= 0) throw e1;
+      await writePOST(Object.assign({ action:"save" }, params));
+      viaFallback = true;
+    }
     clearDraft(x.r);
     for (let j=0;j<8;j++) x.r.cats[j] = document.getElementById("ed"+key+"_"+j).value;
     x.r.obs = document.getElementById("ed"+key+"_comment").value;
     x.r.scoreM = document.getElementById("ed"+key+"_score").value;
     x.r.verdictM = document.getElementById("ed"+key+"_verdict").value;
     x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
-    toast("✔ Сохранено в таблицу (" + res.saved + " полей)");
+    toast(viaFallback ? "✔ Сохранено (резервный канал)" : "✔ Сохранено в таблицу (" + (res.saved||0) + " полей)");
     render();
   } catch(e){
     toast("Ошибка: " + e.message, true);
@@ -743,6 +814,34 @@ document.getElementById("bellbtn").onclick = ()=>{
   state.unread = 0; updateBell();
 };
 document.getElementById("hist-x").onclick = ()=>closeModal("histmodal");
+document.querySelectorAll(".planbtn").forEach(b=>b.onclick=(ev)=>{
+  ev.stopPropagation();
+  const parts = b.dataset.plan.split("|");
+  document.getElementById("pl-prod").textContent = parts[1] || "—";
+  document.getElementById("pl-city").textContent = parts[0] || "";
+  document.getElementById("pl-text").value = (state.plans||{})[b.dataset.plan] || "";
+  document.getElementById("pl-text").dataset.key = b.dataset.plan;
+  openModal("planmodal");
+});
+document.getElementById("plan-x").onclick = ()=>closeModal("planmodal");
+document.getElementById("pl-save").onclick = async ()=>{
+  const key = document.getElementById("pl-text").dataset.key;
+  const msg = document.getElementById("pl-msg");
+  msg.textContent = "Сохраняю…";
+  const params = { action:"setplan", key: key, plan: document.getElementById("pl-text").value };
+  try {
+    let res = null;
+    try { res = await jsonp(params); if (res.error) throw new Error(res.error); }
+    catch(e1){
+      if (String(e1.message).indexOf("прав") >= 0) throw e1;
+      await writePOST(params);
+    }
+    state.plans[key] = document.getElementById("pl-text").value;
+    closeModal("planmodal");
+    toast("✔ План сохранён");
+    render();
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+};
 document.querySelectorAll(".cdot").forEach(d=>d.onclick=(ev)=>{
   ev.stopPropagation();
   if (!AUTH.edit){ toast("Цвет может поменять только редактор", true); return; }
@@ -755,16 +854,29 @@ document.querySelectorAll(".cdot").forEach(d=>d.onclick=(ev)=>{
 document.getElementById("colorpick").onchange = async function(){
   if (!this.dataset.prod) return;
   try {
-    const res = await jsonp({ action:"setcolor", producer: this.dataset.prod, color: this.value, user: AUTH.user, pass: AUTH.pass });
-    if (res.error) throw new Error(res.error);
+    try { const res = await jsonp({ action:"setcolor", producer: this.dataset.prod, color: this.value, user: AUTH.user, pass: AUTH.pass }); if (res.error) throw new Error(res.error); }
+    catch(e1){
+      if (String(e1.message).indexOf("прав") >= 0) throw e1;
+      await writePOST({ action:"setcolor", producer: this.dataset.prod, color: this.value });
+    }
     toast("✔ Цвет команды «" + this.dataset.prod + "» сохранён");
     setTimeout(load, 500);
   } catch(e){ toast("Ошибка: " + e.message, true); }
 };
+function nextWeekLabel(label){
+  const m = String(label||"").match(/(\d{1,2})-(\d{1,2})\.(\d{1,2})/);
+  if (!m) return "";
+  const y = new Date().getFullYear();
+  const d1 = new Date(y, m[3]-1, m[1]); d1.setDate(d1.getDate()+7);
+  const d2 = new Date(y, m[3]-1, m[2]); d2.setDate(d2.getDate()+7);
+  const f1 = d1.getDate(), m1 = d1.getMonth()+1, f2 = d2.getDate(), m2 = d2.getMonth()+1;
+  return m1===m2 ? f1+"-"+f2+"."+m2 : f1+"."+m1+"-"+f2+"."+m2;
+}
 document.getElementById("weekbtn").onclick = ()=>{
   const weeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   const sel = document.getElementById("w-base");
   sel.innerHTML = weeks.map(w=>`<option>${esc(w)}</option>`).join("") || "<option>— нет недель —</option>";
+  document.getElementById("w-name").value = nextWeekLabel(weeks[weeks.length-1] || "");
   openModal("weekmodal");
 };
 document.getElementById("week-x").onclick = ()=>closeModal("weekmodal");
@@ -775,10 +887,15 @@ document.getElementById("w-go").onclick = async ()=>{
   if (!name || !base){ msg.textContent = "Укажи название недели"; return; }
   msg.textContent = "Создаю…";
   try {
-    const res = await jsonp({ action:"copyweek", base: base, name: name, user: AUTH.user, pass: AUTH.pass });
-    if (res.error) throw new Error(res.error);
+    let res = null, viaFallback = false;
+    try { res = await jsonp({ action:"copyweek", base: base, name: name, user: AUTH.user, pass: AUTH.pass }); if (res.error) throw new Error(res.error); }
+    catch(e1){
+      if (String(e1.message).indexOf("прав") >= 0 || String(e1.message).indexOf("Укажи") >= 0) throw e1;
+      await writePOST({ action:"copyweek", base: base, name: name });
+      viaFallback = true;
+    }
     closeModal("weekmodal");
-    toast("✔ Неделя " + name + " создана (" + res.created + " листов)");
+    toast("✔ Неделя " + name + " создана (" + (viaFallback ? "смотри вкладки" : res.created + " листов") + ")");
     setTimeout(load, 1000);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
@@ -897,6 +1014,7 @@ async function load(){
     if(j.error)throw new Error(j.error);
     state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
     state.colors = j.colors || {};
+    state.plans = j.plans || {};
     dot.className="dot-live";
     txt.textContent="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
     document.getElementById("updated").textContent="источник: таблица «продюсеры»";
@@ -914,6 +1032,8 @@ async function load(){
     dot.className="dot-off";
     txt.textContent="Ошибка загрузки: "+e.message+". Возможно, нужно войти в Google-аккаунт в этом браузере.";
   }
+  const sp = document.getElementById("splash");
+  if (sp && !sp.classList.contains("hide")) sp.classList.add("hide");
 }
 document.getElementById("refresh").onclick=()=>{
   if (anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Обновить данные?")) return;
