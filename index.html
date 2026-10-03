@@ -121,8 +121,9 @@
   .gate-card .abtn{width:100%}
   .gate-card .err{color:var(--bad);font-size:12.5px;min-height:16px;margin-top:6px}
   .draftmark{color:var(--warn);font-size:11px;font-weight:600}
-  body.compact td{padding:4px 8px;font-size:12px}
-  body.compact .tile .n{font-size:24px}
+  .spacer{flex:1}
+  .iconbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:5px 11px;cursor:pointer;font:inherit}
+  .iconbtn:hover{color:var(--ink)}
   @keyframes flash{0%{background:rgba(91,157,255,.22)}100%{background:transparent}}
   tr.flash td{animation:flash 1.8s ease-out}
   .pwrap{margin:-6px 0 14px}
@@ -152,11 +153,11 @@
 </div>
 <div class="wrap">
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
+    <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
+    <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Смена</button>
-    <button id="weekbtn" class="abtn2" style="display:none">🗓 Новая неделя</button>
-    <button id="densbtn" class="abtn2" title="плотность строк">≡</button>
-    <button id="loginbtn" class="abtn2">🔑 Войти</button>
-    <button id="refresh" style="margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:6px 14px;cursor:pointer;font:inherit">⟳ Обновить</button>
+    <button id="weekbtn" class="abtn2" style="display:none">🗓 Неделя</button>
+    <button id="loginbtn" class="abtn2">🔑 Вход</button>
   </div>
   <header>
     <h1>Проверка смен — дашборд</h1>
@@ -180,7 +181,7 @@
         <div class="ff"><label>Имя нового продюсера</label><input id="a-prod-new" placeholder="Фамилия"></div>
       </div>
       <div class="mrow">
-        <div class="ff"><label>Никнейм CB</label><input id="a-nick" placeholder="никнейм оператора на CB"></div>
+        <div class="ff"><label>Никнейм</label><input id="a-nick" placeholder="никнейм"></div>
         <div class="ff"><label>Опер (фамилия)</label><input id="a-opname" placeholder="фамилия оператора"></div>
         <div class="ff"><label>Модель (фамилия)</label><input id="a-model" placeholder="фамилия модели"></div>
       </div>
@@ -253,7 +254,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, selected:new Set(), changed:null };
+const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null };
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
@@ -279,8 +280,8 @@ function rowStats(r){
   if (evalN > 0){
     score = ok;
     verdict = bad === 0 ? "норма" : bad <= 2 ? "замечание" : "критично";
-    if (r.verdict && r.verdict !== "—") verdict = r.verdict;
-    if (r.score && r.score.indexOf("/8") >= 0) score = parseInt(r.score) || 0;
+    if (r.scoreM && /^[0-8]$/.test(String(r.scoreM).trim())) score = parseInt(r.scoreM);
+    if (r.verdictM) verdict = r.verdictM;
   }
   return {st, ok, bad, score, verdict};
 }
@@ -380,7 +381,6 @@ function render(){
         <span class="count" id="f-count"></span>
       </div>
       <div id="table"></div>
-      <div id="selbar"></div>
     </div>`;
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;render();};
   document.getElementById("f-bad").onchange = e=>{state.onlyBad=e.target.checked;render();};
@@ -431,7 +431,7 @@ function render(){
   document.getElementById("f-count").textContent = "показано " + view.length + " из " + rows.length;
 
   document.getElementById("table").innerHTML = view.length ? `<table>
-    <thead><tr>${AUTH.edit?"<th>☑</th>":""}<th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${
+    <thead><tr><th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${
     view.map((x,key)=>{
       const dr = getDraft(x.r);
       const readDet = CATS.map((n,j)=>{
@@ -444,6 +444,8 @@ function render(){
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}</div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
+          <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/8</option>`).join("")}</select></div>
+          <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>
         <div class="f" style="grid-column:1/-1"><b>📋 Скрин из буфера</b><div class="paste" id="pz${key}">Открой скрин → Ctrl+C → сюда Ctrl+V (уедет на диск и привяжется к смене)</div></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
@@ -452,7 +454,7 @@ function render(){
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
       const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
-      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td>${AUTH.edit?`<input type="checkbox" class="selrow" data-i="${key}">`:""}${esc(x.r.producer||"—")}${draftMark}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}</td><td>${esc(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td>${esc(x.r.producer||"—")}${draftMark}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${esc(x.r.opName||x.r.opNick||"")}</td><td>${esc(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${esc(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="8"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("")}</tbody></table>` : `<div class="empty">Нет данных по фильтру</div>`;
 
@@ -472,11 +474,7 @@ function render(){
     ta.value = ta.value ? ta.value.replace(/\s+$/,"") + ", " + b.dataset.p : b.dataset.p;
     ta.dispatchEvent(new Event("input"));
   });
-  document.querySelectorAll(".selrow").forEach(cb=>cb.onchange=()=>{
-    if (cb.checked) state.selected.add(cb.dataset.i); else state.selected.delete(cb.dataset.i);
-    updateSelbar();
-  });
-  updateSelbar();
+
   document.querySelectorAll(".detail textarea, .detail input").forEach(el=>{
     el.oninput = function(){
       const det = this.closest("tr.detail");
@@ -486,6 +484,8 @@ function render(){
       CATS.forEach((n,j)=>{ const ta = document.getElementById("ed"+det.dataset.d+"_"+j); if (ta) d["f"+j] = ta.value; });
       const c = document.getElementById("ed"+det.dataset.d+"_comment"); if (c) d.comment = c.value;
       const s = document.getElementById("ed"+det.dataset.d+"_screen"); if (s) d.screen = s.value;
+      const sc = document.getElementById("ed"+det.dataset.d+"_score"); if (sc) d.score = sc.value;
+      const vd = document.getElementById("ed"+det.dataset.d+"_verdict"); if (vd) d.verdict = vd.value;
       setDraft(x.r, d);
     };
   });
@@ -546,34 +546,6 @@ function renderOperators(rows, st){
 }
 
 // ---------- связь с таблицей ----------
-function updateSelbar(){
-  const bar = document.getElementById("selbar"); if (!bar) return;
-  const n = state.selected.size;
-  if (!n){ bar.innerHTML = ""; return; }
-  bar.innerHTML = `<div class="selbar-in">Выбрано: <b>${n}</b>
-    <select id="ms"><option value="ново">ново</option><option value="в работе">в работе</option><option value="исправлено">исправлено</option><option value="">— очистить —</option></select>
-    <button class="abtn" id="ms-apply" style="padding:6px 14px">Применить</button>
-    <button class="abtn2" id="ms-clear">Снять выделение</button></div>`;
-  document.getElementById("ms-clear").onclick = ()=>{ state.selected.clear(); render(); };
-  document.getElementById("ms-apply").onclick = async ()=>{
-    if (!AUTH.edit){ toast("Только редактор", true); return; }
-    const stv = document.getElementById("ms").value;
-    toast("Применяю к " + n + " сменам…");
-    let done = 0;
-    for (const key of state.selected){
-      const x = state.lastView[key]; if (!x) continue;
-      try {
-        const r = await jsonp({ action:"save", sheet:x.r._sheet, row:String(x.r._row),
-          f1:"status", v1:stv, user:AUTH.user, pass:AUTH.pass });
-        if (!r.error){ x.r.status = stv; done++; }
-      } catch(e){}
-    }
-    toast("✔ Статус обновлён у " + done + " смен");
-    state.selected.clear();
-    setTimeout(load, 600);
-  };
-}
-
 function renderCompare(rows, st){
   const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
   if (!weeks.length){ document.getElementById("content").innerHTML = '<div class="card"><div class="empty">Нет недель</div></div>'; return; }
@@ -644,6 +616,10 @@ async function saveRow(x, key){
   }
   const com = document.getElementById("ed"+key+"_comment").value;
   if (com !== (x.r.obs||"")) changes.push(["comment", com]);
+  const sco = document.getElementById("ed"+key+"_score").value;
+  if (sco !== (x.r.scoreM||"")) changes.push(["score", sco]);
+  const ver = document.getElementById("ed"+key+"_verdict").value;
+  if (ver !== (x.r.verdictM||"")) changes.push(["verdict", ver]);
   if (!changes.length){ toast("Изменений нет", true); return; }
   btn.disabled = true;
   try {
@@ -654,6 +630,8 @@ async function saveRow(x, key){
     clearDraft(x.r);
     for (let j=0;j<8;j++) x.r.cats[j] = document.getElementById("ed"+key+"_"+j).value;
     x.r.obs = document.getElementById("ed"+key+"_comment").value;
+    x.r.scoreM = document.getElementById("ed"+key+"_score").value;
+    x.r.verdictM = document.getElementById("ed"+key+"_verdict").value;
     x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
     toast("✔ Сохранено в таблицу (" + res.saved + " полей)");
     render();
@@ -665,7 +643,7 @@ async function saveRow(x, key){
 // ---------- форма новой смены ----------
 function updateProdList(){
   const city = document.getElementById("a-city").value;
-  const list = [...new Set([...(PRODUCERS[city]||[]), ...state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean)])];
+  const list = [...new Set(state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean))].sort();
   const sel = document.getElementById("a-prod");
   if (!sel) return;
   if (!list.length){
@@ -710,11 +688,7 @@ document.getElementById("w-go").onclick = async ()=>{
     setTimeout(load, 1000);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
-document.getElementById("densbtn").onclick = ()=>{
-  const on = document.body.classList.toggle("compact");
-  localStorage.setItem("dash_compact", on ? "1" : "0");
-};
-if (localStorage.getItem("dash_compact")==="1") document.body.classList.add("compact");
+
 document.getElementById("a-save").onclick = async ()=>{
   if (!AUTH.edit){ toast("Добавлять смены может только редактор", true); return; }
   const msg = document.getElementById("a-msg");
