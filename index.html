@@ -148,6 +148,10 @@
   .rail.mini{width:56px;min-width:56px;padding:10px 6px}
   .rail.mini .tab,.rail.mini .wtab,.rail.mini .rtoggle{justify-content:center;padding:9px 0;gap:0}
   .rail.mini .tab span:nth-child(2),.rail.mini .wtab span:nth-child(2),.rail.mini .tab .cnt:not(.due),.rail.mini .rsect{display:none}
+  .wdrop{position:fixed;z-index:120;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:3px}
+  .witem{background:none;border:none;color:var(--ink);text-align:left;padding:8px 11px;border-radius:7px;cursor:pointer;font:inherit;font-size:12.5px}
+  .witem:hover{background:var(--panel2)}
+  .witem.on{background:var(--accent);color:#fff;font-weight:600}
   #tabs .wtab{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;color:var(--dim);background:none;border:1px solid var(--line);font-size:12.5px;width:100%;cursor:pointer;font:inherit;text-align:left;font-family:inherit}
   #tabs .wtab:hover{color:var(--ink);background:var(--panel2)}
   #tabs .wtab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
@@ -383,7 +387,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, weeksOpen:false };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false };
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
 
@@ -501,18 +505,8 @@ function render(){
   const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
   const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
   const toolTabs = tabs().filter(c=>["Операторы","Сравнение"].includes(c));
-  const wtabBtn = w => w===""
-    ? `<button class="wtab ${!state.week?"on":""}" data-w="" title="все недели"><span>🗓</span><span>все недели</span></button>`
-    : `<button class="wtab ${state.week===w?"on":""}" data-w="${esc(w)}" title="${esc(w)}"><span>🗓</span><span>${esc(w)}</span></button>`;
-  const oldWeeks = wks.slice(0,-1);
-  const foldWeeks = wks.length >= 4; // порог: с 4 недель старые прячутся за «прошлые (N)»
-  const showOld = !foldWeeks || state.weeksOpen || oldWeeks.includes(state.week);
-  const weeksHtml = wks.length>1
-    ? sect("недели") + wtabBtn("") + wtabBtn(wks[wks.length-1])
-      + (wks.length>2
-          ? (showOld ? oldWeeks.map(wtabBtn).join("") : "")
-            + (foldWeeks ? `<button class="wtab" data-wfold="1" title="${state.weeksOpen?"свернуть старые недели":"показать старые недели"}"><span>${state.weeksOpen?"▾":"▸"}</span><span>${state.weeksOpen?"свернуть старые":"прошлые ("+oldWeeks.length+")"}</span></button>` : "")
-          : "")
+  const weeksHtml = wks.length
+    ? sect("недели") + `<button class="wtab" id="weekdrop-btn" title="выбрать неделю"><span>🗓</span><span>Неделя</span><span class="cnt">${esc(state.week||"все")}</span></button>`
     : "";
   document.getElementById("tabs").innerHTML = `<button class="rtoggle" id="railtoggle" title="${state.railMini?"развернуть панель":"свернуть в иконки"}">${state.railMini?"⇥":"⇤"}</button>`
     + mainTabs.map(tabBtn).join("")
@@ -521,8 +515,8 @@ function render(){
     + weeksHtml;
   document.getElementById("tabs").classList.toggle("mini", !!state.railMini);
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
-  document.querySelectorAll(".wtab").forEach(b=>b.onclick=()=>{ if (!("w" in b.dataset)) return; state.week = b.dataset.w; state.page = 1; render(); });
-  document.querySelectorAll("[data-wfold]").forEach(b=>b.onclick=()=>{ state.weeksOpen = !state.weeksOpen; render(); });
+  const wdb = document.getElementById("weekdrop-btn");
+  if (wdb) wdb.onclick = toggleWeekDrop;
   const rt = document.getElementById("railtoggle");
   if (rt) rt.onclick = ()=>{
     state.railMini = !state.railMini;
@@ -994,6 +988,32 @@ function renderSchedule(){
     } catch(e){ toast("Ошибка: " + e.message, true); }
   });
 }
+
+// ---------- выпадающий список недель ----------
+function closeWeekDrop(){ const e = document.getElementById("weekdrop"); if (e) e.remove(); }
+function toggleWeekDrop(){
+  const ex = document.getElementById("weekdrop");
+  if (ex){ ex.remove(); return; }
+  const btn = document.getElementById("weekdrop-btn");
+  if (!btn) return;
+  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
+  if (!wks.length) return;
+  const rect = btn.getBoundingClientRect();
+  const div = document.createElement("div");
+  div.id = "weekdrop"; div.className = "wdrop";
+  div.style.top = Math.min(window.innerHeight - 60, rect.bottom + 4) + "px";
+  div.style.left = rect.left + "px";
+  div.innerHTML = `<button class="witem ${!state.week?"on":""}" data-w="">все недели</button>`
+    + wks.map(w=>`<button class="witem ${state.week===w?"on":""}" data-w="${esc(w)}">${esc(w)}</button>`).join("");
+  document.body.appendChild(div);
+  div.querySelectorAll(".witem").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; closeWeekDrop(); render(); });
+}
+document.addEventListener("click", e=>{
+  const d = document.getElementById("weekdrop");
+  if (!d) return;
+  if (e.target.closest("#weekdrop") || e.target.closest("#weekdrop-btn")) return;
+  closeWeekDrop();
+});
 
 // переход из «Расписания» к правкам конкретной смены
 function gotoRow(goto){
