@@ -63,8 +63,8 @@
   td{padding:8px;border-bottom:1px solid var(--line)}
   tr.r:hover td{background:var(--panel2);cursor:pointer}
   tr.detail td{background:#191c21;padding:0}
-  .detail-in{padding:14px 18px 18px;overflow:hidden;max-height:0;transition:max-height .35s ease}
-  tr.detail.open .detail-in{max-height:3000px}
+  .detail-in{padding:0 18px;overflow:hidden;max-height:0;transition:max-height .35s ease, padding .35s ease}
+  tr.detail.open .detail-in{max-height:3000px;padding:14px 18px 18px}
   .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
   @media(max-width:900px){.dgrid{grid-template-columns:1fr}}
   .drow{border-bottom:1px dashed var(--line);padding:6px 0;font-size:12.5px}
@@ -126,8 +126,6 @@
   .spacer{flex:1}
   .iconbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:5px 11px;cursor:pointer;font:inherit}
   .iconbtn:hover{color:var(--ink)}
-  .iconbtn{position:relative}
-  .badge{position:absolute;top:-7px;right:-7px;background:var(--bad);color:#fff;border-radius:10px;font-size:10px;padding:0 5px;font-weight:700}
   .cdot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px;cursor:pointer;border:1px solid rgba(255,255,255,.18)}
   #splash{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
   #splash.hide{opacity:0;pointer-events:none}
@@ -135,6 +133,38 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .slogo{font-size:34px}
   .stxt{color:var(--dim);font-size:13px}
+  .layout{display:flex;align-items:flex-start;gap:0}
+  .rail{width:195px;min-width:170px;position:sticky;top:14px;background:#181b20;border:1px solid var(--line);border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;gap:5px}
+  #tabs .tab{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;color:var(--dim);background:none;border:none;font-size:13px;width:100%}
+  #tabs .tab:hover{color:var(--ink);background:var(--panel2)}
+  #tabs .tab.on{background:var(--accent);color:#fff;font-weight:600}
+  #tabs .tab .cnt{margin-left:auto;opacity:.75;font-size:11px}
+  #tabs .weeksel{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit;font-size:12px;margin-top:6px}
+  .maincol{flex:1;min-width:0;padding-left:16px}
+  @media(max-width:820px){
+    .layout{flex-direction:column}
+    .rail{width:100%;flex-direction:row;flex-wrap:wrap;position:static}
+    #tabs .tab{width:auto}
+    #tabs .weeksel{width:auto;flex:1}
+    .maincol{padding-left:0;width:100%}
+  }
+  .pgroup{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden;background:var(--panel)}
+  .phead{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel2);cursor:pointer}
+  .phead:hover{background:#262b33}
+  .phead .arrow{color:var(--faint);font-size:11px;width:10px}
+  .phead b{font-weight:600}
+  .phead .tag{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .ptag{border-radius:12px;padding:1px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pt-ok{background:rgba(62,207,142,.13);color:var(--ok)}
+  .pt-bad{background:rgba(229,101,95,.13);color:var(--bad)}
+  .pt-warn{background:rgba(229,180,85,.13);color:var(--warn)}
+  .pbody{border-top:1px solid var(--line);display:none}
+  .pgroup.open .pbody{display:block}
+  .score-cell{display:flex;align-items:center;gap:8px}
+  .score-cell .num{font-weight:700;min-width:32px}
+  .sbar{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;max-width:90px}
+  .sfill{height:100%;border-radius:4px}
+  .sf-g{background:var(--ok)} .sf-y{background:var(--warn)} .sf-r{background:var(--bad)}
   .planbtn{background:none;border:none;cursor:pointer;font-size:12px;opacity:.65;padding:0 2px}
   .planbtn:hover{opacity:1}
   .fchip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:16px;padding:4px 13px;font-size:12px;cursor:pointer;margin-right:6px;font:inherit}
@@ -170,7 +200,6 @@
   <div id="splash"><div class="slogo">📊</div><div class="spin"></div><div class="stxt">Загружаем данные…</div></div>
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
-    <button id="bellbtn" class="iconbtn" title="уведомления">🔔<span class="badge" id="bellbadge" style="display:none">0</span></button>
     <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Смена</button>
     <button id="weekbtn" class="abtn2" style="display:none">🗓 Неделя</button>
@@ -181,10 +210,13 @@
     <span class="week" id="weeklabel"></span>
     <span class="sub" id="updated"></span>
   </header>
-  <div id="pbar" class="pwrap"></div>
-
-  <div class="tabs" id="tabs"></div>
-  <div id="content"></div>
+  <div class="layout">
+    <div class="rail" id="tabs"></div>
+    <div class="maincol">
+      <div id="pbar" class="pwrap"></div>
+      <div id="content"></div>
+    </div>
+  </div>
 
   <div class="modal-ov" id="addmodal">
     <div class="modal">
@@ -217,23 +249,6 @@
       <p style="color:var(--faint);font-size:12px;margin-bottom:12px">Создаст листы всех твоих городов с теми же командами, но с чистыми полями проверки.</p>
       <button class="abtn" id="w-go">Создать</button>
       <span id="w-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
-    </div>
-  </div>
-  <div class="modal-ov" id="histmodal">
-    <div class="modal" style="width:min(480px,94vw)">
-      <button class="x" id="hist-x">✕</button>
-      <h3>🔔 Уведомления</h3>
-      <div id="histlist" style="max-height:60vh;overflow:auto"></div>
-    </div>
-  </div>
-  <input type="color" id="colorpick" style="position:absolute;left:-200px;top:-200px">
-  <div class="modal-ov" id="planmodal">
-    <div class="modal" style="width:min(560px,94vw)">
-      <button class="x" id="plan-x">✕</button>
-      <h3>🗓 План работ — <span id="pl-prod"></span> <span id="pl-city" style="color:var(--faint);font-size:12px"></span></h3>
-      <textarea id="pl-text" style="width:100%;min-height:140px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="план работ на неделю по команде"></textarea>
-      <button class="abtn" id="pl-save" style="margin-top:10px">Сохранить план</button>
-      <span id="pl-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
     </div>
   </div>
   <div class="toast" id="toast"></div>
@@ -291,7 +306,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null, colors:{}, quick:"", notifs:[], unread:0 };
+const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null, colors:{}, quick:"", notifs:[], unread:0, grpOpen:{}, page:1 };
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
@@ -376,17 +391,8 @@ function toast(msg, isErr){
   toastTimer = setTimeout(()=>t.className = "toast", 3500);
   state.notifs.unshift({ time: new Date().toLocaleTimeString("ru-RU").slice(0,5), msg: msg, err: !!isErr });
   if (state.notifs.length > 50) state.notifs.pop();
-  if (!document.getElementById("histmodal").classList.contains("show")){
-    state.unread++;
-    updateBell();
-  }
 }
-function updateBell(){
-  const b = document.getElementById("bellbadge");
-  if (!b) return;
-  b.textContent = state.unread;
-  b.style.display = state.unread > 0 ? "" : "none";
-}
+
 function openModal(id){ document.getElementById(id).classList.add("show"); }
 function closeModal(id){ document.getElementById(id).classList.remove("show"); }
 document.addEventListener("click", e=>{
@@ -407,9 +413,10 @@ function updateLoginBtn(){
 
 function render(){
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
+  const icons = {"Обзор":"📊","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
   document.getElementById("tabs").innerHTML = tabs().map(c=>{
     const n = rowsOf(c).length;
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}">${c}<span class="cnt">${n||""}</span></button>`;
+    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c}</span><span class="cnt">${n||""}</span></button>`;
   }).join("") + (wks.length>1 ? `<select id="weeksel" title="неделя"><option value="">все недели</option>${wks.map(w=>`<option ${state.week===w?"selected":""}>${esc(w)}</option>`).join("")}</select>` : "");
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
   const ws=document.getElementById("weeksel");
@@ -525,9 +532,29 @@ function render(){
   state.lastView = view;
   document.getElementById("f-count").textContent = "показано " + view.length + " из " + rows.length;
 
-  document.getElementById("table").innerHTML = view.length ? `<table>
-    <thead><tr><th>Продюсер</th><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${
-    view.map((x,key)=>{
+  // группы по продюсерам
+  const groupsMap = {};
+  view.forEach((x,key)=>{
+    const gk = x.r.city+"|"+(x.r.producer||"—");
+    if (!groupsMap[gk]) groupsMap[gk] = {city:x.r.city, producer:x.r.producer||"—", items:[], ok:0, warn:0, bad:0, none:0};
+    const g = groupsMap[gk];
+    g.items.push({x,key});
+    if (x.s.verdict==="норма") g.ok++;
+    else if (x.s.verdict==="замечание") g.warn++;
+    else if (x.s.verdict==="критично") g.bad++;
+    else g.none++;
+  });
+  let groups = Object.keys(groupsMap).map(k=>Object.assign({key:k}, groupsMap[k]));
+  const filterActive = state.search || state.quick || state.onlyBad;
+  groups.sort((a,b)=>(b.bad*3+b.warn)-(a.bad*3+a.warn));
+  const PAGE = 12;
+  const shown = groups.slice(0, state.page*PAGE);
+  const hidden = groups.length - shown.length;
+
+  document.getElementById("table").innerHTML = groups.length ? shown.map(g=>{
+    const open = filterActive || state.grpOpen[g.key];
+    const gkeyEsc = esc(g.key);
+    const rowsHtml = g.items.map(({x,key})=>{
       const dr = getDraft(x.r);
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
@@ -540,9 +567,8 @@ function render(){
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}</div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
-          <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/8</option>`).join("")}</select></div>
-          <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>
-        <div class="f" style="grid-column:1/-1"><b>📋 Скрин из буфера</b><div class="paste" id="pz${key}">Открой скрин → Ctrl+C → сюда Ctrl+V (уедет на диск и привяжется к смене)</div></div>`;
+        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/8</option>`).join("")}</select></div>
+        <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие смены команды</button>
@@ -551,9 +577,31 @@ function render(){
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
       const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
-      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td><span class="cdot" data-prod="${esc(x.r.producer||"")}" style="background:${esc(state.colors[x.r.producer]||"#566070")}" title="${esc(x.r.producer||"")} — цвет команды"></span>${esc(x.r.producer||"—")}${draftMark}${AUTH.edit?` <button class="planbtn" data-plan="${esc(x.r.city)}|${esc(x.r.producer||"")}" title="план работ">📝</button>`:""}${isFresh(x.r)?' <span title="обновлено: '+esc(x.r.updated)+'" style="color:var(--accent)">⏱</span>':""}</td><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}</td>${cityCell}<td class="${scoreCls(x.s.score===null?0:x.s.score)}">${x.s.score!==null?x.s.score+"/8":"–"}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
-      <tr class="detail" data-d="${key}"><td colspan="8"><div class="detail-in">${inner}</div></td></tr>`;
-    }).join("")}</tbody></table>` : `<div class="empty">Нет данных по фильтру</div>`;
+      const scoreBar = x.s.score!==null
+        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${x.s.score*12.5}%"></div></div></div>`
+        : '<span style="color:var(--faint)">–</span>';
+      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      <tr class="detail" data-d="${key}"><td colspan="${state.tab==="Обзор"?7:6}"><div class="detail-in">${inner}</div></td></tr>`;
+    }).join("");
+    return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}">
+      <div class="phead" data-g="${gkeyEsc}">
+        <span class="cdot" data-prod="${esc(g.producer)}" style="background:${esc(state.colors[g.producer]||"#566070")}"></span>
+        <span class="arrow">${open?"▾":"▸"}</span><b>${esc(g.producer)}</b>
+        ${state.tab==="Обзор"?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
+        ${AUTH.edit?`<button class="planbtn" data-plan="${gkeyEsc}" title="план работ">📝</button>`:""}
+        <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
+      </div>
+      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${state.tab==="Обзор"?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+    </div>`;
+  }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "")
+    : `<div class="empty">Нет данных по фильтру</div>`;
+
+  document.querySelectorAll(".phead").forEach(h=>h.onclick=()=>{
+    state.grpOpen[h.dataset.g] = !state.grpOpen[h.dataset.g];
+    h.parentElement.classList.toggle("open");
+  });
+  const mb = document.getElementById("morebtn");
+  if (mb) mb.onclick = ()=>{ state.page++; render(); };
 
   document.querySelectorAll("tr.r").forEach(tr=>tr.onclick=()=>{
     const d = document.querySelector(`tr.detail[data-d="${tr.dataset.i}"]`);
@@ -805,15 +853,6 @@ document.getElementById("addbtn").onclick = ()=>{
   updateProdList(); openModal("addmodal");
 };
 document.getElementById("add-x").onclick = ()=>closeModal("addmodal");
-document.getElementById("bellbtn").onclick = ()=>{
-  const list = document.getElementById("histlist");
-  list.innerHTML = state.notifs.length
-    ? state.notifs.map(n=>`<div class="drow"><b>${n.time}${n.err?" · ошибка":""}</b><span>${esc(n.msg)}</span></div>`).join("")
-    : '<div class="empty">Пока пусто</div>';
-  openModal("histmodal");
-  state.unread = 0; updateBell();
-};
-document.getElementById("hist-x").onclick = ()=>closeModal("histmodal");
 document.querySelectorAll(".planbtn").forEach(b=>b.onclick=(ev)=>{
   ev.stopPropagation();
   const parts = b.dataset.plan.split("|");
