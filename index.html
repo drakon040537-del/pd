@@ -1530,7 +1530,6 @@ async function load(){
     dot.className="dot-live";
     dot.title="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
     txt.textContent="";
-    document.getElementById("updated").textContent="";
     updateLoginBtn();
     render();
     jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
