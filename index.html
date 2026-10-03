@@ -353,9 +353,8 @@
   <div class="modal-ov" id="cammodal">
     <div class="modal" style="width:min(900px,96vw)">
       <button class="x" id="cam-x">✕</button>
-      <h3>📷 Скрин команды</h3>
-      <img id="cam-img" style="width:100%;border-radius:8px" alt="скрин команды">
-      <a id="cam-link" href="#" target="_blank" style="color:var(--accent);font-size:12.5px">открыть оригинал в новой вкладке ↗</a>
+      <h3 id="cam-title">📷 Скрин</h3>
+      <img id="cam-img" style="width:100%;border-radius:8px" alt="скрин">
     </div>
   </div>
   <div class="modal-ov" id="uplmodal">
@@ -400,7 +399,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.17"
+  VER: "2026-10-03.18"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -805,7 +804,7 @@ function render(){
       const rowScreens = (state.screens||{})[x.r._sheet+"|"+x.r._row] || [];
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.length ? rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"🔗")}</a>`).join("") : '<span style="color:var(--faint)">—</span>';
-      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img src="${esc(driveThumb(s.link,400))}" data-big="${esc(driveThumb(s.link,1600))}" alt="скрин: ${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img src="${esc(driveThumb(s.link,400))}" data-big="${esc(driveThumb(s.link,1600))}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         const scr = rowScreens.filter(s=>String(s.cat)===n);
@@ -935,7 +934,7 @@ function render(){
     ev.stopPropagation();
     const x = state.lastView[b.dataset.cam]; if (!x || !x.r.screen) return;
     document.getElementById("cam-img").src = driveThumb(x.r.screen, 1600);
-    document.getElementById("cam-link").href = driveFilePage(x.r.screen);
+    document.getElementById("cam-title").textContent = "📷 " + (x.r.opName || x.r.opNick || "скрин") + (x.r.model ? " · " + x.r.model : "");
     openModal("cammodal");
   });
   document.querySelectorAll(".chk[data-selk]").forEach(c=>c.onchange=()=>{
@@ -979,7 +978,7 @@ function render(){
     im.onerror=()=>{ const n=(+im.dataset.n||0)+1; im.dataset.n=n; if(n<3) setTimeout(()=>{ im.src=im.src; },3000); }; // холодный thumbnail даёт 404 — ретраим
     im.onclick=()=>{
       document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
-      document.getElementById("cam-link").href = driveFilePage(im.getAttribute("data-big") || im.src);
+      document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
     };
   });
