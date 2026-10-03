@@ -238,6 +238,7 @@
   <div class="gate-card">
     <div class="logo">Вход</div>
     <div class="sub">вход по личному логину — увидишь только свои города</div>
+    <div style="color:var(--faint);font-size:10.5px;margin-bottom:14px">версия сайта: <span id="l-ver"></span></div>
     <input id="l-user" placeholder="Логин" autocomplete="username">
     <input id="l-pass" type="password" placeholder="Пароль" autocomplete="current-password">
     <button class="abtn" id="l-go">Войти</button>
@@ -342,7 +343,8 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
-  REFRESH_MIN: 5
+  REFRESH_MIN: 5,
+  VER: "2026-10-03.5"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -1420,6 +1422,8 @@ function showGate(){
   document.getElementById("gate").classList.remove("hide");
   document.getElementById("l-pass").value = "";
   document.getElementById("l-msg").textContent = "";
+  const ver = document.getElementById("l-ver");
+  if (ver) ver.textContent = CONFIG.VER;
   setTimeout(()=>document.getElementById("l-user").focus(), 100);
 }
 function hideGate(){ document.getElementById("gate").classList.add("hide"); }
