@@ -281,23 +281,22 @@ CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
 
 const AUTH = {
   user: localStorage.getItem("dash_user") || "",
-  pass: localStorage.getItem("dash_pass") || "",
+  pass: sessionStorage.getItem("dash_pass") || "",
   name: localStorage.getItem("dash_name") || "",
   edit: localStorage.getItem("dash_edit") === "1",
   cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
   ok(){ return !!(this.user && this.pass); },
   set(u,p,edit,cities,name){ this.user=u; this.pass=p; this.edit=edit; this.cities=cities; this.name=name||u;
-    localStorage.setItem("dash_user",u); localStorage.setItem("dash_pass",p);
+    localStorage.setItem("dash_user",u); sessionStorage.setItem("dash_pass",p);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
     localStorage.setItem("dash_name",this.name); },
-  clear(){ ["dash_user","dash_pass","dash_edit","dash_cities","dash_name"].forEach(k=>localStorage.removeItem(k));
-    this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; },
-  canCity(c){ return this.cities.includes("all") || this.cities.includes(c); }
+  clear(){ ["dash_user","dash_edit","dash_cities","dash_name"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass");
+    this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; }
 };
 
 
-const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
-const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
+const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу","Плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
+const FIELDCODES = ["oko","model","membrs","goly","show","playlist","sites","kadr","room"];
 const PRODUCERS = {
   "Томск": ["Фуад","Минько","Дащинский","Кравчук","Соколов","Валов"],
   "Новосибирск": ["Иванов","Пирожков","Козлов","Фаткулин","Васильченко","Пышков","Глушков","Белых","Бологов","Феоктистов","Черников"],
@@ -308,7 +307,8 @@ const PH = {
   model: ["блокнот не используется","микрофон выключен","общение не ведётся","модель не управляется"],
   membrs: ["не пишет первым","сухие сообщения без крючка","не обновляет список зрителей","не цепляется за новых"],
   goly: ["голы не меняются","не следит за пробитием","цели скучные","гол не виден в раскладке"],
-  show: ["шоу не ведётся","шоу однотипное","модель не вовлечена","плохой плейлист"],
+  show: ["шоу не ведётся","шоу однотипное","модель не вовлечена"],
+  playlist: ["плохой плейлист","музыка не подходит","плейлист не обновляется"],
   sites: ["работы нет","работает не на всех сайтах","не видна статистика гола","внешний переводчик"],
   kadr: ["кадр не меняется","обрезано лицо","картинка не настроена","плохой свет"],
   room: ["пустая комната","перегруженный фон","не подходит команде","плохой свет/оттенки"]
@@ -316,7 +316,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", onlyBad:false, search:"", lastView:[], rows:[], open:{}, changed:null, colors:{}, quick:"", notifs:[], unread:0, grpOpen:{}, page:1 };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"" };
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
@@ -378,14 +378,12 @@ function draftVal(r, j){ const d = getDraft(r); return d && d["f"+j] !== undefin
 function draftIsDirty(r){ return !!getDraft(r); }
 function rowDirty(key){
   const x = state.lastView[key]; if (!x) return false;
-  for (let j=0;j<8;j++){
+  for (let j=0;j<9;j++){
     const el = document.getElementById("ed"+key+"_"+j);
     if (el && el.value !== (x.r.cats[j]||"")) return true;
   }
   const c = document.getElementById("ed"+key+"_comment");
   if (c && c.value !== (x.r.obs||"")) return true;
-  const s = document.getElementById("ed"+key+"_screen");
-  if (s && s.value.trim() !== (x.r.screen||"")) return true;
   return false;
 }
 function anyDirty(){
@@ -399,18 +397,15 @@ function toast(msg, isErr){
   t.className = "toast show" + (isErr ? " err" : "");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.className = "toast", 3500);
-  state.notifs.unshift({ time: new Date().toLocaleTimeString("ru-RU").slice(0,5), msg: msg, err: !!isErr });
-  if (state.notifs.length > 50) state.notifs.pop();
 }
 
 function openModal(id){ document.getElementById(id).classList.add("show"); }
 function closeModal(id){ document.getElementById(id).classList.remove("show"); }
 document.addEventListener("click", e=>{
-  const ov = document.getElementById("addmodal");
-  if (ov && ov.classList.contains("show") && e.target === ov) closeModal("addmodal");
+  document.querySelectorAll(".modal-ov.show").forEach(ov=>{ if (e.target === ov) closeModal(ov.id); });
 });
 document.addEventListener("keydown", e=>{
-  if (e.key === "Escape") closeModal("addmodal");
+  if (e.key === "Escape") document.querySelectorAll(".modal-ov.show").forEach(ov=>closeModal(ov.id));
 });
 
 function updateLoginBtn(){
@@ -487,12 +482,12 @@ function render(){
   const cr = document.getElementById("chipsrow");
   if (cr){
     cr.innerHTML = chipDefs.map(c=>`<button class="fchip ${state.quick===c[0]?"on":""}" data-q="${c[0]}">${c[1]} · ${c[2]}</button>`).join("");
-    cr.querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{ state.quick = state.quick===b.dataset.q ? "" : b.dataset.q; render(); });
+    cr.querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{ state.quick = state.quick===b.dataset.q ? "" : b.dataset.q; state.page=1; render(); });
   }
-  document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;render();};
+  document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;state.page=1;render();};
   
   const fs=document.getElementById("f-search");
-  fs.oninput = e=>{state.search=e.target.value;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
+  fs.oninput = e=>{state.search=e.target.value;state.page=1;render();const f2=document.getElementById("f-search");f2.focus();f2.setSelectionRange(f2.value.length,f2.value.length);};
 
 
   const catCounts = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length}));
@@ -555,7 +550,7 @@ function render(){
     else g.none++;
   });
   let groups = Object.keys(groupsMap).map(k=>Object.assign({key:k}, groupsMap[k]));
-  const filterActive = state.search || state.quick || state.onlyBad;
+  const filterActive = state.search || state.quick;
   groups.sort((a,b)=>(b.bad*3+b.warn)-(a.bad*3+a.warn));
   const PAGE = 12;
   const shown = groups.slice(0, state.page*PAGE);
@@ -590,7 +585,7 @@ function render(){
       const scoreBar = x.s.score!==null
         ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${x.s.score*12.5}%"></div></div></div>`
         : '<span style="color:var(--faint)">–</span>';
-      return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
+      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="${state.tab==="Обзор"?7:6}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}">
@@ -638,7 +633,6 @@ function render(){
       const d = getDraft(x.r) || {};
       CATS.forEach((n,j)=>{ const ta = document.getElementById("ed"+det.dataset.d+"_"+j); if (ta) d["f"+j] = ta.value; });
       const c = document.getElementById("ed"+det.dataset.d+"_comment"); if (c) d.comment = c.value;
-      const s = document.getElementById("ed"+det.dataset.d+"_screen"); if (s) d.screen = s.value;
       const sc = document.getElementById("ed"+det.dataset.d+"_score"); if (sc) d.score = sc.value;
       const vd = document.getElementById("ed"+det.dataset.d+"_verdict"); if (vd) d.verdict = vd.value;
       setDraft(x.r, d);
@@ -654,7 +648,7 @@ function render(){
 
 function switchTab(t){
   if (state.tab !== t && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
-  state.tab = t; state.open = {}; render();
+  state.tab = t; state.page = 1; render();
 }
 
 // ---------- «Операторы» ----------
@@ -663,10 +657,10 @@ function renderOperators(rows, st){
   rows.forEach((r,i)=>{
     const name = (r.opName || r.opNick || "").trim() || "—";
     const s = st[i];
-    if (!map[name]) map[name] = {checks:0, sum:0, crit:0, cities:new Set(), prods:new Set(), rows:[]};
+    if (!map[name]) map[name] = {checks:0, sum:0, scored:0, crit:0, cities:new Set(), prods:new Set(), rows:[]};
     const o = map[name];
     o.checks++;
-    if (s.score!==null){ o.sum += s.score; }
+    if (s.score!==null){ o.sum += s.score; o.scored++; }
     if (s.verdict==="критично") o.crit++;
     o.cities.add(r.city); o.prods.add(r.producer||"—");
     o.rows.push({r, s});
@@ -679,7 +673,7 @@ function renderOperators(rows, st){
     });
     const known = perWeek.filter(v=>v!==null);
     const trend = known.length>=2 ? (known[known.length-1] - known[known.length-2]) : 0;
-    return { name, checks:o.checks, avg: o.sum>0 ? o.sum/o.checks : null,
+    return { name, checks:o.checks, avg: o.scored ? o.sum/o.scored : null,
       crit:o.crit, cities:[...o.cities], prods:[...o.prods], rows:o.rows, perWeek, trend };
   }).sort((a,b)=>(b.avg??-1)-(a.avg??-1));
 
@@ -753,11 +747,11 @@ async function dupRow(x, key){
   const targets = state.rows.filter(r=>r._sheet===x.r._sheet && r.producer===x.r.producer && r.opNick===x.r.opNick && r._row!==x.r._row);
   if (!targets.length){ toast("У этой команды нет других смен на неделе", true); return; }
   if (!confirm("Скопировать замечания на " + targets.length + " других смен команды?")) return;
-  let done = 0;
+  let done = 0, fb = 0;
   for (const t of targets){
     const params = { action:"save", sheet:t._sheet, row:String(t._row), user:AUTH.user, pass:AUTH.pass };
     let n = 1;
-    for (let j=0;j<8;j++){
+    for (let j=0;j<9;j++){
       const v = (x.r.cats[j]||"").trim();
       if (!v) continue;
       params["f"+n] = FIELDCODES[j]; params["v"+n] = v; n++;
@@ -768,11 +762,12 @@ async function dupRow(x, key){
       catch(e1){
         if (String(e1.message).indexOf("прав") >= 0) throw e1;
         await writePOST(Object.assign({ action:"save" }, params));
+        fb++;
       }
       done++;
     } catch(e){}
   }
-  toast("✔ Скопировано в " + done + " смен");
+  toast("✔ Скопировано в " + done + " смен" + (fb ? " (резервный канал — без подтверждения)" : ""));
   setTimeout(load, 800);
 }
 
@@ -801,7 +796,7 @@ async function saveRow(x, key){
   if (!AUTH.edit){ toast("Править может только редактор", true); return; }
   const btn = document.getElementById("sv"+key);
   const changes = [];
-  for (let j=0;j<8;j++){
+  for (let j=0;j<9;j++){
     const val = document.getElementById("ed"+key+"_"+j).value;
     if (val !== (x.r.cats[j]||"")) changes.push([FIELDCODES[j], val]);
   }
@@ -824,12 +819,12 @@ async function saveRow(x, key){
       viaFallback = true;
     }
     clearDraft(x.r);
-    for (let j=0;j<8;j++) x.r.cats[j] = document.getElementById("ed"+key+"_"+j).value;
+    for (let j=0;j<9;j++) x.r.cats[j] = document.getElementById("ed"+key+"_"+j).value;
     x.r.obs = document.getElementById("ed"+key+"_comment").value;
     x.r.scoreM = document.getElementById("ed"+key+"_score").value;
     x.r.verdictM = document.getElementById("ed"+key+"_verdict").value;
     x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
-    toast(viaFallback ? "✔ Сохранено (резервный канал)" : "✔ Сохранено в таблицу (" + (res.saved||0) + " полей)");
+    toast(viaFallback ? "✔ Сохранено (резервный канал — без подтверждения)" : "✔ Сохранено в таблицу (" + (res.saved||0) + " полей)");
     render();
   } catch(e){
     toast("Ошибка: " + e.message, true);
@@ -916,8 +911,10 @@ function nextWeekLabel(label){
   const m = String(label||"").match(/(\d{1,2})-(\d{1,2})\.(\d{1,2})/);
   if (!m) return "";
   const y = new Date().getFullYear();
-  const d1 = new Date(y, m[3]-1, m[1]); d1.setDate(d1.getDate()+7);
-  const d2 = new Date(y, m[3]-1, m[2]); d2.setDate(d2.getDate()+7);
+  const dS = parseInt(m[1],10), dE = parseInt(m[2],10), endM = parseInt(m[3],10);
+  const startM = dS > dE ? (endM === 1 ? 12 : endM - 1) : endM;
+  const d1 = new Date(y, startM-1, dS); d1.setDate(d1.getDate()+7);
+  const d2 = new Date(y, endM-1, dE);   d2.setDate(d2.getDate()+7);
   const f1 = d1.getDate(), m1 = d1.getMonth()+1, f2 = d2.getDate(), m2 = d2.getMonth()+1;
   return m1===m2 ? f1+"-"+f2+"."+m2 : f1+"."+m1+"-"+f2+"."+m2;
 }
@@ -963,10 +960,15 @@ document.getElementById("a-save").onclick = async ()=>{
   if (!any){ msg.textContent = "На листе " + city + " пока нет строк — создай блок продюсера в таблице"; return; }
   msg.textContent = "Добавляю…";
   try {
-    const res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass });
-    if (res.error) throw new Error(res.error);
+    let res = null, viaFallback = false;
+    try { res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass }); if (res.error) throw new Error(res.error); }
+    catch(e1){
+      if (String(e1.message).indexOf("прав") >= 0) throw e1;
+      await writePOST({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model });
+      viaFallback = true;
+    }
     closeModal("addmodal");
-    toast("✔ Смена добавлена в " + city + " (строка " + res.row + ")");
+    toast("✔ Смена добавлена в " + city + (viaFallback ? " (резервный канал — без подтверждения)" : " (строка " + res.row + ")"));
     ["a-nick","a-opname","a-model","a-prod-new"].forEach(id=>document.getElementById(id).value="");
     setTimeout(load, 800);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
@@ -1038,7 +1040,9 @@ async function uploadScreen(blob, x){
     const scale = Math.min(1, 1600/Math.max(img.width, img.height));
     const cv = document.createElement("canvas");
     cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
-    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
     const data = cv.toDataURL("image/jpeg", 0.85).split(",")[1];
     toast("📸 Скрин: загружаю на диск…");
     await fetch(CONFIG.API_URL, {
@@ -1081,7 +1085,7 @@ async function load(){
     if (document.getElementById("a-prod")) updateProdList();
   }catch(e){
     dot.className="dot-off";
-    txt.textContent="Ошибка загрузки: "+e.message+". Возможно, нужно войти в Google-аккаунт в этом браузере.";
+    txt.textContent="Ошибка загрузки: "+e.message+(String(e.message)==="JSONP_FAIL"?" — нет связи с Apps Script, проверь сеть.":". Возможно, нужно войти в Google-аккаунт в этом браузере.");
   }
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("hide")) sp.classList.add("hide");
