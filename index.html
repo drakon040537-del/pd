@@ -171,6 +171,23 @@
   .sbar{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;max-width:90px}
   .sfill{height:100%;border-radius:4px}
   .sf-g{background:var(--ok)} .sf-y{background:var(--warn)} .sf-r{background:var(--bad)}
+  .schedwrap{overflow-x:auto;padding-bottom:4px}
+  .schedrow{display:grid;grid-template-columns:190px repeat(7,minmax(150px,1fr));gap:8px;min-width:1350px}
+  .sday{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px;min-height:110px}
+  .sday.today{border-color:var(--accent)}
+  .sday.oday{border-color:var(--bad)}
+  .sday h3{font-size:12px;color:var(--dim);margin-bottom:8px;text-align:center}
+  .sday.today h3{color:var(--accent)} .sday.oday h3{color:var(--bad)}
+  .sday h3 .cnt{color:var(--faint);font-weight:400}
+  .schip{border:1px solid var(--line);border-left:3px solid var(--dim);border-radius:8px;padding:7px 9px;margin-bottom:7px;background:var(--panel2);font-size:12px}
+  .schip.v-ok{border-left-color:var(--ok)}
+  .schip.v-warn{border-left-color:var(--warn)}
+  .schip.v-bad{border-left-color:var(--bad)}
+  .sc-top{font-weight:600;margin-bottom:2px;line-height:1.35}
+  .sc-sub{color:var(--dim);font-size:11px;line-height:1.4}
+  .sbtn{margin-top:6px;background:var(--panel);border:1px solid var(--line);color:var(--ok);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px;font-family:inherit}
+  .sbtn:hover{border-color:var(--ok)}
+  @media(max-width:900px){.twocol{grid-template-columns:1fr !important}}
   .gbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:7px;padding:4px 10px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}
   .gbtn:hover{color:var(--ink);border-color:var(--dim)}
   .delbtn:hover{color:var(--bad);border-color:var(--bad)}
@@ -360,7 +377,7 @@ function tabs(){
   const cities = AUTH.cities.includes("all")
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
-  return ["Обзор"].concat(AUTH.edit?["Сводка"]:[]).concat(cities).concat(["Операторы","Сравнение"]);
+  return ["Обзор"].concat(AUTH.edit?["Сводка"]:[]).concat(["Расписание"]).concat(cities).concat(["Операторы","Сравнение"]);
 }
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
 
@@ -406,7 +423,7 @@ function hl(t){
   try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
 }
 function esc(s){ return (s||"").split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week) rs = rs.filter(r=>r.week===state.week); return rs; }
+function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week) rs = rs.filter(r=>r.week===state.week); return rs; }
 
 // ---------- черновики ----------
 const dKey = r => "draft:" + r._sheet + ":" + r._row;
@@ -457,7 +474,7 @@ function updateLoginBtn(){
 
 function render(){
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
-  const icons = {"Обзор":"📊","Сводка":"🧭","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
+  const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
   document.getElementById("tabs").innerHTML = tabs().map(c=>{
     const n = rowsOf(c).length;
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c}</span><span class="cnt">${n||""}</span></button>`;
@@ -471,6 +488,7 @@ function render(){
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
 
+  if (state.tab==="Расписание"){ renderSchedule(); return; }
   if (state.tab==="Сводка"){ renderSummary(rows, st); return; }
   if (state.tab==="Операторы"){ renderOperators(rows, st); return; }
   if (state.tab==="Сравнение"){ renderCompare(rows, st); return; }
@@ -503,15 +521,24 @@ function render(){
       <div id="chipsrow" style="margin:-4px 0 12px"></div>
       <div id="table"></div>
     </div>`;
+  // анимация только изменившихся плиток — иначе числа мигают при каждом обновлении
+  const tileVals = [withScore.length, rows.length - withScore.length,
+    withScore.filter(x=>x.verdict==="норма").length,
+    withScore.filter(x=>x.verdict==="замечание").length,
+    withScore.filter(x=>x.verdict==="критично").length];
+  const avgVal = withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5) : null;
+  const prevT = state.tileVals || [];
   document.querySelectorAll("#content .tile .n").forEach(function(el, i){
-    const v = [withScore.length, rows.length - withScore.length,
-      withScore.filter(x=>x.verdict==="норма").length,
-      withScore.filter(x=>x.verdict==="замечание").length,
-      withScore.filter(x=>x.verdict==="критично").length][i];
-    if (v !== undefined) animNum(el, v, "");
+    const isAvg = i === 5;
+    const v = isAvg ? avgVal : tileVals[i];
+    if (v === undefined || v === null) return;
+    const suffix = isAvg ? "%" : "";
+    if (prevT[i] === v){ el.dataset.v = String(v); return; } // не изменилось — не трогаем
+    if (prevT[i] === undefined || prevT[i] === null){ el.dataset.v = String(v); return; } // первый показ
+    el.textContent = String(prevT[i]) + suffix;
+    animNum(el, v, suffix);
   });
-  const avgEl = document.querySelectorAll("#content .tile .n")[5];
-  if (avgEl) animNum(avgEl, withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5) : 0, "%");
+  state.tileVals = tileVals.concat([avgVal]);
   const chipDefs = [
     ["crit","🔴 критично", st.filter(x=>x.verdict==="критично").length],
     ["warn","🟡 есть замечания", st.filter(x=>x.verdict==="замечание").length],
@@ -800,8 +827,84 @@ function renderOperators(rows, st){
   });
 }
 
+// ---------- «Расписание» — кто и когда на перепроверку ----------
+const VMAP = {"норма":"ok","замечание":"warn","критично":"bad"};
+function schedChip(x){
+  const r = x.r, u = dueInfo(r);
+  const lastTxt = u ? (u.days===0?"сегодня":u.days+" дн. назад") : "не проверялась";
+  const vd = x.s.verdict ? "v-"+(VMAP[x.s.verdict]||"none") : "v-none";
+  return `<div class="schip ${vd}" title="последняя проверка/правка: ${esc(r.updated||"—")}">
+    <div class="sc-top"><b>${esc(r.opName||r.opNick||"—")}</b> / ${esc(r.model||"—")}</div>
+    <div class="sc-sub">${esc(r.producer||"—")} · ${esc(r.city)}</div>
+    <div class="sc-sub">🕐 ${lastTxt}${x.s.verdict?" · "+(VLBL[x.s.verdict]||x.s.verdict):""}</div>
+    ${AUTH.edit?`<button class="sbtn" data-sch-touch="${esc(r._sheet)}|${r._row}">✅ сегодня</button>`:""}
+  </div>`;
+}
+function renderSchedule(){
+  document.getElementById("pbar").innerHTML = "";
+  // команда = город+опер+модель; берём строку с самой свежей датой «Обновлено»
+  const map = {};
+  state.rows.forEach(function(r){
+    if (!(r.opName||r.opNick||r.model)) return;
+    const key = r.city+"|"+(r.opName||r.opNick||"").toLowerCase()+"|"+(r.model||"").toLowerCase();
+    const prev = map[key];
+    if (!prev){ map[key] = r; return; }
+    const a = parseUpd(r.updated), b = parseUpd(prev.updated);
+    if ((a && !b) || (a && b && a > b)) map[key] = r;
+  });
+  let teams = Object.values(map).map(r=>({r, s: rowStats(r)}));
+  if (state.search){ const q = state.search.toLowerCase(); teams = teams.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const overdue = [], later = [], never = [], buckets = {};
+  teams.forEach(function(x){
+    const d = parseUpd(x.r.updated);
+    if (!d){ never.push(x); return; }
+    d.setHours(0,0,0,0);
+    const next = new Date(d.getTime() + 7*864e5);
+    const off = Math.round((next - today)/864e5);
+    if (off < 0) overdue.push(x);
+    else if (off <= 6){ (buckets[off] = buckets[off] || []).push(x); }
+    else later.push(x);
+  });
+  const byAge = (a,b)=>{ const da = parseUpd(a.r.updated), db = parseUpd(b.r.updated); return (da?da.getTime():0) - (db?db.getTime():0); };
+  overdue.sort(byAge); later.sort(byAge);
+  Object.keys(buckets).forEach(k=>buckets[k].sort(byAge));
+  const dn = ["вс","пн","вт","ср","чт","пт","сб"];
+  const days = [];
+  for (let i=0;i<7;i++){
+    const d = new Date(today.getTime() + i*864e5);
+    days.push({ i, label: dn[d.getDay()]+" "+String(d.getDate()).padStart(2,"0")+"."+String(d.getMonth()+1).padStart(2,"0") });
+  }
+  const col = (title, list, cls) => `<div class="sday ${cls||""}"><h3>${title} <span class="cnt">${list.length||""}</span></h3>${list.map(schedChip).join("")}</div>`;
+  document.getElementById("content").innerHTML = `
+    <div class="card" style="margin-bottom:14px"><h2>Расписание перепроверок</h2>
+      <div style="color:var(--faint);font-size:12px">команд всего: ${teams.length} · 🔴 просрочено: ${overdue.length} · ⚪ никогда не проверялись: ${never.length} · ✅ проверены сегодня: ${teams.filter(x=>{const u=dueInfo(x.r);return u&&u.days===0;}).length}</div>
+    </div>
+    <div class="schedwrap"><div class="schedrow">
+      ${col("🔴 просрочено", overdue, "oday")}
+      ${days.map(d=>col((d.i===0?"СЕГОДНЯ · ":"")+d.label, buckets[d.i]||[], d.i===0?"today":"")).join("")}
+    </div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px" class="twocol">
+      <div class="card"><h2>⚪ Никогда не проверялись (${never.length})</h2>${never.length?never.map(schedChip).join(""):'<div class="empty">Все команды проверены 🎉</div>'}</div>
+      <div class="card"><h2>🗓 Позже этой недели (${later.length})</h2>${later.length?later.map(schedChip).join(""):'<div class="empty">Нет команд</div>'}</div>
+    </div>`;
+  document.querySelectorAll("[data-sch-touch]").forEach(b=>b.onclick=async (ev)=>{
+    ev.stopPropagation();
+    const parts = b.dataset.schTouch.split("|");
+    try {
+      const res = await jsonp({ action:"touch", sheet: parts[0], row: parts[1], user: AUTH.user, pass: AUTH.pass });
+      if (res.error) throw new Error(res.error);
+      const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
+      if (r) r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
+      toast("✔ Отмечено проверенной сегодня — следующая перепроверка через 7 дней");
+      renderSchedule();
+    } catch(e){ toast("Ошибка: " + e.message, true); }
+  });
+}
+
 // ---------- «Сводка» (для смотрящего) ----------
 function renderSummary(rows, st){
+  document.getElementById("pbar").innerHTML = "";
   const allR = state.rows;
   const allS = allR.map(rowStats);
   const weeks = [...new Set(allR.map(r=>r.week).filter(Boolean))];
