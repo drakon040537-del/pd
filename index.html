@@ -139,7 +139,11 @@
   #tabs .tab:hover{color:var(--ink);background:var(--panel2)}
   #tabs .tab.on{background:var(--accent);color:#fff;font-weight:600}
   #tabs .tab .cnt{margin-left:auto;opacity:.75;font-size:11px}
-  #tabs .weeksel{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font:inherit;font-size:12px;margin-top:6px}
+  #tabs .wlabel{color:var(--faint);font-size:10.5px;margin-top:8px;padding-left:4px}
+  #tabs .wpills{display:flex;flex-wrap:wrap;gap:4px}
+  .wpill{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:12px;padding:3px 10px;font:inherit;font-size:11px;cursor:pointer}
+  .wpill.on{border-color:var(--accent);color:var(--accent);background:rgba(91,157,255,.1)}
+  @media(max-width:820px){ #tabs .wpills{display:none} }
   .maincol{flex:1;min-width:0;padding-left:16px}
   @media(max-width:820px){
     .layout{flex-direction:column}
@@ -165,6 +169,20 @@
   .sbar{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;max-width:90px}
   .sfill{height:100%;border-radius:4px}
   .sf-g{background:var(--ok)} .sf-y{background:var(--warn)} .sf-r{background:var(--bad)}
+  .opgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .opcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer}
+  .opcard:hover{border-color:var(--dim)}
+  .opcard-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .opava{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+  .opname{font-weight:650;font-size:14px}
+  .opnick{color:var(--faint);font-size:11.5px}
+  .optrend{margin-left:auto;font-size:16px}
+  .opavg{font-size:26px;font-weight:700;margin-bottom:6px}
+  .opavgs{font-size:12px;color:var(--faint);font-weight:400;margin-left:6px}
+  .opmeta{font-size:12px;color:var(--dim);margin-bottom:3px}
+  .opcard .spark{margin-top:8px}
+  .opdet{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin-top:8px}
+  .opdet .drow{border-bottom:1px dashed var(--line)}
   .planbtn{background:none;border:none;cursor:pointer;font-size:12px;opacity:.65;padding:0 2px}
   .planbtn:hover{opacity:1}
   .fchip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:16px;padding:4px 13px;font-size:12px;cursor:pointer;margin-right:6px;font:inherit}
@@ -296,8 +314,8 @@ const AUTH = {
 };
 
 
-const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
-const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
+const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу","Плейлист / музыка","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
+const FIELDCODES = ["oko","model","membrs","goly","show","playlist","sites","kadr","room"];
 const PRODUCERS = {
   "Томск": ["Фуад","Минько","Дащинский","Кравчук","Соколов","Валов"],
   "Новосибирск": ["Иванов","Пирожков","Козлов","Фаткулин","Васильченко","Пышков","Глушков","Белых","Бологов","Феоктистов","Черников"],
@@ -308,7 +326,8 @@ const PH = {
   model: ["блокнот не используется","микрофон выключен","общение не ведётся","модель не управляется"],
   membrs: ["не пишет первым","сухие сообщения без крючка","не обновляет список зрителей","не цепляется за новых"],
   goly: ["голы не меняются","не следит за пробитием","цели скучные","гол не виден в раскладке"],
-  show: ["шоу не ведётся","шоу однотипное","модель не вовлечена","плохой плейлист"],
+  show: ["шоу не ведётся","шоу однотипное","модель не вовлечена"],
+  playlist: ["плохой плейлист","нет липсинга","музыка не нравится модели","плейлист не обновляется"],
   sites: ["работы нет","работает не на всех сайтах","не видна статистика гола","внешний переводчик"],
   kadr: ["кадр не меняется","обрезано лицо","картинка не настроена","плохой свет"],
   room: ["пустая комната","перегруженный фон","не подходит команде","плохой свет/оттенки"]
@@ -342,12 +361,12 @@ function rowStats(r){
   if (evalN > 0){
     score = ok;
     verdict = bad === 0 ? "норма" : bad <= 2 ? "замечание" : "критично";
-    if (r.scoreM && /^[0-8]$/.test(String(r.scoreM).trim())) score = parseInt(r.scoreM);
+    if (r.scoreM && /^[0-9]$/.test(String(r.scoreM).trim())) score = parseInt(r.scoreM);
     if (r.verdictM) verdict = r.verdictM;
   }
   return {st, ok, bad, score, verdict};
 }
-const scoreCls = n => n>=6 ? "score-ok" : n>=3 ? "score-warn" : "score-bad";
+const scoreCls = n => n>=7 ? "score-ok" : n>=3 ? "score-warn" : "score-bad";
 const chipCls = {"норма":"c-ok","замечание":"c-warn","критично":"c-bad"};
 function animNum(el, to, suffix){
   const from = parseFloat(el.dataset.v || "0") || 0;
@@ -427,10 +446,9 @@ function render(){
   document.getElementById("tabs").innerHTML = tabs().map(c=>{
     const n = rowsOf(c).length;
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c}</span><span class="cnt">${n||""}</span></button>`;
-  }).join("") + (wks.length>1 ? `<select id="weeksel" title="неделя"><option value="">все недели</option>${wks.map(w=>`<option ${state.week===w?"selected":""}>${esc(w)}</option>`).join("")}</select>` : "");
+  }).join("") + (wks.length>1 ? `<div class="wlabel">недели</div><div class="wpills"><button class="wpill ${state.week===""?"on":""}" data-w="">все</button>${wks.map(w=>`<button class="wpill ${state.week===w?"on":""}" data-w="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "");
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
-  const ws=document.getElementById("weeksel");
-  if (ws) ws.onchange = e=>{ state.week = e.target.value; render(); };
+  document.querySelectorAll(".wpill").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; render(); });
 
   const rows = rowsOf(state.tab);
   const st = rows.map(rowStats);
@@ -453,7 +471,7 @@ function render(){
       <div class="tile ok"><div class="n">${withScore.filter(x=>x.verdict==="норма").length}</div><div class="l">в норме</div></div>
       <div class="tile warn"><div class="n">${withScore.filter(x=>x.verdict==="замечание").length}</div><div class="l">есть замечания</div></div>
       <div class="tile bad"><div class="n">${withScore.filter(x=>x.verdict==="критично").length}</div><div class="l">критично</div></div>
-      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5)+"%":"–"}</div><div class="l">средняя оценка</div></div>
+      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length/9*100)+"%":"–"}</div><div class="l">средняя оценка</div></div>
     </div>
     <div class="grid">
       <div class="card"><h2>Топ проблем по категориям</h2><div id="cats"></div></div>
@@ -476,7 +494,7 @@ function render(){
     if (v !== undefined) animNum(el, v, "");
   });
   const avgEl = document.querySelectorAll("#content .tile .n")[5];
-  if (avgEl) animNum(avgEl, withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*12.5) : 0, "%");
+  if (avgEl) animNum(avgEl, withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length/9*100) : 0, "%");
   const chipDefs = [
     ["crit","🔴 критично", st.filter(x=>x.verdict==="критично").length],
     ["warn","🟡 замечания", st.filter(x=>x.verdict==="замечание").length],
@@ -577,7 +595,7 @@ function render(){
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}</div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
-        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/8</option>`).join("")}</select></div>
+        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
@@ -588,7 +606,7 @@ function render(){
       const cityCell = state.tab==="Обзор" ? `<td style="color:var(--dim)">${esc(x.r.city)}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
-        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${x.s.score*12.5}%"></div></div></div>`
+        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/9</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${Math.round(x.s.score/9*100)}%"></div></div></div>`
         : '<span style="color:var(--faint)">–</span>';
       return `<tr class="r ${state.changed&&state.changed.has(x.r._sheet+":"+x.r._row)?"flash":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td>${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:""}</td><td style="color:var(--accent);font-weight:700">✎</td></tr>
       <tr class="detail" data-d="${key}"><td colspan="${state.tab==="Обзор"?7:6}"><div class="detail-in">${inner}</div></td></tr>`;
@@ -683,19 +701,37 @@ function renderOperators(rows, st){
       crit:o.crit, cities:[...o.cities], prods:[...o.prods], rows:o.rows, perWeek, trend };
   }).sort((a,b)=>(b.avg??-1)-(a.avg??-1));
 
+  const initials = n => n.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const hue = n => { let h=0; for (let i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))%360; return h; };
   document.getElementById("content").innerHTML = `
-    <div class="card"><h2>Рейтинг операторов <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по оперу: вся история проверок</span></h2>
-      ${ops.length ? `<table><thead><tr><th>Оператор</th><th>Ник CB</th><th>Проверок</th><th>Средняя оценка</th><th>Тренд</th><th>Критичных</th><th>Города</th><th>Продюсеры</th></tr></thead><tbody>${
-        ops.map((o,i)=>{
-          const nick = o.rows.find(x=>x.r.opNick);
-          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)}</td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*12.5)+"% ("+o.avg.toFixed(1)+"/8)":"–"}</td>
-          <td>${(()=>{ const pts=o.perWeek.map((v,i)=>{ if(v===null) return null; const x=8+i*(62/Math.max(1,o.perWeek.length-1||1)); const y=20-v*2.2; return x+","+y.toFixed(1); }).filter(Boolean); const arrow = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═"; const ac = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)"; return pts.length>1?`<svg class="spark" width="70" height="22"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg> <span style="color:${ac}">${arrow}</span>`:`<span style="color:var(--faint)">—</span>`; })()}</td>
-          <td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
-          <tr class="opdet" data-o="${i}" style="display:none"><td colspan="7"><div style="padding:10px 6px">${
-            o.rows.map(x=>`<div class="drow"><b>${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")} · ${esc(x.r.city)} · ${x.s.verdict?x.s.verdict:"не проверено"}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
-          }</div></td></tr>`;
-        }).join("")}</tbody></table>` : `<div class="empty">Нет данных</div>`}
-    </div>`;
+    <div class="opgrid">${
+      ops.map((o,i)=>{
+        const nick = o.rows.find(x=>x.r.opNick);
+        const trend = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═";
+        const tc = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)";
+        const avgCls = o.avg!==null?scoreCls(o.avg):"";
+        return `<div class="opcard" data-i="${i}">
+          <div class="opcard-top">
+            <div class="opava" style="background:hsl(${hue(o.name)},45%,38%)">${initials(o.name)}</div>
+            <div><div class="opname">${esc(o.name)}</div>
+            <div class="opnick">${nick?esc(nick.r.opNick):""}</div></div>
+            <div class="optrend" style="color:${tc}">${trend}</div>
+          </div>
+          <div class="opavg ${avgCls}">${o.avg!==null?Math.round(o.avg/9*100)+"%":""}<span class="opavgs">${o.avg!==null?o.avg.toFixed(1)+"/9":""}</span></div>
+          <div class="opmeta">проверок: <b>${o.checks}</b> · 🔴 <b style="color:var(--bad)">${o.crit}</b></div>
+          <div class="opmeta" style="color:var(--faint)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(" · ")}</div>
+          ${o.perWeek.length>1?`<svg class="spark" width="100%" height="26" viewBox="0 0 100 26" preserveAspectRatio="none">${o.perWeek.map((v,wi)=>{ if(v===null) return ""; const x=8+wi*(84/Math.max(1,o.perWeek.length-1||1)); const y=23-v/9*20; return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="var(--accent)"></circle>`; }).join("")}<polyline points="${o.perWeek.map((v,wi)=>{ if(v===null) return ""; const x=8+wi*(84/Math.max(1,o.perWeek.length-1||1)); const y=23-v/9*20; return x.toFixed(1)+","+y.toFixed(1); }).filter(Boolean).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg>`:""}
+        </div>
+        <div class="opdet" data-o="${i}" style="display:none"><div style="padding:10px 4px">${
+          o.rows.map(x=>`<div class="drow"><b>${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")} · ${esc(x.r.city)} · ${x.s.verdict?x.s.verdict:"не проверено"}</b><span>${esc(x.r.cats.map((c,jj)=>c?("["+CATS[jj]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
+        }</div></div>`;
+      }).join("")
+    }</div>`;
+  document.querySelectorAll(".opcard").forEach(c=>c.onclick=()=>{
+    const d = document.querySelector(`.opdet[data-o="${c.dataset.i}"]`);
+    d.style.display = d.style.display==="none" ? "" : "none";
+  });
+}
   document.querySelectorAll("tr.op").forEach(tr=>tr.onclick=()=>{
     const d = document.querySelector(`tr.opdet[data-o="${tr.dataset.i}"]`);
     d.style.display = d.style.display==="none" ? "" : "none";
@@ -725,15 +761,27 @@ function renderCompare(rows, st){
     ["🟢 норма", A.ok, B.ok],
     ["🟡 замечание", A.warn, B.warn],
     ["🔴 критично", A.bad, B.bad],
-    ["средняя оценка", A.avg===null?null:Math.round(A.avg*12.5)+"%", B.avg===null?null:Math.round(B.avg*12.5)+"%"]
+    ["средняя оценка", A.avg===null?null:Math.round(A.avg/9*100)+"%", B.avg===null?null:Math.round(B.avg/9*100)+"%"]
   ];
+  const panel = (w, X) => `
+      <div class="card" style="flex:1;min-width:280px">
+        <h3 style="font-size:15px;font-weight:650;margin-bottom:10px">${esc(w)}</h3>
+        <div class="pbar-track" style="margin-bottom:4px"><div class="pbar-fill" style="width:${X.total?Math.round(X.checked/X.total*100):0}%"></div></div>
+        <div style="color:var(--faint);font-size:11.5px;margin-bottom:10px">проверено ${X.checked} из ${X.total}</div>
+        <div style="display:flex;gap:14px;font-size:13px;flex-wrap:wrap">
+          <span>🟢 <b style="color:var(--ok)">${X.ok}</b></span>
+          <span>🟡 <b style="color:var(--warn)">${X.warn}</b></span>
+          <span>🔴 <b style="color:var(--bad)">${X.bad}</b></span>
+          <span>⭐ <b>${X.avg!==null?Math.round(X.avg/9*100)+"%":"–"}</b></span>
+        </div>
+      </div>`;
   document.getElementById("content").innerHTML = `
-    <div class="card"><h2>Сравнение недель</h2>
-      <div class="filters">
+    <div class="filters" style="margin-bottom:14px">
         <select id="cmp-a">${weeks.map(w=>`<option ${w===a?"selected":""}>${esc(w)}</option>`).join("")}</select>
         <span style="color:var(--faint)">против</span>
         <select id="cmp-b">${weeks.map(w=>`<option ${w===b?"selected":""}>${esc(w)}</option>`).join("")}</select>
-      </div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">${panel(a,A)}${panel(b,B)}</div>
       <table><thead><tr><th>Метрика</th><th>${esc(a)}</th><th>${esc(b)}</th><th>Δ</th></tr></thead><tbody>
       ${rowsM.map(m=>{
         const va = typeof m[1]==="number"?m[1]:null, vb = typeof m[2]==="number"?m[2]:null;
