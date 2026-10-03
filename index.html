@@ -994,10 +994,21 @@ async function doLogin(){
   const u = document.getElementById("l-user").value.trim();
   const p = document.getElementById("l-pass").value;
   if (!u || !p){ document.getElementById("l-msg").textContent = "Введи логин и пароль"; return; }
+  if (!CONFIG.API_KEY){
+    const k = prompt("Введи ключ доступа к дашборду (из ссылки с ?key=...):");
+    if (!k){ document.getElementById("l-msg").textContent = "Нужен ключ доступа — открой ссылку с ?key=..."; return; }
+    localStorage.setItem("dash_key", k); CONFIG.API_KEY = k;
+  }
   document.getElementById("l-msg").textContent = "Проверяю…";
   try {
     const res = await jsonp({ action:"check", user:u, pass:p });
-    if (res.error || !res.ok){ document.getElementById("l-msg").textContent = res.error || "Неверный логин или пароль"; return; }
+    if (res.error || !res.ok){
+      if (res.error === "forbidden"){ localStorage.removeItem("dash_key"); CONFIG.API_KEY = ""; }
+      document.getElementById("l-msg").textContent =
+        res.error === "forbidden" ? "Неверный ключ доступа — открой ссылку с ?key=... или введи ключ заново" :
+        (res.error || "Неверный логин или пароль");
+      return;
+    }
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
     try {
       const q2 = new URLSearchParams(location.search);
