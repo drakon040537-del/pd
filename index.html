@@ -304,7 +304,7 @@
         <div class="ff"><label>Опер (фамилия)</label><input id="a-opname" placeholder="фамилия оператора"></div>
         <div class="ff"><label>Модель (фамилия)</label><input id="a-model" placeholder="фамилия модели"></div>
       </div>
-      <button class="abtn" id="a-save">Добавить смену</button>
+      <button class="abtn" id="a-save">Добавить мониторинг</button>
       <span id="a-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
     </div>
   </div>
@@ -778,12 +778,14 @@ function render(){
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
+        <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки на сайты (строки: Название = URL)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/...">${esc((state.links||[]).filter(l=>l.key===x.r.city+"|"+x.r.producer).map(l=>l.title+" = "+l.url).join("\n"))}</textarea></div>
         <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/8</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие смены команды</button>
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
+        <button class="abtn2" id="lks${key}" style="margin-left:10px">💾 Ссылки</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
         : `<div class="dgrid">${readDet}</div>` +
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин смены">` : "");
@@ -806,9 +808,10 @@ function render(){
         <span class="cdot" data-prod="${esc(g.producer)}" style="background:${esc(state.colors[g.producer]||"#566070")}"></span>
         <span class="arrow">${open?"▾":"▸"}</span><b>${esc(g.producer)}</b>
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
+        ${(state.links||[]).filter(l=>l.key===g.city+"|"+g.producer).map(l=>`<a class="gbtn" href="${esc(l.url)}" target="_blank" rel="noopener" title="открыть ${esc(l.title)}">${esc(l.title||"🔗")}</a>`).join("")}
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
-        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить смену этому продюсеру">＋ смена</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все смены команды проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
+        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру">＋ мониторинг</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все смены команды проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
       </div>
       <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
@@ -922,7 +925,7 @@ function render(){
   };
   const selClear = document.getElementById("sel-clear");
   if (selClear) selClear.onclick = ()=>{ state.selSet.clear(); render(); };
-  document.querySelectorAll(".qx").forEach(x=>x.onclick=(ev)=>{ ev.stopPropagation(); delPhrase(x.dataset.code, x.dataset.qx); render(); });
+  document.querySelectorAll(".qx[data-code]").forEach(x=>x.onclick=(ev)=>{ ev.stopPropagation(); delPhrase(x.dataset.code, x.dataset.qx); render(); });
   document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const v=prompt("Своя формулировка для «"+b.dataset.n+"» (сохранится в этом браузере):"); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
   document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
@@ -991,6 +994,16 @@ function render(){
     if (btn) btn.onclick = ()=>saveRow(x, key);
     const dup = document.getElementById("dup"+key);
     if (dup) dup.onclick = ()=>dupRow(x, key);
+    const lkb = document.getElementById("lks"+key);
+    if (lkb) lkb.onclick = async ()=>{
+      const ta = document.getElementById("lk"+key);
+      try {
+        const res = await jsonp({ action:"setlinks", key: x.r.city+"|"+x.r.producer, text: ta.value, user: AUTH.user, pass: AUTH.pass });
+        if (res.error) throw new Error(res.error);
+        toast("✔ Ссылки сохранены");
+        setTimeout(load, 500);
+      } catch(e){ toast("Ошибка: "+e.message, true); }
+    };
     const tc = document.getElementById("tc"+key);
     if (tc) tc.onclick = async ()=>{
       try {
@@ -1302,6 +1315,43 @@ function renderSummary(rows, st){
       </div>
     </div>`;
   document.querySelectorAll("[data-cw]").forEach(td=>td.onclick=()=>{ state.week=td.dataset.cw; state.tab=td.dataset.cc; state.search=""; state.quick=""; state.page=1; render(); toast("Фильтр: "+td.dataset.cc+" · "+td.dataset.cw); });
+}
+
+// ---------- «Чек» и «Рекомендации» ----------
+function renderNotes(kind){
+  document.getElementById("pbar").innerHTML = "";
+  const map = kind==="check" ? (state.checks||{}) : (state.recs||{});
+  const sheetName = kind==="check" ? "Чек" : "Рекомендации";
+  const headTitle = kind==="check" ? "📈 План повышения чека — по командам" : "💡 Общие рекомендации — по командам";
+  const teams = dedupeRows(state.rows).filter(r=>r.producer||r.city);
+  const seen = {};
+  const cards = teams.map(r=>{
+    const key = r.city+"|"+r.producer;
+    if (seen[key]) return ""; seen[key] = 1;
+    const val = map[key] || "";
+    const col = state.colors[r.producer] || "#566070";
+    const nid = "n" + (kind==="check"?"c":"r") + Math.abs([...key].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7));
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="cdot" style="background:${esc(col)}"></span><b>${esc(r.producer)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.city)}</span></div>
+      ${AUTH.edit
+        ? `<textarea id="${nid}" style="width:100%;min-height:120px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="${kind==="check"?"план повышения чека для команды…":"общие рекомендации для команды…"}">${esc(val)}</textarea>
+           <button class="abtn2 notebtn" data-nid="${nid}" data-sheet="${sheetName}" data-key="${esc(key)}" data-kind="${kind}" style="margin-top:6px">💾 Сохранить</button>`
+        : (val ? `<div style="white-space:pre-wrap;font-size:13px;margin-top:8px">${esc(val)}</div>` : `<div class="empty">Пока пусто</div>`)}
+    </div>`;
+  }).join("");
+  document.getElementById("content").innerHTML = `<div class="card" style="margin-bottom:14px"><h2>${esc(headTitle)}</h2><div style="color:var(--faint);font-size:12px">${AUTH.edit?"пишешь текст — сохраняешь по кнопке; продюсер увидит это у себя":"планы и рекомендации от смотрящего"}</div></div>${cards || '<div class="empty">Нет команд</div>'}`;
+  document.querySelectorAll(".notebtn").forEach(b=>b.onclick=async ()=>{
+    const ta = document.getElementById(b.dataset.nid);
+    const store = b.dataset.kind==="check" ? state.checks : state.recs;
+    b.disabled = true;
+    try {
+      const res = await jsonp({ action:"setplan", sheet: b.dataset.sheet, key: b.dataset.key, plan: ta.value, user: AUTH.user, pass: AUTH.pass });
+      if (res.error) throw new Error(res.error);
+      store[b.dataset.key] = ta.value;
+      toast("✔ Сохранено: " + b.dataset.key.split("|")[1]);
+    } catch(e){ toast("Ошибка: "+e.message, true); }
+    b.disabled = false;
+  });
 }
 
 // ---------- связь с таблицей ----------
@@ -1698,7 +1748,9 @@ async function doLogin(){
       return;
     }
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
+    AUTH.prod = !!res.prod;
     state.lastCheck = Date.now();
+    try{ localStorage.setItem("dash_last_user",u); if (document.getElementById("l-remember").checked) localStorage.setItem("dash_pass_keep",p); else localStorage.removeItem("dash_pass_keep"); }catch(e){}
     historyClean();
     hideGate();
     updateLoginBtn();
@@ -1842,10 +1894,14 @@ function applyData(j){
   state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
   state.colors = j.colors || {};
   state.plans = j.plans || {};
+  state.checks = j.checks || {};
+  state.recs = j.recs || {};
+  state.links = j.links || [];
+  state.screens = j.screens || {};
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
   dot.className="dot-live";
   dot.title="Живые данные · обновлено "+new Date().toLocaleTimeString("ru-RU")+" · "+(AUTH.name||AUTH.user);
-  txt.textContent="";
+  txt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
   updateLoginBtn();
   render();
   if (document.getElementById("a-prod")) updateProdList();
