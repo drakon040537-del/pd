@@ -398,7 +398,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.22"
+  VER: "2026-10-03.23"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -559,14 +559,23 @@ document.addEventListener("keydown", e=>{
 // ---------- режим «посмотреть глазами» (только для редактора) ----------
 function viewAsActive(){ return !!state.viewAs; }
 function filterViewData(){
-  if (!state.viewAs || state.viewAs.type!=="prod") return;
-  const name = state.viewAs.name;
-  state.rows = state.rows.filter(r=>r.producer===name);
-  const cities = [...new Set(state.rows.map(r=>r.city).filter(Boolean))];
-  if (cities.length) AUTH.cities = cities;
-  const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[1]===name) o[k]=m[k]; }); return o; };
-  state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
-  state.links = (state.links||[]).filter(l=>String(l.key).split("|")[1]===name);
+  if (!state.viewAs) return;
+  if (state.viewAs.type==="prod"){
+    const name = state.viewAs.name;
+    state.rows = state.rows.filter(r=>r.producer===name);
+    const cities = [...new Set(state.rows.map(r=>r.city).filter(Boolean))];
+    if (cities.length) AUTH.cities = cities;
+    const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[1]===name) o[k]=m[k]; }); return o; };
+    state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
+    state.links = (state.links||[]).filter(l=>String(l.key).split("|")[1]===name);
+  } else if (state.viewAs.type==="city"){
+    const c = state.viewAs.name;
+    state.rows = state.rows.filter(r=>r.city===c);
+    AUTH.cities = [c];
+    const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[0]===c) o[k]=m[k]; }); return o; };
+    state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
+    state.links = (state.links||[]).filter(l=>String(l.key).split("|")[0]===c);
+  } else { return; }
   const okRows = {}; state.rows.forEach(r=>okRows[r._sheet+"|"+r._row]=1);
   const sc = {}; Object.keys(state.screens||{}).forEach(k=>{ if (okRows[k]) sc[k]=state.screens[k]; });
   state.screens = sc;
@@ -586,6 +595,10 @@ function startViewAs(mode){ // "" — свой вид, "dir" — директо�
     state.viewAs = { type:"dir" };
     AUTH.edit = false; AUTH.prod = false; AUTH.cities = ["all"];
     toast("👁 Вид: Директор — только просмотр");
+  } else if (mode.slice(0,5) === "city:"){
+    state.viewAs = { type:"city", name: mode.slice(5) };
+    AUTH.edit = false; AUTH.prod = false;
+    toast("👁 Вид: " + state.viewAs.name + " — только просмотр");
   } else {
     state.viewAs = { type:"prod", name: mode.slice(5) };
     AUTH.edit = false; AUTH.prod = true;
@@ -593,7 +606,7 @@ function startViewAs(mode){ // "" — свой вид, "dir" — директо�
   }
   filterViewData();
   const lt = document.getElementById("livetext");
-  if (lt) lt.textContent = state.viewAs.type==="prod" ? "режим продюсера · видишь только свои команды" : "режим директора · только просмотр";
+  if (lt) lt.textContent = state.viewAs.type==="prod" ? "режим продюсера · видишь только свои команды" : state.viewAs.type==="city" ? "режим города · только просмотр" : "режим директора · только просмотр";
   render(); updateLoginBtn(); updateViewAs();
 }
 function updateViewAs(){
@@ -603,10 +616,11 @@ function updateViewAs(){
   const prods = [];
   state.rows.forEach(r=>{ if (r.producer && !prods.includes(r.producer)) prods.push(r.producer); });
   sel.innerHTML = ['<option value="">👁 вид: я (редактор)</option>']
+    .concat(['<option value="city:Томск">🏙 как Томск</option><option value="city:Новосибирск">🏙 как НСК</option><option value="city:Онлайн">🔵 как Онлайн</option>'])
     .concat(prods.sort().map(p=>`<option value="prod:${esc(p)}">👤 как ${esc(p)}</option>`))
     .concat(['<option value="dir">🎩 как Директор (просмотр)</option>']).join("");
   sel.style.display = "";
-  sel.value = state.viewAs ? (state.viewAs.type==="dir" ? "dir" : "prod:"+state.viewAs.name) : "";
+  sel.value = state.viewAs ? (state.viewAs.type==="dir" ? "dir" : state.viewAs.type==="city" ? "city:"+state.viewAs.name : "prod:"+state.viewAs.name) : "";
 }
 document.getElementById("viewas").onchange = function(){ startViewAs(this.value); };
 let realAuthSnap = null;
