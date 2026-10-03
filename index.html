@@ -150,7 +150,7 @@
   .rail.mini{width:56px;min-width:56px;padding:10px 6px}
   .rail.mini .tab,.rail.mini .wtab,.rail.mini .rtoggle{justify-content:center;padding:9px 0;gap:0}
   .rail.mini .tab span:nth-child(2),.rail.mini .wtab span:nth-child(2),.rail.mini .tab .cnt:not(.due),.rail.mini .rsect{display:none}
-  .wdrop{position:fixed;z-index:120;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:3px}
+  .wdrop{position:absolute;z-index:130;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:190px;max-height:70vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:3px}
   .witem{background:none;border:none;color:var(--ink);text-align:left;padding:8px 11px;border-radius:7px;cursor:pointer;font:inherit;font-size:12.5px}
   .witem:hover{background:var(--panel2)}
   .witem.on{background:var(--accent);color:#fff;font-weight:600}
@@ -349,7 +349,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.7"
+  VER: "2026-10-03.8"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -1024,14 +1024,15 @@ function toggleWeekDrop(){
   if (!btn) return;
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   if (!wks.length) return;
-  const rect = btn.getBoundingClientRect();
+  const tabs = document.getElementById("tabs");
+  const tr = tabs.getBoundingClientRect(), br = btn.getBoundingClientRect();
   const div = document.createElement("div");
   div.id = "weekdrop"; div.className = "wdrop";
-  div.style.top = Math.min(window.innerHeight - 60, rect.bottom + 4) + "px";
-  div.style.left = rect.left + "px";
+  div.style.top = (br.bottom - tr.top + 4) + "px";
+  div.style.left = (br.left - tr.left) + "px";
   div.innerHTML = `<button class="witem ${!state.week?"on":""}" data-w="">все недели</button>`
     + wks.map(w=>`<button class="witem ${state.week===w?"on":""}" data-w="${esc(w)}">${esc(w)}</button>`).join("");
-  document.body.appendChild(div);
+  tabs.appendChild(div);
   div.querySelectorAll(".witem").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; closeWeekDrop(); render(); });
 }
 document.addEventListener("click", e=>{
@@ -1182,7 +1183,7 @@ async function dupRow(x, key){
   setTimeout(load, 800);
 }
 
-function jsonp(params, _retry){
+function jsonp(params, _retry, timeoutMs){
   return new Promise((resolve,reject)=>{
     const cb="__dashcb_"+Math.random().toString(36).slice(2);
     let done=false, s=null;
@@ -1192,11 +1193,11 @@ function jsonp(params, _retry){
     s=document.createElement("script");
     s.src=CONFIG.API_URL+"?"+q.toString();
     s.onerror=()=>{ if(done) return; done=true; cleanup(); retryOrReject("JSONP_FAIL"); };
-    const to=setTimeout(()=>{ if(done) return; done=true; cleanup(); retryOrReject("таймаут"); }, 20000);
+    const to=setTimeout(()=>{ if(done) return; done=true; cleanup(); retryOrReject("таймаут"); }, timeoutMs || 20000);
     function cleanup(){ clearTimeout(to); delete window[cb]; if (s) s.remove(); }
     // Apps Script иногда отвечает дольше 10с на холодном старте — один автоповтор
     function retryOrReject(kind){
-      if (!_retry){ jsonp(params, true).then(resolve, reject); return; }
+      if (!_retry){ jsonp(params, true, timeoutMs).then(resolve, reject); return; }
       reject(new Error(kind==="JSONP_FAIL" ? "JSONP_FAIL" : "нет ответа от таблицы (таймаут)"));
     }
     document.head.appendChild(s);
@@ -1271,6 +1272,7 @@ document.getElementById("a-prod").onchange = e=>{
 };
 document.getElementById("addbtn").onclick = ()=>{
   if (!AUTH.edit){ toast("Добавлять смены может только редактор — войди (🔑)", true); return; }
+  document.getElementById("a-msg").textContent = "";
   updateProdList(); openModal("addmodal");
 };
 document.getElementById("add-x").onclick = ()=>closeModal("addmodal");
@@ -1332,6 +1334,8 @@ document.getElementById("weekbtn").onclick = ()=>{
   const del = document.getElementById("w-del");
   del.innerHTML = weeks.map(w=>`<option>${esc(w)}</option>`).join("") || "<option value=\"\">— нет недель —</option>";
   document.getElementById("w-delmsg").textContent = "";
+  document.getElementById("w-msg").textContent = "";
+  if (weeks.length) sel.value = weeks[weeks.length-1];
   document.getElementById("w-name").value = nextWeekLabel(weeks[weeks.length-1] || "");
   openModal("weekmodal");
 };
@@ -1380,10 +1384,10 @@ document.getElementById("w-go").onclick = async ()=>{
   const base = document.getElementById("w-base").value;
   const name = document.getElementById("w-name").value.trim();
   if (!name || !base){ msg.textContent = "Укажи название недели"; return; }
-  msg.textContent = "Создаю…";
+  msg.textContent = "Создаю… (до минуты)";
   try {
     let res = null, viaFallback = false;
-    try { res = await jsonp({ action:"copyweek", base: base, name: name, user: AUTH.user, pass: AUTH.pass }); if (res.error) throw new Error(res.error); }
+    try { res = await jsonp({ action:"copyweek", base: base, name: name, user: AUTH.user, pass: AUTH.pass }, null, 60000); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0 || String(e1.message).indexOf("Укажи") >= 0) throw e1;
       await writePOST({ action:"copyweek", base: base, name: name });
@@ -1392,7 +1396,10 @@ document.getElementById("w-go").onclick = async ()=>{
     closeModal("weekmodal");
     toast("✔ Неделя " + name + " создана (" + (viaFallback ? "смотри вкладки" : res.created + " листов") + ")");
     setTimeout(load, 1000);
-  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+  } catch(e){
+    msg.textContent = "Ошибка: " + e.message + " — неделя могла всё же создаться, проверь список";
+    setTimeout(load, 500);
+  }
 };
 document.getElementById("w-del-go").onclick = async ()=>{
   const week = document.getElementById("w-del").value;
@@ -1400,15 +1407,19 @@ document.getElementById("w-del-go").onclick = async ()=>{
   if (!week){ msg.textContent = "Выбери неделю"; return; }
   const nSheets = new Set(state.rows.filter(r=>r.week===week).map(r=>r._sheet)).size;
   if (!confirm("Удалить неделю «"+week+"» во всех твоих городах ("+nSheets+" листов) со ВСЕМИ проверками? Действие необратимо!")) return;
-  msg.textContent = "Удаляю…";
+  msg.textContent = "Удаляю… (до минуты)";
   try {
-    const res = await jsonp({ action:"delweek", week: week, user: AUTH.user, pass: AUTH.pass });
+    const res = await jsonp({ action:"delweek", week: week, user: AUTH.user, pass: AUTH.pass }, null, 60000);
     if (res.error) throw new Error(res.error);
     if (state.week === week) state.week = "";
     closeModal("weekmodal");
     toast("✔ Удалено листов: " + (res.removed||0));
     setTimeout(load, 800);
-  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+  } catch(e){
+    msg.textContent = "Ошибка: " + e.message + " — неделя могла быть уже удалена, обновляю данные";
+    state.week = "";
+    setTimeout(load, 500);
+  }
 };
 
 document.getElementById("a-save").onclick = async ()=>{
@@ -1423,10 +1434,10 @@ document.getElementById("a-save").onclick = async ()=>{
   if (!prod){ msg.textContent = "Укажи продюсера"; return; }
   const any = state.rows.find(r=>r.city===city);
   if (!any){ msg.textContent = "На листе " + city + " пока нет строк — создай блок продюсера в таблице"; return; }
-  msg.textContent = "Добавляю…";
+  msg.textContent = "Добавляю… (до минуты)";
   try {
     let res = null, viaFallback = false;
-    try { res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass }); if (res.error) throw new Error(res.error); }
+    try { res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass }, null, 60000); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0) throw e1;
       await writePOST({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model });
@@ -1436,7 +1447,10 @@ document.getElementById("a-save").onclick = async ()=>{
     toast("✔ Смена добавлена в " + city + (viaFallback ? " (резервный канал — без подтверждения)" : " (строка " + res.row + ")"));
     ["a-nick","a-opname","a-model","a-prod-new"].forEach(id=>document.getElementById(id).value="");
     setTimeout(load, 800);
-  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+  } catch(e){
+    msg.textContent = "Ошибка: " + e.message + " — смена могла добавиться, обновляю данные";
+    setTimeout(load, 500);
+  }
 };
 
 // ---------- вход ----------
