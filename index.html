@@ -400,7 +400,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.16"
+  VER: "2026-10-03.17"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -803,10 +803,9 @@ function render(){
     const rowsHtml = g.items.map(({x,key})=>{
       const dr = getDraft(x.r);
       const rowScreens = (state.screens||{})[x.r._sheet+"|"+x.r._row] || [];
-      const genScr = rowScreens.filter(s=>!String(s.cat||"").trim()); // общие фото (без категории)
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.length ? rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"🔗")}</a>`).join("") : '<span style="color:var(--faint)">—</span>';
-      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img src="${esc(s.link)}" data-big="${esc(s.link)}" alt="скрин: ${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img src="${esc(driveThumb(s.link,400))}" data-big="${esc(driveThumb(s.link,1600))}" alt="скрин: ${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         const scr = rowScreens.filter(s=>String(s.cat)===n);
@@ -815,7 +814,6 @@ function render(){
         return `<div class="drow"><b>${mark} ${n}</b><span>${hl(t)}</span>${scrThumbs(scr,n,false)}</div>`;
       }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${hl(x.r.obs)}</span></div>` : "") +
         (x.r.reco ? `<div class="drow"><b>💡 Рекомендации</b><span>${hl(x.r.reco)}</span></div>` : "") +
-        (genScr.length ? `<div class="drow"><b>📷 Фото команды</b><span>${scrThumbs(genScr,"фото",false)}</span></div>` : "") +
         ((state.plans||{})[x.r.city+"|"+x.r.producer] ? `<div class="drow"><b>🗓 План работ</b><span>${esc(state.plans[x.r.city+"|"+x.r.producer])}</span></div>` : "") +
         (x.r.updated ? `<div class="drow"><b>🕐 Последняя проверка/правка</b><span>${esc(x.r.updated)}</span></div>` : "");
       const lv0 = liveEval(CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"")));
@@ -824,7 +822,6 @@ function render(){
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>💡 Рекомендации (их видит команда)</b><textarea id="ed${key}_reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea></div>
-        <div class="f" style="grid-column:1/-1"><b>📷 Фото команды</b><button class="qbtn" data-upl="${key}_G" title="прикрепить фото">📷 добавить</button><span style="color:var(--faint);font-size:11.5px;margin-left:8px">или Ctrl+V в окне вставки</span>${scrThumbs(genScr,"фото",true)}</div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки (одна в строке: «Название = URL»; сохраняются кнопкой «Сохранить»)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc(dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||""))}</textarea></div>
         <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
@@ -834,7 +831,7 @@ function render(){
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
         : `<div class="dgrid">${readDet}</div>` +
-          (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин команды">` : "");
+          (x.r.screen ? `<img class="screen-prev" src="${esc(driveThumb(x.r.screen,1200))}" alt="скрин команды">` : "");
       const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(x.r.city)}${!state.week&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
@@ -937,8 +934,8 @@ function render(){
   document.querySelectorAll("[data-cam]").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
     const x = state.lastView[b.dataset.cam]; if (!x || !x.r.screen) return;
-    document.getElementById("cam-img").src = x.r.screen;
-    document.getElementById("cam-link").href = x.r.screen;
+    document.getElementById("cam-img").src = driveThumb(x.r.screen, 1600);
+    document.getElementById("cam-link").href = driveFilePage(x.r.screen);
     openModal("cammodal");
   });
   document.querySelectorAll(".chk[data-selk]").forEach(c=>c.onchange=()=>{
@@ -978,10 +975,13 @@ function render(){
     const catIdx = parts[1]==="G" ? undefined : parseInt(parts[1],10); // G = общее фото без категории
     openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
   });
-  document.querySelectorAll(".sthumb img").forEach(im=>im.onclick=()=>{
-    document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
-    document.getElementById("cam-link").href = im.getAttribute("data-big") || im.src;
-    openModal("cammodal");
+  document.querySelectorAll(".sthumb img").forEach(im=>{
+    im.onerror=()=>{ const n=(+im.dataset.n||0)+1; im.dataset.n=n; if(n<3) setTimeout(()=>{ im.src=im.src; },3000); }; // холодный thumbnail даёт 404 — ретраим
+    im.onclick=()=>{
+      document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
+      document.getElementById("cam-link").href = driveFilePage(im.getAttribute("data-big") || im.src);
+      openModal("cammodal");
+    };
   });
   document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
     ev.stopPropagation();
@@ -1551,6 +1551,15 @@ function normLinks(text){
     return t;
   }).filter(Boolean).join("\n");
 }
+// Drive-ссылки: uc?export=view блокируется браузером (ORB) — показываем через thumbnail
+function driveThumb(u, w){
+  const m = String(u||"").match(/[?&]id=([\w-]+)/);
+  return m ? "https://drive.google.com/thumbnail?id="+m[1]+"&sz=w"+(w||800) : String(u||"");
+}
+function driveFilePage(u){
+  const m = String(u||"").match(/[?&]id=([\w-]+)/);
+  return m ? "https://drive.google.com/file/d/"+m[1]+"/view" : String(u||"");
+}
 function linksArrFromText(key, text){
   return text.split("\n").map(l=>{ const m = l.match(/^(.+?)\s*=\s*(\S+)$/); return m ? { key: key, title: m[1].trim(), url: m[2] } : null; }).filter(Boolean).filter(l=>/^https?:\/\//i.test(l.url));
 }
@@ -1984,18 +1993,6 @@ document.addEventListener("paste", function(e){
     const items = e.clipboardData && e.clipboardData.items;
     if (items) for (let i=0;i<items.length;i++){
       if (items[i].type && items[i].type.indexOf("image") === 0){ e.preventDefault(); doUpload(items[i].getAsFile()); return; }
-    }
-  }
-  const det = document.querySelector("tr.detail.open");
-  if (!det) return;
-  const x = state.lastView[det.dataset.d]; if (!x) return;
-  const items = e.clipboardData && e.clipboardData.items;
-  if (!items) return;
-  for (let i=0;i<items.length;i++){
-    if (items[i].type && items[i].type.indexOf("image") === 0){
-      e.preventDefault();
-      uploadScreen(items[i].getAsFile(), x);
-      return;
     }
   }
 });
