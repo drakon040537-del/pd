@@ -344,7 +344,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.5"
+  VER: "2026-10-03.6"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -1463,9 +1463,17 @@ async function doLogin(){
     load();
   } catch(e){
     const m = String(e && e.message || e);
-    document.getElementById("l-msg").textContent = (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0)
-      ? "Таблица не ответила (пробовал 2 раза). Проверь интернет/VPN и попробуй ещё раз"
-      : "Не удалось проверить: " + m;
+    const msgEl = document.getElementById("l-msg");
+    if (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0){
+      msgEl.innerHTML = 'Таблица не ответила (2 попытки). Если недавно сайт чинили — браузер мог держать старую версию: <button class="gbtn" id="hardref" style="margin-left:6px">⟳ обновить принудительно</button>';
+      const hr = document.getElementById("hardref");
+      if (hr) hr.onclick = ()=>{
+        try{ sessionStorage.removeItem("dash_cache"); }catch(e2){}
+        location.replace(location.href.split("#")[0].split("?")[0] + "?key=" + encodeURIComponent(CONFIG.API_KEY||"") + "&r=" + Date.now());
+      };
+    } else {
+      msgEl.textContent = "Не удалось проверить: " + m;
+    }
   }
 }
 
