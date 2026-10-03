@@ -495,8 +495,10 @@ function render(){
   const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
-    const n = rowsOf(c).length;
-    const crit = rowsOf(c).reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
+    const raw = rowsOf(c);
+    const rs = (!state.week && c!=="Сравнение") ? dedupeRows(raw) : raw;
+    const n = rs.length;
+    const crit = rs.reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
     let badge = "";
     if (c==="Расписание"){ const od = overdueCount(); if (od) badge = `<span class="cnt due" title="просрочено перепроверок: ${od}">⏰${od}</span>`; }
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" title="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c==="Расписание"?"Расписание проверок":c}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span>${badge}</button>`;
@@ -716,7 +718,7 @@ function render(){
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
-        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все смены команды проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
+        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить смену этому продюсеру">＋ смена</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все смены команды проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
       </div>
       <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th>Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
@@ -746,6 +748,19 @@ function render(){
     document.getElementById("d-city").textContent = parts[0] || "";
     document.getElementById("d-msg").textContent = "";
     openModal("delmodal");
+  });
+  document.querySelectorAll(".addg").forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    if (!AUTH.edit){ toast("Добавлять смены может только редактор", true); return; }
+    const parts = b.dataset.addg.split("|");
+    document.getElementById("a-city").value = parts[0] || "Томск";
+    updateProdList();
+    const sel = document.getElementById("a-prod");
+    const want = parts[1] || "";
+    if ([...sel.options].some(o=>o.textContent===want)) sel.value = want;
+    else { sel.value = "__new"; document.getElementById("a-newrow").style.display = ""; document.getElementById("a-prod-new").value = want; }
+    document.getElementById("a-msg").textContent = "";
+    openModal("addmodal");
   });
   document.querySelectorAll(".tcall").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
