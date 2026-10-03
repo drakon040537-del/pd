@@ -251,6 +251,15 @@
       <span id="w-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
     </div>
   </div>
+    <div class="modal-ov" id="planmodal">
+    <div class="modal" style="width:min(560px,94vw)">
+      <button class="x" id="plan-x">✕</button>
+      <h3>🗓 План работ — <span id="pl-prod"></span> <span id="pl-city" style="color:var(--faint);font-size:12px"></span></h3>
+      <textarea id="pl-text" style="width:100%;min-height:140px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="план работ на неделю по команде"></textarea>
+      <button class="abtn" id="pl-save" style="margin-top:10px">Сохранить план</button>
+      <span id="pl-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+    </div>
+  </div>
   <div class="toast" id="toast"></div>
   <p class="note">Данные: Google-таблица «продюсеры» (приватная) → Apps Script (доступ только по ключу) → этот дашборд. Обновление каждые 5 минут.</p>
 </div>
