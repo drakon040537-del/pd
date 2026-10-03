@@ -926,6 +926,29 @@ function render(){
   const selClear = document.getElementById("sel-clear");
   if (selClear) selClear.onclick = ()=>{ state.selSet.clear(); render(); };
   document.querySelectorAll(".qx[data-code]").forEach(x=>x.onclick=(ev)=>{ ev.stopPropagation(); delPhrase(x.dataset.code, x.dataset.qx); render(); });
+  document.querySelectorAll("[data-upl]").forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const parts = b.dataset.upl.split("_");
+    const x = state.lastView[parts[0]]; if (!x) return;
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = ()=>{ if (inp.files && inp.files[0]) uploadScreen(inp.files[0], x, parseInt(parts[1],10)); };
+    document.body.appendChild(inp); inp.click(); inp.remove();
+  });
+  document.querySelectorAll(".sthumb img").forEach(im=>im.onclick=()=>{
+    document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
+    document.getElementById("cam-link").href = im.getAttribute("data-big") || im.src;
+    openModal("cammodal");
+  });
+  document.querySelectorAll(".qx[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
+    ev.stopPropagation();
+    try {
+      const res = await jsonp({ action:"delscreen", key: x.dataset.dsk, link: x.dataset.dlink, user: AUTH.user, pass: AUTH.pass });
+      if (res.error) throw new Error(res.error);
+      toast("Скрин удалён");
+      setTimeout(load, 500);
+    } catch(e){ toast("Ошибка: "+e.message, true); }
+  });
   document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const v=prompt("Своя формулировка для «"+b.dataset.n+"» (сохранится в этом браузере):"); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
   document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
