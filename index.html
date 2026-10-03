@@ -99,6 +99,9 @@
 
   .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:flex-start;justify-content:center;overflow:auto}
   .modal-ov.show{display:flex}
+  .uplzone{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--dim);font-size:13px;margin:10px 0;cursor:pointer}
+  .uplzone:hover{border-color:var(--accent);color:var(--ink)}
+  .rlink{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:11px;color:var(--accent);text-decoration:none;margin:1px 2px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-top:8vh;width:min(720px,94vw);position:relative}
   .modal h3{font-size:16px;margin-bottom:16px}
   .modal .x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--faint);font-size:20px;cursor:pointer}
@@ -354,6 +357,16 @@
       <a id="cam-link" href="#" target="_blank" style="color:var(--accent);font-size:12.5px">открыть оригинал в новой вкладке ↗</a>
     </div>
   </div>
+  <div class="modal-ov" id="uplmodal">
+    <div class="modal" style="width:min(460px,94vw)">
+      <button class="x" id="u-x">✕</button>
+      <h3 id="u-title">📷 Фото</h3>
+      <div class="uplzone" id="u-zone">Ctrl+V — вставь скрин из буфера<br><span style="color:var(--faint);font-size:11.5px">скрин сохранится и появится у команды</span></div>
+      <button class="abtn" id="u-file">📁 Выбрать файл с ПК</button>
+      <input type="file" id="u-fileinp" accept="image/*" style="display:none">
+      <div id="u-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
+    </div>
+  </div>
   <div class="modal-ov" id="delmodal">
     <div class="modal" style="width:min(460px,94vw)">
       <button class="x" id="del-x">✕</button>
@@ -386,7 +399,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.14"
+  VER: "2026-10-03.15"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -509,6 +522,8 @@ function rowDirty(key){
   if (c && c.value !== (x.r.obs||"")) return true;
   const rc = document.getElementById("ed"+key+"_reco");
   if (rc && rc.value !== (x.r.reco||"")) return true;
+  const lk = document.getElementById("lk"+key);
+  if (lk && normLinks(lk.value) !== normLinks(x.r.linksTxt||"")) return true;
   return false;
 }
 function anyDirty(){
@@ -551,6 +566,7 @@ function updateLoginBtn(){
 }
 
 function render(){
+  const openDet = new Set([...document.querySelectorAll("tr.detail.open")].map(d=>d.dataset.d)); // открытые редакторы переживают перерисовку (считаем ДО очистки DOM)
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week})); }catch(e){}
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
   const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡"};
@@ -787,6 +803,8 @@ function render(){
       const dr = getDraft(x.r);
       const rowScreens = (state.screens||{})[x.r._sheet+"|"+x.r._row] || [];
       const genScr = rowScreens.filter(s=>!String(s.cat||"").trim()); // общие фото (без категории)
+      const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
+      const linksCell = rowLinks.length ? rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"🔗")}</a>`).join("") : '<span style="color:var(--faint)">—</span>';
       const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img src="${esc(s.link)}" data-big="${esc(s.link)}" alt="скрин: ${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
@@ -805,7 +823,7 @@ function render(){
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>💡 Рекомендации (их видит команда)</b><textarea id="ed${key}_reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea></div>
-        <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки на сайты (строки: Название = URL)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc((state.links||[]).filter(l=>l.key===x.r.city+"|"+x.r.producer).map(l=>l.title+" = "+l.url).join("\n"))}</textarea></div>
+        <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки (одна в строке: «Название = URL»; сохраняются кнопкой «Сохранить»)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc(dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||""))}</textarea></div>
         <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>
         <div class="f" style="grid-column:1/-1"><b>📷 Фото команды</b><button class="qbtn" data-upl="${key}_G" title="прикрепить фото">📷 добавить</button><span style="color:var(--faint);font-size:11.5px;margin-left:8px">или Ctrl+V в открытом редакторе</span>${scrThumbs(genScr,"фото",true)}</div>`;
@@ -813,7 +831,6 @@ function render(){
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие проверки команды</button>
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
-        <button class="abtn2" id="lks${key}" style="margin-left:10px">💾 Ссылки</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>`
         : `<div class="dgrid">${readDet}</div>` +
           (x.r.screen ? `<img class="screen-prev" src="${esc(x.r.screen)}" alt="скрин команды">` : "");
@@ -828,20 +845,19 @@ function render(){
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
         return `<div style="white-space:nowrap;font-size:12px"><b style="font-weight:600">${esc((x.r.updated||"").slice(0,11))}</b><div style="font-size:11px;color:var(--dim)">${lab} · след. ${nx}</div></div>`;
       })();
-      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${AUTH.edit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${AUTH.edit?`<span class="rowbtns"><input type="checkbox" class="chk" data-selk="${esc(x.r._sheet)}|${x.r._row}" title="выбрать для массовых действий"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn" data-cam="${key}" title="скрин смены">📷</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns">${x.r.screen?`<span class="cam" data-cam="${key}" title="скрин смены">📷</span>`:""}<span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
-      <tr class="detail" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?8:7}"><div class="detail-in">${inner}</div></td></tr>`;
+      return `<tr class="r" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${AUTH.edit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${AUTH.edit?`<span class="rowbtns"><input type="checkbox" class="chk" data-selk="${esc(x.r._sheet)}|${x.r._row}" title="выбрать для массовых действий"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn" data-cam="${key}" title="скрин смены">📷</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns">${x.r.screen?`<span class="cam" data-cam="${key}" title="скрин смены">📷</span>`:""}<span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
+      <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?9:8}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}" style="border-left:4px solid ${esc(state.colors[g.producer]||"#566070")}">
       <div class="phead" data-g="${gkeyEsc}">
         <span class="cdot" data-prod="${esc(g.producer)}" style="background:${esc(state.colors[g.producer]||"#566070")}"></span>
         <span class="arrow">${open?"▾":"▸"}</span><b>${esc(g.producer)}</b>
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
-        ${(state.links||[]).filter(l=>l.key===g.city+"|"+g.producer && /^https?:\/\//i.test(l.url||"")).map(l=>`<a class="gbtn" href="${esc(l.url)}" target="_blank" rel="noopener" title="открыть ${esc(l.title)}">${esc(l.title||"🔗")}</a>`).join("")}
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(g.city)}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
         ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру">＋ мониторинг</button><button class="gbtn tcall" data-tcall="${gkeyEsc}" title="отметить все команды (мониторинги) проверенными сегодня">✅ команда</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
       </div>
-      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Ссылки</th><th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
   }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "")
     : `<div class="empty">Нет данных по фильтру</div>`;
@@ -958,10 +974,8 @@ function render(){
     ev.stopPropagation();
     const parts = b.dataset.upl.split("_");
     const x = state.lastView[parts[0]]; if (!x) return;
-    const inp = document.createElement("input");
-    inp.type = "file"; inp.accept = "image/*";
-    inp.onchange = ()=>{ if (inp.files && inp.files[0]) uploadScreen(inp.files[0], x, parts[1]==="G" ? undefined : parseInt(parts[1],10)); }; // G = общее фото без категории
-    document.body.appendChild(inp); inp.click(); inp.remove();
+    const catIdx = parts[1]==="G" ? undefined : parseInt(parts[1],10); // G = общее фото без категории
+    openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
   });
   document.querySelectorAll(".sthumb img").forEach(im=>im.onclick=()=>{
     document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
@@ -1010,9 +1024,13 @@ function render(){
     d.classList.toggle("open");
     if (d.classList.contains("open")) d.scrollIntoView({behavior:"smooth", block:"nearest"});
   });
-  document.querySelectorAll(".qbtn").forEach(b=>b.onclick=(ev)=>{
-    ev.stopPropagation();
-    document.getElementById(b.dataset.ta).value = b.dataset.v;
+  document.querySelectorAll("a.rlink").forEach(a=>a.onclick=(ev)=>ev.stopPropagation()); // клик по ссылке не открывает/не закрывает редактор
+  document.querySelectorAll(".qbtn").forEach(b=>{
+    if (b.dataset.upl) return; // кнопке фото нужен СВОЙ обработчик: раньше этот блок перезаписывал его — кнопки «не работали»
+    b.onclick=(ev)=>{
+      ev.stopPropagation();
+      document.getElementById(b.dataset.ta).value = b.dataset.v;
+    };
   });
   document.querySelectorAll(".qchip").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
@@ -1030,6 +1048,7 @@ function render(){
       CATS.forEach((n,j)=>{ const ta = document.getElementById("ed"+det.dataset.d+"_"+j); if (ta) d["f"+j] = ta.value; });
       const c = document.getElementById("ed"+det.dataset.d+"_comment"); if (c) d.comment = c.value;
       const rc = document.getElementById("ed"+det.dataset.d+"_reco"); if (rc) d.reco = rc.value;
+      const lk = document.getElementById("lk"+det.dataset.d); if (lk) d.lk = lk.value;
       const sc = document.getElementById("ed"+det.dataset.d+"_score"); if (sc) d.score = sc.value;
       const vd = document.getElementById("ed"+det.dataset.d+"_verdict"); if (vd) d.verdict = vd.value;
       const lv = document.getElementById("live"+det.dataset.d);
@@ -1046,20 +1065,6 @@ function render(){
     if (btn) btn.onclick = ()=>saveRow(x, key);
     const dup = document.getElementById("dup"+key);
     if (dup) dup.onclick = ()=>dupRow(x, key);
-    const lkb = document.getElementById("lks"+key);
-    if (lkb) lkb.onclick = async ()=>{
-      const ta = document.getElementById("lk"+key);
-      const norm = normLinks(ta.value);
-      ta.value = norm;
-      const lkey = x.r.city+"|"+x.r.producer;
-      try {
-        const res = await jsonp({ action:"setlinks", bkey: lkey, text: norm, user: AUTH.user, pass: AUTH.pass });
-        if (res.error) throw new Error(res.error);
-        state.links = (state.links||[]).filter(l=>l.key!==lkey).concat(linksArrFromText(lkey, norm));
-        toast("✔ Ссылки сохранены: " + norm.split("\n").filter(x=>x.indexOf("=")>=0).length + " шт");
-        render();
-      } catch(e){ toast("Ошибка: "+e.message, true); }
-    };
     const tc = document.getElementById("tc"+key);
     if (tc) tc.onclick = async ()=>{
       try {
@@ -1564,13 +1569,11 @@ async function saveRow(x, key){
   if (ver !== (x.r.verdictM||"")) changes.push(["verdict", ver]);
   const rec = document.getElementById("ed"+key+"_reco").value;
   if (rec !== (x.r.reco||"")) changes.push(["recs", rec]);
-  // ссылки в этой же форме: сохраняются вместе с основным «Сохранить», если менялись
+  // ссылки — per строка (колонка U «Ссылки»), сохраняются основным «Сохранить»
   const lkEl = document.getElementById("lk"+key);
-  const lkey = x.r.city+"|"+x.r.producer;
-  const linksCur = (state.links||[]).filter(l=>l.key===lkey).map(l=>l.title+" = "+l.url).join("\n");
   const linksNew = lkEl ? normLinks(lkEl.value) : "";
-  const linksChanged = !!lkEl && linksNew !== linksCur;
-  if (!changes.length && !linksChanged){ toast("Изменений нет", true); return; }
+  if (lkEl && linksNew !== normLinks(x.r.linksTxt||"")) changes.push(["links", linksNew]);
+  if (!changes.length){ toast("Изменений нет", true); return; }
   btn.disabled = true;
   try {
     let viaFallback = false, savedN = 0;
@@ -1590,13 +1593,9 @@ async function saveRow(x, key){
       x.r.reco = document.getElementById("ed"+key+"_reco").value;
       x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
     }
-    if (linksChanged){
-      const lr = await jsonp({ action:"setlinks", bkey: lkey, text: linksNew, user: AUTH.user, pass: AUTH.pass });
-      if (lr.error) throw new Error(lr.error);
-      state.links = (state.links||[]).filter(l=>l.key!==lkey).concat(linksArrFromText(lkey, linksNew));
-    }
+    x.r.linksTxt = linksNew;
     clearDraft(x.r);
-    toast(changes.length ? (viaFallback ? "✔ Сохранено (резервный канал — без подтверждения)" : "✔ Сохранено в таблицу (" + savedN + " полей)") : "✔ Ссылки сохранены");
+    toast(viaFallback ? "✔ Сохранено (резервный канал — без подтверждения)" : "✔ Сохранено в таблицу (" + savedN + " полей)");
     render();
   } catch(e){
     toast("Ошибка: " + e.message, true);
@@ -1719,6 +1718,24 @@ document.getElementById("d-one").onclick = ()=>doDelTeam(false);
 document.getElementById("d-all").onclick = ()=>doDelTeam(true);
 document.getElementById("op-x").onclick = ()=>closeModal("opmodal");
 document.getElementById("cam-x").onclick = ()=>closeModal("cammodal");
+// ---------- окно вставки фото (кнопка или Ctrl+V) ----------
+let uplTarget = null;
+function openUpload(x, catIdx, label){
+  uplTarget = { x: x, catIdx: catIdx };
+  document.getElementById("u-title").textContent = "📷 Фото — " + label;
+  document.getElementById("u-msg").textContent = "";
+  openModal("uplmodal");
+}
+function doUpload(blob){
+  if (!uplTarget) return;
+  const t = uplTarget; uplTarget = null;
+  closeModal("uplmodal");
+  uploadScreen(blob, t.x, t.catIdx);
+}
+document.getElementById("u-file").onclick = ()=>{ document.getElementById("u-fileinp").click(); };
+document.getElementById("u-zone").onclick = ()=>{ document.getElementById("u-fileinp").click(); };
+document.getElementById("u-fileinp").onchange = function(){ if (this.files && this.files[0]) doUpload(this.files[0]); this.value = ""; };
+document.getElementById("u-x").onclick = ()=>{ uplTarget = null; closeModal("uplmodal"); };
 document.getElementById("o-save").onclick = async ()=>{
   const ov = document.getElementById("opmodal");
   const x = state.lastView[ov.dataset.key]; if (!x) return;
@@ -1961,6 +1978,13 @@ function overdueCount(city){
 
 document.addEventListener("paste", function(e){
   if (!AUTH.edit) return;
+  const um = document.getElementById("uplmodal");
+  if (um && um.classList.contains("show") && uplTarget){ // окно фото открыто — вставка идёт туда
+    const items = e.clipboardData && e.clipboardData.items;
+    if (items) for (let i=0;i<items.length;i++){
+      if (items[i].type && items[i].type.indexOf("image") === 0){ e.preventDefault(); doUpload(items[i].getAsFile()); return; }
+    }
+  }
   const det = document.querySelector("tr.detail.open");
   if (!det) return;
   const x = state.lastView[det.dataset.d]; if (!x) return;
