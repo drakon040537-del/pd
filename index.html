@@ -397,7 +397,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.19"
+  VER: "2026-10-03.20"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -807,7 +807,7 @@ function render(){
       }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${hl(x.r.obs)}</span></div>` : "") +
         (x.r.reco ? `<div class="drow"><b>💡 Рекомендации</b><span>${hl(x.r.reco)}</span></div>` : "") +
         ((state.plans||{})[x.r.city+"|"+x.r.producer] ? `<div class="drow"><b>🗓 План работ</b><span>${esc(state.plans[x.r.city+"|"+x.r.producer])}</span></div>` : "") +
-        (x.r.updated ? `<div class="drow"><b>🕐 Последняя проверка/правка</b><span>${esc(x.r.updated)}</span></div>` : "");
+        (x.r.updated ? `<div class="drow"><b>🕐 Последняя проверка/правка</b><span>${esc(fmtUpd(x.r.updated))}</span></div>` : "");
       const lv0 = liveEval(CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"")));
       const editDet = `<div class="editlive" id="live${key}">${lv0}</div>` + CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
@@ -916,7 +916,7 @@ function render(){
     openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
   });
   document.querySelectorAll(".sthumb img").forEach(im=>{
-    im.onerror=()=>{ const n=(+im.dataset.n||0)+1; im.dataset.n=n; if(n<3) setTimeout(()=>{ im.src=im.src; },3000); }; // холодный thumbnail даёт 404 — ретраим
+    im.onerror=()=>{ const n=(+im.dataset.n||0)+1; im.dataset.n=n; if(n<3) setTimeout(()=>{ im.src=im.src+(im.src.indexOf("?")>=0?"&":"?")+"r="+Date.now(); },3000); }; // холодный thumbnail даёт 404 — ретраим со сбросом кэша
     im.onclick=()=>{
       document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
       document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
@@ -925,14 +925,21 @@ function render(){
   });
   document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
     ev.stopPropagation();
-    try {
-      const res = await jsonp({ action:"delscreen", bkey: x.dataset.dsk, link: x.dataset.dlink, user: AUTH.user, pass: AUTH.pass });
-      if (res.error) throw new Error(res.error);
-      const arr = (state.screens||{})[x.dataset.dsk]; // удаляем локально и мгновенно, без перечитывания всей таблицы
-      if (arr) state.screens[x.dataset.dsk] = arr.filter(s=>s.link!==x.dataset.dlink);
-      toast("Скрин удалён");
-      render();
-    } catch(e){ toast("Ошибка: "+e.message, true); }
+    const dsk = x.dataset.dsk, dlink = x.dataset.dlink; // запоминаем до перерисовки
+    toast("Удаляю скрин…");
+    let lastErr = null;
+    for (let a=0;a<3;a++){ // Apps Script бывает капризным сразу после загрузки — до 3 попыток
+      try {
+        const res = await jsonp({ action:"delscreen", bkey: dsk, link: dlink, user: AUTH.user, pass: AUTH.pass }, null, 30000);
+        if (res.error) throw new Error(res.error);
+        const arr = (state.screens||{})[dsk]; // удаляем локально и мгновенно, без перечитывания всей таблицы
+        if (arr) state.screens[dsk] = arr.filter(s=>s.link!==dlink);
+        toast("Скрин удалён");
+        render();
+        return;
+      } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,2000)); }
+    }
+    toast("Скрин не удалось удалить (" + (lastErr?lastErr.message:"нет ответа") + ") — попробуй ещё раз через минуту", true);
   });
   document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const v=prompt("Своя формулировка для «"+b.dataset.n+"» (сохранится в этом браузере):"); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
   document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
@@ -1086,7 +1093,7 @@ function schedChip(x){
   const lastTxt = u ? (u.days===0?"сегодня":u.days+" дн. назад") : "не проверялась";
   const oldCls = (u && u.days >= 14) ? " v-old" : "";
   const vd = x.s.verdict ? "v-"+(VMAP[x.s.verdict]||"none") : "v-none";
-  return `<div class="schip click ${oldCls} ${vd}" data-goto="${esc(r._sheet)}|${r._row}" title="последняя проверка/правка: ${esc(r.updated||"—")} — нажми, чтобы открыть правки">
+  return `<div class="schip click ${oldCls} ${vd}" data-goto="${esc(r._sheet)}|${r._row}" title="последняя проверка/правка: ${esc(fmtUpd(r.updated)||"—")} — нажми, чтобы открыть правки">
     <div class="sc-top"><b>${esc(r.opName||r.opNick||"—")}</b> / ${esc(r.model||"—")}</div>
     <div class="sc-sub">${esc(r.producer||"—")} · ${esc(r.city)}</div>
     <div class="sc-sub">🕐 ${lastTxt}${x.s.verdict?" · "+(VLBL[x.s.verdict]||x.s.verdict):""}</div>
@@ -1493,6 +1500,8 @@ function normLinks(text){
     return t;
   }).filter(Boolean).join("\n");
 }
+// «Обновлено» хранится как «dd.MM HH:mm (кто)» — на экране показываем только дату и время
+function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim(); }
 // Drive-ссылки: uc?export=view блокируется браузером (ORB) — показываем через thumbnail
 function driveThumb(u, w){
   const m = String(u||"").match(/[?&]id=([\w-]+)/);
@@ -1973,10 +1982,10 @@ async function uploadScreen(blob, x, catIdx){
           return;
         }
       }catch(e){}
-      if (tries < 6) setTimeout(poll, 3000);
+      if (tries < 8) setTimeout(poll, 2500);
       else toast("Скрин НЕ сохранился — сервер отклонил загрузку (проверь права Apps Script на Диск)", true);
     };
-    setTimeout(poll, 3000);
+    setTimeout(poll, 2000);
   } catch(err){ toast("Скрин не удался: " + err.message, true); }
 }
 
