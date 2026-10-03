@@ -329,7 +329,7 @@ const CONFIG = {
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
-  if (p) localStorage.setItem("dash_key", p);
+  if (p) { try{ localStorage.setItem("dash_key", p); }catch(e){} }
 })();
 CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
 
@@ -342,10 +342,11 @@ const AUTH = {
   cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
   ok(){ return !!(this.user && this.pass); },
   set(u,p,edit,cities,name){ this.user=u; this.pass=p; this.edit=edit; this.cities=cities; this.name=name||u;
-    localStorage.setItem("dash_user",u); sessionStorage.setItem("dash_pass",p);
+    try{ localStorage.setItem("dash_user",u); sessionStorage.setItem("dash_pass",p);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
-    localStorage.setItem("dash_name",this.name); },
-  clear(){ ["dash_user","dash_edit","dash_cities","dash_name"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass");
+    localStorage.setItem("dash_name",this.name); }catch(e){} // приватный режим iOS — хранилище может бросать
+    return true; },
+  clear(){ try{ ["dash_user","dash_edit","dash_cities","dash_name"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); }catch(e){}
     this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; }
 };
 
@@ -1034,7 +1035,7 @@ function jsonp(params){
     const s=document.createElement("script");
     s.src=CONFIG.API_URL+"?"+q.toString();
     s.onerror=()=>{ if(done) return; done=true; reject(new Error("JSONP_FAIL")); cleanup(); };
-    const to=setTimeout(()=>{ if(done) return; done=true; reject(new Error("нет ответа от таблицы")); cleanup(); }, 10000);
+    const to=setTimeout(()=>{ if(done) return; done=true; reject(new Error("нет ответа от таблицы (таймаут)")); cleanup(); }, 10000);
     function cleanup(){ clearTimeout(to); delete window[cb]; s.remove(); }
     document.head.appendChild(s);
   });
@@ -1280,7 +1281,7 @@ async function doLogin(){
   if (!CONFIG.API_KEY){
     const k = prompt("Введи ключ доступа к дашборду (из ссылки с ?key=...):");
     if (!k){ document.getElementById("l-msg").textContent = "Нужен ключ доступа — открой ссылку с ?key=..."; return; }
-    localStorage.setItem("dash_key", k); CONFIG.API_KEY = k;
+    try{ localStorage.setItem("dash_key", k); }catch(e){} CONFIG.API_KEY = k;
   }
   document.getElementById("l-msg").textContent = "Проверяю…";
   try {
@@ -1302,7 +1303,12 @@ async function doLogin(){
     updateLoginBtn();
     toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
     load();
-  } catch(e){ document.getElementById("l-msg").textContent = "Не удалось проверить — попробуй ещё раз"; }
+  } catch(e){
+    const m = String(e && e.message || e);
+    document.getElementById("l-msg").textContent = (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0)
+      ? "Таблица не ответила. На iPhone/iPad это обычно блокировка сторонних cookie — доступ веб-приложения Apps Script должен быть «Все» (см. инструкцию)"
+      : "Не удалось проверить: " + m;
+  }
 }
 
 function isFresh(r){
@@ -1374,7 +1380,7 @@ async function load(){
   if (!AUTH.ok){ showGate(); return; }
   if (!CONFIG.API_KEY){
     const k=prompt("Введи ключ доступа к дашборду:");
-    if(k){localStorage.setItem("dash_key",k);CONFIG.API_KEY=k;}
+    if(k){try{localStorage.setItem("dash_key",k);}catch(e){} CONFIG.API_KEY=k;}
     else{ return; }
   }
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
