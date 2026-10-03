@@ -220,7 +220,8 @@
   tr.r:nth-child(even) td{background:rgba(255,255,255,.015)}
   .schip.v-old{border-left-color:#a3403c;background:#241a19}
   .sgrp{margin:7px 0 3px;font-size:10.5px;color:var(--faint);display:flex;align-items:center;gap:6px}
-  .chk{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;vertical-align:-2px}
+  .chk{appearance:none;-webkit-appearance:none;width:15px;height:15px;border:1.5px solid #3a4048;border-radius:4px;background:#15181d;cursor:pointer;vertical-align:-2px;transition:background .15s,border-color .15s}
+  .chk:checked{background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.5' d='M3 8.5l3.5 3.5L13 5'/%3E%3C/svg%3E") center/11px no-repeat;border-color:var(--accent)}
   .schipbtn{background:none;border:none;padding:0;cursor:pointer;font:inherit}
   .op-best{color:var(--ok);font-weight:700} .op-worst{color:var(--bad);font-weight:700}
   .mini-gauge{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--panel2);width:80px;margin-top:3px}
@@ -231,7 +232,7 @@
   .qx{color:var(--bad);font-weight:700;margin-left:3px}
   .scrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
   .sthumb{position:relative;display:inline-block;line-height:0}
-  .sthumb img{width:66px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block}
+  .sthumb img{width:96px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block}
   .sthumb:hover img{border-color:var(--accent)}
   .sqx{position:absolute;top:-6px;right:-6px;background:var(--panel);border:1px solid var(--line);border-radius:50%;width:17px;height:17px;line-height:15px;font-size:10px;cursor:pointer;text-align:center;color:var(--dim);z-index:2}
   .sqx:hover{color:var(--bad);border-color:var(--bad)}
@@ -399,7 +400,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.15"
+  VER: "2026-10-03.16"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -823,10 +824,10 @@ function render(){
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>💡 Рекомендации (их видит команда)</b><textarea id="ed${key}_reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea></div>
+        <div class="f" style="grid-column:1/-1"><b>📷 Фото команды</b><button class="qbtn" data-upl="${key}_G" title="прикрепить фото">📷 добавить</button><span style="color:var(--faint);font-size:11.5px;margin-left:8px">или Ctrl+V в окне вставки</span>${scrThumbs(genScr,"фото",true)}</div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки (одна в строке: «Название = URL»; сохраняются кнопкой «Сохранить»)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc(dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||""))}</textarea></div>
         <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
-        <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>
-        <div class="f" style="grid-column:1/-1"><b>📷 Фото команды</b><button class="qbtn" data-upl="${key}_G" title="прикрепить фото">📷 добавить</button><span style="color:var(--faint);font-size:11.5px;margin-left:8px">или Ctrl+V в открытом редакторе</span>${scrThumbs(genScr,"фото",true)}</div>`;
+        <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие проверки команды</button>
@@ -2018,8 +2019,29 @@ async function uploadScreen(blob, x, catIdx){
         sheet: x.r._sheet, row: x.r._row, data: data,
         cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
     });
-    toast("📸 Скрин отправлен"+(catIdx!==undefined&&catIdx!==null?" — категория ["+CATS[catIdx]+"]":"")+" — привязываю к проверке…");
-    setTimeout(load, 2500);
+    toast("📸 Скрин загружаю…"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":""));
+    // no-cors не даёт прочитать ответ сервера — подтверждаем ФАКТОМ: опрашиваем лёгкий action=screens
+    const k0 = x.r._sheet+"|"+x.r._row;
+    const beforeLinks = new Set(((state.screens||{})[k0]||[]).map(s=>s.link));
+    let tries = 0;
+    const poll = async ()=>{
+      tries++;
+      try{
+        const j = await jsonp({ action:"screens", user: AUTH.user, pass: AUTH.pass }, null, 20000);
+        const now = (j && j.screens ? j.screens : {})[k0] || [];
+        const fresh = now.filter(s=>s.link && !beforeLinks.has(s.link));
+        if (fresh.length){
+          state.screens = state.screens || {};
+          state.screens[k0] = (state.screens[k0]||[]).concat(fresh);
+          toast("📸 Скрин загружен ✓");
+          render(); load();
+          return;
+        }
+      }catch(e){}
+      if (tries < 6) setTimeout(poll, 3000);
+      else toast("Скрин НЕ сохранился — сервер отклонил загрузку (проверь права Apps Script на Диск)", true);
+    };
+    setTimeout(poll, 3000);
   } catch(err){ toast("Скрин не удался: " + err.message, true); }
 }
 
