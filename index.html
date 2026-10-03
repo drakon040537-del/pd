@@ -180,6 +180,8 @@
   .sday.today h3{color:var(--accent)} .sday.oday h3{color:var(--bad)}
   .sday h3 .cnt{color:var(--faint);font-weight:400}
   .schip{border:1px solid var(--line);border-left:3px solid var(--dim);border-radius:8px;padding:7px 9px;margin-bottom:7px;background:var(--panel2);font-size:12px}
+  .schip.click{cursor:pointer}
+  .schip.click:hover{border-color:var(--accent);background:var(--panel)}
   .schip.v-ok{border-left-color:var(--ok)}
   .schip.v-warn{border-left-color:var(--warn)}
   .schip.v-bad{border-left-color:var(--bad)}
@@ -372,7 +374,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"" };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"" };
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
@@ -478,7 +480,7 @@ function render(){
   const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️"};
   document.getElementById("tabs").innerHTML = tabs().map(c=>{
     const n = rowsOf(c).length;
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c}</span><span class="cnt">${n||""}</span></button>`;
+    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c==="Расписание"?"Расписание проверок":c}</span><span class="cnt">${n||""}</span></button>`;
   }).join("") + (wks.length>1 ? `<button class="wtab ${!state.week?"on":""}" data-w=""><span>🗓</span><span>все недели</span></button>` + wks.map(w=>`<button class="wtab ${state.week===w?"on":""}" data-w="${esc(w)}"><span>🗓</span><span>${esc(w)}</span></button>`).join("") : "");
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
   document.querySelectorAll(".wtab").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; render(); });
@@ -834,7 +836,7 @@ function schedChip(x){
   const r = x.r, u = dueInfo(r);
   const lastTxt = u ? (u.days===0?"сегодня":u.days+" дн. назад") : "не проверялась";
   const vd = x.s.verdict ? "v-"+(VMAP[x.s.verdict]||"none") : "v-none";
-  return `<div class="schip ${vd}" title="последняя проверка/правка: ${esc(r.updated||"—")}">
+  return `<div class="schip click ${vd}" data-goto="${esc(r._sheet)}|${r._row}" title="последняя проверка/правка: ${esc(r.updated||"—")} — нажми, чтобы открыть правки">
     <div class="sc-top"><b>${esc(r.opName||r.opNick||"—")}</b> / ${esc(r.model||"—")}</div>
     <div class="sc-sub">${esc(r.producer||"—")} · ${esc(r.city)}</div>
     <div class="sc-sub">🕐 ${lastTxt}${x.s.verdict?" · "+(VLBL[x.s.verdict]||x.s.verdict):""}</div>
@@ -855,6 +857,8 @@ function renderSchedule(){
   });
   let teams = Object.values(map).map(r=>({r, s: rowStats(r)}));
   if (state.search){ const q = state.search.toLowerCase(); teams = teams.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
+  if (state.schedCity) teams = teams.filter(x=>x.r.city===state.schedCity);
+  const citiesAvail = tabs().filter(c=>c!=="Обзор"&&c!=="Сводка"&&c!=="Расписание"&&c!=="Операторы"&&c!=="Сравнение");
   const today = new Date(); today.setHours(0,0,0,0);
   const overdue = [], later = [], never = [], buckets = {};
   teams.forEach(function(x){
@@ -878,8 +882,10 @@ function renderSchedule(){
   }
   const col = (title, list, cls) => `<div class="sday ${cls||""}"><h3>${title} <span class="cnt">${list.length||""}</span></h3>${list.map(schedChip).join("")}</div>`;
   document.getElementById("content").innerHTML = `
-    <div class="card" style="margin-bottom:14px"><h2>Расписание перепроверок</h2>
+    <div class="card" style="margin-bottom:14px"><h2>Расписание проверок</h2>
       <div style="color:var(--faint);font-size:12px">команд всего: ${teams.length} · 🔴 просрочено: ${overdue.length} · ⚪ никогда не проверялись: ${never.length} · ✅ проверены сегодня: ${teams.filter(x=>{const u=dueInfo(x.r);return u&&u.days===0;}).length}</div>
+      <div style="margin-top:10px">${[""].concat(citiesAvail).map(c=>`<button class="fchip ${state.schedCity===c?"on":""}" data-sc="${esc(c)}">${c===""?"Все города":(c==="Новосибирск"?"НСК":c)}</button>`).join("")}</div>
+      <div style="color:var(--faint);font-size:11.5px;margin-top:8px">нажми на команду — откроются её правки на вкладке города</div>
     </div>
     <div class="schedwrap"><div class="schedrow">
       ${col("🔴 просрочено", overdue, "oday")}
@@ -889,6 +895,11 @@ function renderSchedule(){
       <div class="card"><h2>⚪ Никогда не проверялись (${never.length})</h2>${never.length?never.map(schedChip).join(""):'<div class="empty">Все команды проверены 🎉</div>'}</div>
       <div class="card"><h2>🗓 Позже этой недели (${later.length})</h2>${later.length?later.map(schedChip).join(""):'<div class="empty">Нет команд</div>'}</div>
     </div>`;
+  document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{ state.schedCity = b.dataset.sc; renderSchedule(); });
+  document.querySelectorAll(".schip[data-goto]").forEach(ch=>ch.onclick=(ev)=>{
+    if (ev.target.closest("button")) return;
+    gotoRow(ch.dataset.goto);
+  });
   document.querySelectorAll("[data-sch-touch]").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
     const parts = b.dataset.schTouch.split("|");
@@ -901,6 +912,25 @@ function renderSchedule(){
       renderSchedule();
     } catch(e){ toast("Ошибка: " + e.message, true); }
   });
+}
+
+// переход из «Расписания» к правкам конкретной смены
+function gotoRow(goto){
+  const parts = goto.split("|");
+  const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
+  if (!r){ toast("Смена не найдена — обнови данные", true); return; }
+  state.tab = r.city; state.week = r.week; state.search = ""; state.quick = ""; state.producer = "";
+  state.page = 999;
+  state.grpOpen[r.city+"|"+(r.producer||"—")] = true;
+  render();
+  setTimeout(()=>{
+    const idx = state.lastView.findIndex(x=>x.r._sheet===r._sheet && String(x.r._row)===String(r._row));
+    if (idx < 0) return;
+    const det = document.querySelector(`tr.detail[data-d="${idx}"]`);
+    const rowTr = document.querySelector(`tr.r[data-i="${idx}"]`);
+    if (det) det.classList.add("open");
+    if (rowTr) rowTr.scrollIntoView({behavior:"smooth", block:"center"});
+  }, 60);
 }
 
 // ---------- «Сводка» (для смотрящего) ----------
