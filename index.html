@@ -131,9 +131,12 @@
   .cdot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px;cursor:pointer;border:1px solid rgba(255,255,255,.18)}
   #splash{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
   #splash.hide{opacity:0;pointer-events:none}
-  .spin{width:44px;height:44px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .9s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .slogo{font-size:34px}
+  .loadbars{display:flex;align-items:flex-end;gap:5px;height:42px}
+  .loadbars i{width:9px;border-radius:3px;background:linear-gradient(180deg,var(--accent),#7ee2a8);animation:barp 1.1s ease-in-out infinite}
+  .loadbars i:nth-child(2){animation-delay:.15s}
+  .loadbars i:nth-child(3){animation-delay:.3s}
+  .loadbars i:nth-child(4){animation-delay:.45s}
+  @keyframes barp{0%,100%{height:12px;opacity:.5}50%{height:38px;opacity:1}}
   .stxt{color:var(--dim);font-size:13px}
   .layout{display:flex;align-items:flex-start;gap:0}
   .rail{width:195px;min-width:170px;position:sticky;top:14px;background:#181b20;border:1px solid var(--line);border-radius:12px;padding:12px 10px;display:flex;flex-direction:column;gap:5px}
@@ -220,7 +223,7 @@
   .mini-gauge{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--panel2);width:80px;margin-top:3px}
   .mini-gauge i{display:block;height:100%}
   .cam{cursor:pointer;font-size:13px;margin-left:4px}
-  .editlive{font-size:11.5px;color:var(--dim);margin:-2px 0 8px}
+  .editlive{font-size:11.5px;color:var(--dim);margin:-2px 0 8px;grid-column:1/-1}
   .myq{border-color:rgba(91,157,255,.45)}
   .qx{color:var(--bad);font-weight:700;margin-left:3px}
   .scrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
@@ -265,17 +268,14 @@
 <div class="gate" id="gate">
   <div class="gate-card">
     <div class="logo">Вход</div>
-    <div class="sub">вход по личному логину — увидишь только свои города</div>
-    <div style="color:var(--faint);font-size:10.5px;margin-bottom:14px">версия сайта: <span id="l-ver">2026-10-03.9</span></div>
     <input id="l-user" placeholder="Логин" autocomplete="username">
     <div class="pwrow"><input id="l-pass" type="password" placeholder="Пароль" autocomplete="current-password"><button class="eyebtn" id="l-eye" title="показать/скрыть пароль">👁</button></div>
-    <label style="color:var(--faint);font-size:11.5px;display:flex;gap:6px;align-items:center;cursor:pointer;margin-bottom:2px"><input type="checkbox" id="l-remember" style="accent-color:var(--accent)"> не выходить при закрытии браузера</label>
     <button class="abtn" id="l-go">Войти</button>
     <div class="err" id="l-msg"></div>
   </div>
 </div>
 <div class="wrap">
-  <div id="splash"><div class="slogo">📊</div><div class="spin"></div><div class="stxt">Загружаем данные…</div></div>
+  <div id="splash"><div class="loadbars"><i></i><i></i><i></i><i></i></div><div class="stxt">Загружаем данные…</div></div>
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
     <span class="spacer"></span>
@@ -386,7 +386,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.11"
+  VER: "2026-10-03.12"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -790,7 +790,7 @@ function render(){
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
         return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
-        <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки на сайты (строки: Название = URL)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/...">${esc((state.links||[]).filter(l=>l.key===x.r.city+"|"+x.r.producer).map(l=>l.title+" = "+l.url).join("\n"))}</textarea></div>
+        <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки на сайты (строки: Название = URL)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — или просто вставь ссылку">${esc((state.links||[]).filter(l=>l.key===x.r.city+"|"+x.r.producer).map(l=>l.title+" = "+l.url).join("\n"))}</textarea></div>
         <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
@@ -1032,11 +1032,15 @@ function render(){
     const lkb = document.getElementById("lks"+key);
     if (lkb) lkb.onclick = async ()=>{
       const ta = document.getElementById("lk"+key);
+      const norm = normLinks(ta.value);
+      ta.value = norm;
+      const lkey = x.r.city+"|"+x.r.producer;
       try {
-        const res = await jsonp({ action:"setlinks", key: x.r.city+"|"+x.r.producer, text: ta.value, user: AUTH.user, pass: AUTH.pass });
+        const res = await jsonp({ action:"setlinks", key: lkey, text: norm, user: AUTH.user, pass: AUTH.pass });
         if (res.error) throw new Error(res.error);
+        state.links = (state.links||[]).filter(l=>l.key!==lkey).concat(linksArrFromText(lkey, norm));
         toast("✔ Ссылки сохранены");
-        setTimeout(load, 500);
+        render();
       } catch(e){ toast("Ошибка: "+e.message, true); }
     };
     const tc = document.getElementById("tc"+key);
@@ -1493,6 +1497,18 @@ async function writePOST(params){
     body: JSON.stringify(Object.assign({ key:CONFIG.API_KEY, user:AUTH.user, pass:AUTH.pass }, params)) });
 }
 
+function normLinks(text){
+  // строка → «Название = URL»: без протокола добавляем https://, голая ссылка получает домен как название
+  return String(text||"").split("\n").map(l=>{
+    let t = l.trim(); if (!t) return "";
+    if (!/^https?:\/\//i.test(t) && /^[\w.-]+\.[a-z]{2,}([\/?#]\S*)?$/i.test(t)) t = "https://" + t;
+    if (/^https?:\/\//i.test(t)) return t.replace(/^https?:\/\//i,"").split("/")[0] + " = " + t;
+    return t;
+  }).filter(Boolean).join("\n");
+}
+function linksArrFromText(key, text){
+  return text.split("\n").map(l=>{ const m = l.match(/^(.+?)\s*=\s*(\S+)$/); return m ? { key: key, title: m[1].trim(), url: m[2] } : null; }).filter(Boolean);
+}
 async function saveRow(x, key){
   if (!AUTH.edit){ toast("Править может только редактор", true); return; }
   const btn = document.getElementById("sv"+key);
@@ -1507,25 +1523,38 @@ async function saveRow(x, key){
   if (sco !== (x.r.scoreM||"")) changes.push(["score", sco]);
   const ver = document.getElementById("ed"+key+"_verdict").value;
   if (ver !== (x.r.verdictM||"")) changes.push(["verdict", ver]);
-  if (!changes.length){ toast("Изменений нет", true); return; }
+  // ссылки в этой же форме: сохраняются вместе с основным «Сохранить», если менялись
+  const lkEl = document.getElementById("lk"+key);
+  const lkey = x.r.city+"|"+x.r.producer;
+  const linksCur = (state.links||[]).filter(l=>l.key===lkey).map(l=>l.title+" = "+l.url).join("\n");
+  const linksNew = lkEl ? normLinks(lkEl.value) : "";
+  const linksChanged = !!lkEl && linksNew !== linksCur;
+  if (!changes.length && !linksChanged){ toast("Изменений нет", true); return; }
   btn.disabled = true;
   try {
-    const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass };
-    changes.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
-    let res = null, viaFallback = false;
-    try { res = await jsonp(params); if (res.error) throw new Error(res.error); }
-    catch(e1){
-      if (String(e1.message).indexOf("прав") >= 0) throw e1;
-      await writePOST(Object.assign({ action:"save" }, params));
-      viaFallback = true;
+    let viaFallback = false, savedN = 0;
+    if (changes.length){
+      const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass };
+      changes.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
+      try { const res = await jsonp(params); if (res.error) throw new Error(res.error); savedN = res.saved||0; }
+      catch(e1){
+        if (String(e1.message).indexOf("прав") >= 0) throw e1;
+        await writePOST(Object.assign({ action:"save" }, params));
+        viaFallback = true;
+      }
+      for (let j=0;j<9;j++) x.r.cats[j] = document.getElementById("ed"+key+"_"+j).value;
+      x.r.obs = document.getElementById("ed"+key+"_comment").value;
+      x.r.scoreM = document.getElementById("ed"+key+"_score").value;
+      x.r.verdictM = document.getElementById("ed"+key+"_verdict").value;
+      x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
+    }
+    if (linksChanged){
+      const lr = await jsonp({ action:"setlinks", key: lkey, text: linksNew, user: AUTH.user, pass: AUTH.pass });
+      if (lr.error) throw new Error(lr.error);
+      state.links = (state.links||[]).filter(l=>l.key!==lkey).concat(linksArrFromText(lkey, linksNew));
     }
     clearDraft(x.r);
-    for (let j=0;j<9;j++) x.r.cats[j] = document.getElementById("ed"+key+"_"+j).value;
-    x.r.obs = document.getElementById("ed"+key+"_comment").value;
-    x.r.scoreM = document.getElementById("ed"+key+"_score").value;
-    x.r.verdictM = document.getElementById("ed"+key+"_verdict").value;
-    x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + AUTH.user + ")";
-    toast(viaFallback ? "✔ Сохранено (резервный канал — без подтверждения)" : "✔ Сохранено в таблицу (" + (res.saved||0) + " полей)");
+    toast(changes.length ? (viaFallback ? "✔ Сохранено (резервный канал — без подтверждения)" : "✔ Сохранено в таблицу (" + savedN + " полей)") : "✔ Ссылки сохранены");
     render();
   } catch(e){
     toast("Ошибка: " + e.message, true);
@@ -1750,8 +1779,6 @@ function showGate(){
   document.getElementById("gate").classList.remove("hide");
   document.getElementById("l-pass").value = "";
   document.getElementById("l-msg").textContent = "";
-  const ver = document.getElementById("l-ver");
-  if (ver) ver.textContent = CONFIG.VER;
   setTimeout(()=>document.getElementById("l-user").focus(), 100);
 }
 function hideGate(){ document.getElementById("gate").classList.add("hide"); }
@@ -1761,6 +1788,7 @@ document.getElementById("loginbtn").onclick = ()=>{
 };
 document.getElementById("l-go").onclick = doLogin;
 document.getElementById("l-pass").onkeydown = e=>{ if (e.key==="Enter") doLogin(); };
+document.getElementById("l-eye").onclick = ()=>{ const p = document.getElementById("l-pass"); p.type = p.type === "password" ? "text" : "password"; };
 async function doLogin(){
   const u = document.getElementById("l-user").value.trim();
   const p = document.getElementById("l-pass").value;
@@ -1785,7 +1813,7 @@ async function doLogin(){
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
     AUTH.prod = !!res.prod;
     state.lastCheck = Date.now();
-    try{ localStorage.setItem("dash_last_user",u); if (document.getElementById("l-remember").checked) localStorage.setItem("dash_pass_keep",p); else localStorage.removeItem("dash_pass_keep"); }catch(e){}
+    try{ localStorage.setItem("dash_last_user",u); localStorage.setItem("dash_pass_keep",p); }catch(e){} // чекбокс убрали — вход запоминаем всегда
     historyClean();
     // кэш прошлой сессии может содержать чужие/старые строки — на входе всегда сбрасываем
     try{ sessionStorage.removeItem("dash_cache"); }catch(e){}
@@ -2001,18 +2029,15 @@ document.getElementById("refresh").onclick=()=>{
 window.addEventListener("beforeunload", e=>{
   if (anyDirty()){ e.preventDefault(); e.returnValue = ""; }
 });
-// сторожевой таймер: заставка не может висеть вечно
+// сторожевой таймер: заставка не может висеть вечно (мягко, без красной паники)
 setTimeout(function(){
   const sp = document.getElementById("splash");
   if (!sp || sp.classList.contains("hide")) return;
-  const diag = "вход: " + (AUTH.ok ? AUTH.user + (AUTH.edit ? " (редактор)" : " (просмотр)") : "НЕТ — нужен вход") +
-    " · строк получено: " + (state.rows ? state.rows.length : 0);
-  sp.querySelector(".stxt").textContent = "Загрузка не завершилась. " + diag + " — обнови страницу (F5).";
-  sp.querySelector(".stxt").style.color = "var(--bad)";
-  setTimeout(function(){
-    sp.classList.add("hide");
-    if (!AUTH.ok) showGate();
-  }, 5000);
+  if (state.rows && state.rows.length){ sp.classList.add("hide"); return; } // данные уже пришли — тихо убрать заставку
+  if (!AUTH.ok){ showGate(); return; }
+  sp.querySelector(".stxt").innerHTML = 'Данные грузятся дольше обычного… <button class="gbtn" id="spl-retry" style="margin-left:8px">повторить</button>';
+  const rb = document.getElementById("spl-retry");
+  if (rb) rb.onclick = function(){ sp.querySelector(".stxt").textContent = "Загружаем данные…"; load(); };
 }, 15000);
 load();
 setInterval(()=>{ if (AUTH.ok && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
