@@ -142,6 +142,12 @@
   #tabs .tab .cnt.crit{color:var(--bad);opacity:1;font-weight:700}
   .rsect{margin:10px 6px 3px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
   .rsect:first-child{margin-top:2px}
+  #tabs .tab .cnt.due{color:var(--warn);opacity:1;font-weight:700}
+  .rtoggle{display:flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:6px 0;cursor:pointer;font:inherit;margin-bottom:6px;width:100%}
+  .rtoggle:hover{color:var(--ink);border-color:var(--dim)}
+  .rail.mini{width:56px;min-width:56px;padding:10px 6px}
+  .rail.mini .tab,.rail.mini .wtab,.rail.mini .rtoggle{justify-content:center;padding:9px 0;gap:0}
+  .rail.mini .tab span:nth-child(2),.rail.mini .wtab span:nth-child(2),.rail.mini .tab .cnt:not(.due),.rail.mini .rsect{display:none}
   #tabs .wtab{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;color:var(--dim);background:none;border:1px solid var(--line);font-size:12.5px;width:100%;cursor:pointer;font:inherit;text-align:left;font-family:inherit}
   #tabs .wtab:hover{color:var(--ink);background:var(--panel2)}
   #tabs .wtab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
@@ -377,7 +383,9 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"" };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, weeksOpen:false };
+try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
+try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
 
 function tabs(){
   const cities = AUTH.cities.includes("all")
@@ -485,18 +493,42 @@ function render(){
   const tabBtn = c=>{
     const n = rowsOf(c).length;
     const crit = rowsOf(c).reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c==="Расписание"?"Расписание проверок":c}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span></button>`;
+    let badge = "";
+    if (c==="Расписание"){ const od = overdueCount(); if (od) badge = `<span class="cnt due" title="просрочено перепроверок: ${od}">⏰${od}</span>`; }
+    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" title="${c}"><span>${icons[c]||"•"}</span><span>${c==="Новосибирск"?"НСК":c==="Расписание"?"Расписание проверок":c}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span>${badge}</button>`;
   };
   const sect = t => `<div class="rsect">${t}</div>`;
   const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
   const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
   const toolTabs = tabs().filter(c=>["Операторы","Сравнение"].includes(c));
-  document.getElementById("tabs").innerHTML = mainTabs.map(tabBtn).join("")
+  const wtabBtn = w => w===""
+    ? `<button class="wtab ${!state.week?"on":""}" data-w="" title="все недели"><span>🗓</span><span>все недели</span></button>`
+    : `<button class="wtab ${state.week===w?"on":""}" data-w="${esc(w)}" title="${esc(w)}"><span>🗓</span><span>${esc(w)}</span></button>`;
+  const oldWeeks = wks.slice(0,-1);
+  const foldWeeks = wks.length >= 4; // порог: с 4 недель старые прячутся за «прошлые (N)»
+  const showOld = !foldWeeks || state.weeksOpen || oldWeeks.includes(state.week);
+  const weeksHtml = wks.length>1
+    ? sect("недели") + wtabBtn("") + wtabBtn(wks[wks.length-1])
+      + (wks.length>2
+          ? (showOld ? oldWeeks.map(wtabBtn).join("") : "")
+            + (foldWeeks ? `<button class="wtab" data-wfold="1" title="${state.weeksOpen?"свернуть старые недели":"показать старые недели"}"><span>${state.weeksOpen?"▾":"▸"}</span><span>${state.weeksOpen?"свернуть старые":"прошлые ("+oldWeeks.length+")"}</span></button>` : "")
+          : "")
+    : "";
+  document.getElementById("tabs").innerHTML = `<button class="rtoggle" id="railtoggle" title="${state.railMini?"развернуть панель":"свернуть в иконки"}">${state.railMini?"⇥":"⇤"}</button>`
+    + mainTabs.map(tabBtn).join("")
     + (cityTabs.length?sect("города")+cityTabs.map(tabBtn).join(""):"")
     + sect("инструменты")+toolTabs.map(tabBtn).join("")
-    + (wks.length>1 ? sect("недели") + `<button class="wtab ${!state.week?"on":""}" data-w=""><span>🗓</span><span>все недели</span></button>` + wks.map(w=>`<button class="wtab ${state.week===w?"on":""}" data-w="${esc(w)}"><span>🗓</span><span>${esc(w)}</span></button>`).join("") : "");
+    + weeksHtml;
+  document.getElementById("tabs").classList.toggle("mini", !!state.railMini);
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
-  document.querySelectorAll(".wtab").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; render(); });
+  document.querySelectorAll(".wtab").forEach(b=>b.onclick=()=>{ if (!("w" in b.dataset)) return; state.week = b.dataset.w; state.page = 1; render(); });
+  document.querySelectorAll("[data-wfold]").forEach(b=>b.onclick=()=>{ state.weeksOpen = !state.weeksOpen; render(); });
+  const rt = document.getElementById("railtoggle");
+  if (rt) rt.onclick = ()=>{
+    state.railMini = !state.railMini;
+    try{ localStorage.setItem("rail_mini", state.railMini?"1":"0"); }catch(e){}
+    render();
+  };
 
   let rows = rowsOf(state.tab);
   if (state.search) rows = state.rows.slice(); // глобальный поиск: все города и недели
@@ -1420,6 +1452,27 @@ function dueInfo(r){
   return { days, nextDay: next.getDate(), nextMonth: next.getMonth()+1 };
 }
 function isDue(r){ const u = dueInfo(r); return !!u && u.days >= 6; }
+// сколько команд просрочили перепроверку (дедупликация по всем неделям, как на доске «Расписание»)
+function overdueCount(){
+  const map = {};
+  state.rows.forEach(function(r){
+    if (!(r.opName||r.opNick||r.model)) return;
+    const key = r.city+"|"+(r.opName||r.opNick||"").toLowerCase()+"|"+(r.model||"").toLowerCase();
+    const prev = map[key];
+    if (!prev){ map[key] = r; return; }
+    const a = parseUpd(r.updated), b = parseUpd(prev.updated);
+    if ((a && !b) || (a && b && a > b)) map[key] = r;
+  });
+  const today = new Date(); today.setHours(0,0,0,0);
+  let n = 0;
+  Object.values(map).forEach(function(r){
+    const d = parseUpd(r.updated);
+    if (!d) return;
+    d.setHours(0,0,0,0);
+    if (Math.round((new Date(d.getTime()+7*864e5) - today)/864e5) < 0) n++;
+  });
+  return n;
+}
 
 document.addEventListener("paste", function(e){
   if (!AUTH.edit) return;
