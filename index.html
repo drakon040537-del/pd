@@ -1081,6 +1081,19 @@ document.getElementById("refresh").onclick=()=>{
 window.addEventListener("beforeunload", e=>{
   if (anyDirty()){ e.preventDefault(); e.returnValue = ""; }
 });
+// сторожевой таймер: заставка не может висеть вечно
+setTimeout(function(){
+  const sp = document.getElementById("splash");
+  if (!sp || sp.classList.contains("hide")) return;
+  const diag = "вход: " + (AUTH.ok ? AUTH.user + (AUTH.edit ? " (редактор)" : " (просмотр)") : "НЕТ — нужен вход") +
+    " · строк получено: " + (state.rows ? state.rows.length : 0);
+  sp.querySelector(".stxt").textContent = "Загрузка не завершилась. " + diag + " — обнови страницу (F5).";
+  sp.querySelector(".stxt").style.color = "var(--bad)";
+  setTimeout(function(){
+    sp.classList.add("hide");
+    if (!AUTH.ok) showGate();
+  }, 5000);
+}, 15000);
 load();
 setInterval(()=>{ if (AUTH.ok && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
 </script>
