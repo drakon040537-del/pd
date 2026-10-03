@@ -397,7 +397,7 @@ const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.20"
+  VER: "2026-10-03.21"
 };
 (function(){
   const p = new URLSearchParams(location.search).get("key");
@@ -445,7 +445,7 @@ const PH = {
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
 const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, thumbCache:{} };
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"); }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
@@ -797,7 +797,7 @@ function render(){
       const rowScreens = (state.screens||{})[x.r._sheet+"|"+x.r._row] || [];
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.length ? rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"🔗")}</a>`).join("") : '<span style="color:var(--faint)">—</span>';
-      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc(driveThumb(s.link,320))}" data-big="${esc(driveThumb(s.link,1600))}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbCache||{})[s.link] || driveThumb(s.link,320))}" data-key="${esc(s.link)}" data-big="${esc(driveThumb(s.link,1600))}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         const scr = rowScreens.filter(s=>String(s.cat)===n);
@@ -916,6 +916,7 @@ function render(){
     openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
   });
   document.querySelectorAll(".sthumb img").forEach(im=>{
+    im.onload=()=>{ state.thumbCache=state.thumbCache||{}; if (im.dataset.key) state.thumbCache[im.dataset.key]=im.src; }; // запоминаем рабочий адрес — после ⟳ картинка не мигает
     im.onerror=()=>{ const n=(+im.dataset.n||0)+1; im.dataset.n=n; if(n<3) setTimeout(()=>{ im.src=im.src+(im.src.indexOf("?")>=0?"&":"?")+"r="+Date.now(); },3000); }; // холодный thumbnail даёт 404 — ретраим со сбросом кэша
     im.onclick=()=>{
       document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
@@ -926,20 +927,23 @@ function render(){
   document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
     ev.stopPropagation();
     const dsk = x.dataset.dsk, dlink = x.dataset.dlink; // запоминаем до перерисовки
-    toast("Удаляю скрин…");
+    // мгновенно убираем с сайта; серверное удаление едет в фоне
+    const arr0 = (state.screens||{})[dsk] || [];
+    if (arr0.some(s=>s.link===dlink)) { state.screens[dsk] = arr0.filter(s=>s.link!==dlink); toast("Скрин удалён"); render(); }
     let lastErr = null;
-    for (let a=0;a<3;a++){ // Apps Script бывает капризным сразу после загрузки — до 3 попыток
+    for (let a=0;a<4;a++){ // Apps Script бывает капризным сразу после загрузки — до 4 фоновых попыток
       try {
         const res = await jsonp({ action:"delscreen", bkey: dsk, link: dlink, user: AUTH.user, pass: AUTH.pass }, null, 30000);
         if (res.error) throw new Error(res.error);
-        const arr = (state.screens||{})[dsk]; // удаляем локально и мгновенно, без перечитывания всей таблицы
-        if (arr) state.screens[dsk] = arr.filter(s=>s.link!==dlink);
-        toast("Скрин удалён");
-        render();
-        return;
-      } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,2000)); }
+        return; // сервер подтвердил удаление
+      } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,3000)); }
     }
-    toast("Скрин не удалось удалить (" + (lastErr?lastErr.message:"нет ответа") + ") — попробуй ещё раз через минуту", true);
+    // сервер так и не подтвердил — возвращаем скрин на место и честно говорим
+    state.screens = state.screens || {};
+    state.screens[dsk] = state.screens[dsk] || [];
+    if (!state.screens[dsk].some(s=>s.link===dlink)) state.screens[dsk].push({cat:"", link:dlink, ts:"не удалён — попробуй ещё раз"});
+    toast("Скрин вернул на место — сервер не подтвердил удаление, попробуй ещё раз", true);
+    render();
   });
   document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const v=prompt("Своя формулировка для «"+b.dataset.n+"» (сохранится в этом браузере):"); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
   document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
@@ -1675,6 +1679,7 @@ document.getElementById("d-one").onclick = ()=>doDelTeam(false);
 document.getElementById("d-all").onclick = ()=>doDelTeam(true);
 document.getElementById("op-x").onclick = ()=>closeModal("opmodal");
 document.getElementById("cam-x").onclick = ()=>closeModal("cammodal");
+document.getElementById("cam-img").onerror=function(){ const n=(+this.dataset.n||0)+1; this.dataset.n=n; if(n<3) setTimeout(()=>{ this.src=this.src+(this.src.indexOf("?")>=0?"&":"?")+"r="+Date.now(); },3000); }; // большой просмотр тоже переживает холодный thumbnail
 // ---------- окно вставки фото (кнопка или Ctrl+V) ----------
 let uplTarget = null;
 function openUpload(x, catIdx, label){
