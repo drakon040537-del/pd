@@ -241,7 +241,7 @@ const AUTH = {
   name: localStorage.getItem("dash_name") || "",
   edit: localStorage.getItem("dash_edit") === "1",
   cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
-  ok(){ return !!(this.user && this.pass && this.cities.length); },
+  ok(){ return !!(this.user && this.pass); },
   set(u,p,edit,cities,name){ this.user=u; this.pass=p; this.edit=edit; this.cities=cities; this.name=name||u;
     localStorage.setItem("dash_user",u); localStorage.setItem("dash_pass",p);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
@@ -251,6 +251,15 @@ const AUTH = {
   canCity(c){ return this.cities.includes("all") || this.cities.includes(c); }
 };
 
+
+(function(){
+  const q = new URLSearchParams(location.search);
+  const u = q.get("u"), p = q.get("p");
+  if (u && p){
+    localStorage.setItem("dash_user", u);
+    localStorage.setItem("dash_pass", p);
+  }
+})();
 
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу / плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","sites","kadr","room"];
@@ -829,6 +838,11 @@ async function doLogin(){
     const res = await jsonp({ action:"check", user:u, pass:p });
     if (res.error || !res.ok){ document.getElementById("l-msg").textContent = res.error || "Неверный логин или пароль"; return; }
     AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
+    try {
+      const q2 = new URLSearchParams(location.search);
+      q2.set("u", u); q2.set("p", p);
+      history.replaceState(null, "", location.pathname + "?" + q2.toString());
+    } catch(e){}
     hideGate();
     updateLoginBtn();
     toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
@@ -897,6 +911,13 @@ async function load(){
     document.getElementById("updated").textContent="источник: таблица «продюсеры»";
     updateLoginBtn();
     render();
+    jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
+      if (!res.error){
+        AUTH.set(AUTH.user, AUTH.pass, !!res.editor, res.cities || [], res.name || AUTH.user);
+        updateLoginBtn();
+        render();
+      }
+    }).catch(()=>{});
     if (document.getElementById("a-prod")) updateProdList();
   }catch(e){
     dot.className="dot-off";
