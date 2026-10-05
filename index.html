@@ -493,7 +493,10 @@ function tabs(){
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
-  if (AUTH.prod) return ["Рекомендации"]; // продюсер: только рекомендации и недели
+  if (AUTH.prod) {
+    const cities = AUTH.cities.filter(c=>CITY_ORDER.includes(c));
+    return cities.concat(["Рекомендации"]); // свой город с разбором + рекомендации
+  }
   return ["Обзор"].concat(cities).concat(["Операторы","Рекомендации"]);
 }
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
