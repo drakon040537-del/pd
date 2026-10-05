@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.34"
+  VER: "2026-10-05.35"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -3019,6 +3019,54 @@ function applyData(j, isHistory){
   render();
   if (document.getElementById("a-prod")) updateProdList();
 }
+// ---------- 🐞 диагностика транспорта (вызывается с экрана загрузки) ----------
+function runDiag(out){
+  out.innerHTML = "запускаю…";
+  const lines = [];
+  const put = t => { lines.push(t); out.innerHTML = lines.map(l=>"<div>· " + l + "</div>").join(""); };
+  const t0 = Date.now();
+  // Шаг 1: ОБЫЧНЫЙ fetch POST (читаемый ответ) — если работает, опросы не нужны
+  fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+    body: JSON.stringify({ action:"check", token: AUTH.token }) })
+    .then(r => r.text())
+    .then(t => {
+      put("1) обычный POST: ✓ за " + ((Date.now()-t0)/1000) + "с — ответ: " + t.slice(0, 60));
+      const t2 = Date.now();
+      return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+        body: JSON.stringify({ action:"read", week:"latest", token: AUTH.token }) })
+        .then(r => r.text())
+        .then(t3 => {
+          let rows = "?"; try { rows = String(JSON.parse(t3).rows.length); } catch(e){}
+          put("2) POST read: ✓ за " + ((Date.now()-t2)/1000) + "с, строк: " + rows);
+          put("ВЫВОД: прямой POST работает — сообщи мне этот текст, починю за один шаг");
+        });
+    })
+    .catch(e => {
+      put("1) обычный POST: ✗ — " + String(e).slice(0, 80));
+      put("2) пробую резервный путь: no-cors POST + опрос…");
+      const req = "diag" + Date.now().toString(36), pp = Math.random().toString(36).slice(2);
+      const t3 = Date.now();
+      fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+        body: JSON.stringify({ action:"read", week:"latest", req: req, pp: pp, token: AUTH.token }) })
+        .then(() => put("3) no-cors POST отправлен"))
+        .catch(e2 => put("3) no-cors POST не ушёл: " + String(e2).slice(0, 60)));
+      let tries = 0;
+      const poll = () => {
+        tries++;
+        jsonp({ action:"aipoll", req: req, pp: pp }, null, 9000)
+          .then(r => {
+            if (r && r.pending && tries < 15){ setTimeout(poll, 2000); return; }
+            const dt = ((Date.now()-t3)/1000).toFixed(0);
+            if (r && r.rows) put("4) опрос: ✓ за " + dt + "с, строк: " + r.rows.length + " — очередь работает");
+            else if (r && r.error) put("4) опрос: сервер ответил ошибкой — " + r.error);
+            else put("4) опрос: ✗ за " + dt + "с — результат так и не пришёл (сообщи мне этот текст)");
+          })
+          .catch(e3 => { if (tries < 15) { setTimeout(poll, 2000); return; } put("4) опрос: ✗ " + String(e3).slice(0, 60)); });
+      };
+      setTimeout(poll, 2000);
+    });
+}
+
 let loadingNow = false;
 async function load(){
   if (loadingNow) return; // не запускать параллельные загрузки
@@ -3111,9 +3159,11 @@ setTimeout(function(){
   if (!sp || sp.classList.contains("hide")) return;
   if (state.rows && state.rows.length){ sp.classList.add("hide"); return; } // данные уже пришли — тихо убрать заставку
   if (!AUTH.ok()){ showGate(); return; }
-  sp.querySelector(".stxt").innerHTML = 'Данные грузятся дольше обычного… <button class="gbtn" id="spl-retry" style="margin-left:8px">повторить</button>';
+  sp.querySelector(".stxt").innerHTML = 'Данные грузятся дольше обычного… <button class="gbtn" id="spl-retry" style="margin-left:8px">повторить</button> <button class="gbtn" id="spl-diag" style="margin-left:6px">🐞 диагностика</button><div id="spl-diagout" style="margin-top:10px;text-align:left;font-size:12px;max-width:520px;margin-left:auto;margin-right:auto"></div>';
   const rb = document.getElementById("spl-retry");
   if (rb) rb.onclick = function(){ sp.querySelector(".stxt").textContent = "Загружаем данные…"; load(); };
+  const db = document.getElementById("spl-diag");
+  if (db) db.onclick = function(){ runDiag(document.getElementById("spl-diagout")); };
 }, 15000);
 load();
 setInterval(()=>{ if (AUTH.ok() && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
