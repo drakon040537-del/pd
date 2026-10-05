@@ -446,7 +446,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.29"
+  VER: "2026-10-05.30"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -491,7 +491,17 @@ const NEG_RE = new RegExp("(^|[^а-яёА-ЯЁ])(не|нет)(?![а-яёА-ЯЁ]
 // отображение компаний (внутри везде ключи городов — данные и таблица не трогаются)
 const CITY_LABEL = { "Томск":"ArtLife", "Новосибирск":"VVCAM", "Онлайн":"DIAMOND" };
 const clabel = c => CITY_LABEL[c] || c;
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"latest", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, viewAs:null, thumbData:{}, fullLoaded:false, fullLoading:false, itog:[], dataFp:"", optimistic:{}, failedSaves:{} };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"latest", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, viewAs:null, thumbData:{}, fullLoaded:false, fullLoading:false, itog:[], dataFp:"", optimistic:{}, failedSaves:{}, knownWeeks:[] };
+try{ state.knownWeeks = JSON.parse(localStorage.getItem("dash_weeks")||"[]"); }catch(e){}
+function rememberWeeks(){ // список недель держим даже когда загружена только открытая
+  const now = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
+  const merged = [...new Set(state.knownWeeks.concat(now))].sort((a,b)=>weekKey(a)-weekKey(b));
+  if (merged.join("|") !== state.knownWeeks.join("|")){
+    state.knownWeeks = merged;
+    try{ localStorage.setItem("dash_weeks", JSON.stringify(merged)); }catch(e){}
+  }
+  return state.knownWeeks;
+}
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"); }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
@@ -593,6 +603,9 @@ function ensureFull(){
     applyData(j, true);
     state.fullLoaded = true;
     state.fullLoading = false;
+    // после полной загрузки список недель — точный (убираем устаревшие)
+    state.knownWeeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+    try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){}
     toast("История загружена");
     fullWaiters.splice(0).forEach(f=>f());
   }).catch(e=>{
@@ -771,11 +784,27 @@ function updateViewAs(){
   if (!sel) return;
   if (!AUTH.edit && !viewAsActive()){ sel.style.display = "none"; return; } // в режиме «глазами» селектор остаётся — им же выходим
   const srcRows = (viewAsActive() && realData) ? realData.rows : state.rows; // список продюсеров — из полных данных
-  const prods = [];
-  srcRows.forEach(r=>{ if (r.producer && !prods.includes(r.producer)) prods.push(r.producer); });
+  // продюсеры сгруппированы по компаниям: ArtLife → её продюсеры, затем VVCAM, DIAMOND
+  const byCity = {};
+  const seen = {};
+  srcRows.forEach(r=>{
+    if (!r.producer || seen[r.producer]) return;
+    seen[r.producer] = 1;
+    (byCity[r.city] = byCity[r.city] || []).push(r.producer);
+  });
+  let prodsHtml = "";
+  CITY_ORDER.forEach(c=>{
+    const list = (byCity[c]||[]).sort();
+    if (!list.length) return;
+    prodsHtml += `<optgroup label="${esc(clabel(c))}">` + list.map(p=>`<option value="prod:${esc(p)}">👤 как ${esc(p)}</option>`).join("") + "</optgroup>";
+  });
+  Object.keys(byCity).forEach(c=>{ // компании вне основного списка (на всякий случай)
+    if (CITY_ORDER.includes(c)) return;
+    prodsHtml += `<optgroup label="${esc(clabel(c))}">` + byCity[c].sort().map(p=>`<option value="prod:${esc(p)}">👤 как ${esc(p)}</option>`).join("") + "</optgroup>";
+  });
   sel.innerHTML = ['<option value="">👁 вид: я (редактор)</option>']
     .concat(['<option value="city:Томск">🏙 как ArtLife</option><option value="city:Новосибирск">🏙 как VVCAM</option><option value="city:Онлайн">🔵 как DIAMOND</option>'])
-    .concat(prods.sort().map(p=>`<option value="prod:${esc(p)}">👤 как ${esc(p)}</option>`))
+    .concat([prodsHtml])
     .concat(['<option value="dir">🎩 как Директор (просмотр)</option>']).join("");
   sel.style.display = "";
   sel.value = state.viewAs ? (state.viewAs.type==="dir" ? "dir" : state.viewAs.type==="city" ? "city:"+state.viewAs.name : "prod:"+state.viewAs.name) : "";
@@ -798,7 +827,7 @@ function render(){
   setTimeout(ensureThumbs, 30); // миниатюры через сервер (после отрисовки DOM)
   const openDet = new Set([...document.querySelectorAll("tr.detail.open")].map(d=>d.dataset.d)); // открытые редакторы переживают перерисовку (считаем ДО очистки DOM)
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week==="latest"?"latest":state.week})); }catch(e){}
-  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+  const wks = rememberWeeks(); // полный список недель — не только загруженная
   const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
@@ -1649,7 +1678,10 @@ function toggleWeekDrop(){
   if (ex){ ex.remove(); return; }
   const btn = document.getElementById("weekdrop-btn");
   if (!btn) return;
-  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+  const wks = rememberWeeks();
+  if (!state.fullLoaded && !state.fullLoading){
+    ensureFull().then(()=>{ const d = document.getElementById("weekdrop"); if (d){ toggleWeekDrop(); toggleWeekDrop(); } }); // список обновится, как придёт история
+  }
   if (!wks.length) return;
   const tabs = document.getElementById("tabs");
   const tr = tabs.getBoundingClientRect(), br = btn.getBoundingClientRect();
@@ -2266,6 +2298,8 @@ document.getElementById("l-forgot").onclick = ()=>{
   document.getElementById("rs-login").value = "";
   openModal("resetmodal");
 };
+document.getElementById("rsq-x").onclick = ()=>closeModal("rsreqmodal"); // крестик панели уведомлений
+// клик по фону тоже закрывает панель (общий обработчик .modal-ov уже стоит)
 document.getElementById("rs-x").onclick = ()=>closeModal("resetmodal");
 document.getElementById("rs-send").onclick = async ()=>{
   const login = document.getElementById("rs-login").value.trim();
