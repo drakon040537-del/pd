@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.36"
+  VER: "2026-10-05.38"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2207,15 +2207,27 @@ function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim();
 const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 // ЕДИНАЯ POST-очередь для ВСЕГО: токен в теле (не в адресе), ответ забирается одноразовым опросом aipoll.
 // jsonp остался только для authpoll/aipoll — там нет токена.
+// Apps Script/Google echo иногда отдаёт сырые переводы строк ВНУТРИ JSON-строк
+// (многострочный текст в ячейках) — строгий JSON.parse падает. Чиним перед разбором:
+// выход JSON.stringify компактный, поэтому ЛЮБОЙ сырой перевод строки — внутри строки.
+function safeJsonParse(t){
+  return JSON.parse(String(t)
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")
+    .replace(/\t/g, "\\t"));
+}
 // v36: ЕДИНЫЙ транспорт — обычный POST с читаемым ответом (диагностика показала,
 // что прямой POST работает всегда; no-cors+poll из-за него убраны)
 function wp(params, timeoutMs){
   const ctl = ("AbortController" in window) ? new AbortController() : null;
   const to = ctl ? setTimeout(()=>ctl.abort(), timeoutMs || 30000) : null;
+  const req = "w" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const pp = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); // одноразовый ключ ответа
   return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({}, params, { token: AUTH.token })),
+      body: JSON.stringify(Object.assign({}, params, { req: req, pp: pp, token: AUTH.token })),
       signal: ctl ? ctl.signal : undefined })
-    .then(r => r.json())
+    .then(r => r.text())
+    .then(t => safeJsonParse(t))
     .then(j => { if (j && j.error) throw new Error(j.error); return j; })
     .finally(() => { if (to) clearTimeout(to); });
 }
@@ -2233,7 +2245,8 @@ function aiAsk(task, extra){
   return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
       body: JSON.stringify(Object.assign({ action:"aiq", task: task, token: AUTH.token }, extra || {})),
       signal: ctl ? ctl.signal : undefined })
-    .then(r => r.json())
+    .then(r => r.text())
+    .then(t => safeJsonParse(t))
     .then(j => { if (j && j.error) throw new Error(aiErrText(j.error)); return j; })
     .catch(e => { throw new Error(aiErrText(String(e && e.message || e))); })
     .finally(() => { if (to) clearTimeout(to); });
@@ -2773,7 +2786,7 @@ async function doLogin(){
   try {
     const res = await fetch(CONFIG.API_URL, { method:"POST",
       headers:{ "Content-Type":"text/plain;charset=utf-8" },
-      body: JSON.stringify({ action:"auth", user:u, pass:p }) }).then(r=>r.json());
+      body: JSON.stringify({ action:"auth", user:u, pass:p }) }).then(r=>r.text()).then(t=>safeJsonParse(t));
     if (res.error || !res.token){
       msgEl.textContent = res.error || "Неверный логин или пароль";
       return;
@@ -2923,7 +2936,7 @@ async function uploadScreen(blob, x, catIdx){
       body: JSON.stringify({ token: AUTH.token,
         sheet: x.r._sheet, row: x.r._row, data: data, small: small,
         cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
-    }).then(r=>r.json()).then(j=>{ if (j && j.error) throw new Error(j.error); });
+    }).then(r=>r.text()).then(t=>safeJsonParse(t)).then(j=>{ if (j && j.error) throw new Error(j.error); });
     toast("📸 Скрин загружаю…"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":""));
     // no-cors не даёт прочитать ответ сервера — подтверждаем ФАКТОМ: опрашиваем лёгкий action=screens
     const k0 = skey(x.r);
