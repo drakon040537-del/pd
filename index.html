@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.33"
+  VER: "2026-10-05.34"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -3053,9 +3053,22 @@ async function load(){
   // по умолчанию сервер отдаёт только открытую неделю; историю просим явно
   const weekReq = state.week === "all" ? "all" : (state.week === "latest" ? "latest" : (state.week === "__month__" ? "all" : state.week));
   try{
-    // холодное чтение может идти долго, а опросы стоят в очереди за ним — запас 90с
-    const j=await wp({action:"read", week: weekReq}, 90000);
-    if(j.error)throw new Error(j.error);
+    // холодное чтение может идти долго (опросы стоят в очереди за ним) — запас 120с,
+    // а если не дождались — один автоповтор: сервер к этому моменту уже кэшировал ответ
+    let j = null, lastErr = null, readAttempt = 0;
+    while (readAttempt < 2 && !j){
+      readAttempt++;
+      try {
+        j = await wp({action:"read", week: weekReq}, 120000);
+        if (j.error) throw new Error(j.error);
+      } catch(eRead){
+        lastErr = eRead;
+        if (readAttempt >= 2 || String(eRead.message).indexOf("сервер не ответил") < 0) throw eRead;
+        txt.textContent = "сервер медленный — повторяю загрузку…";
+        await new Promise(r=>setTimeout(r, 3000));
+      }
+    }
+    if (!j) throw lastErr;
     // автообновление не перерисовывает экран, если данные не изменились (штампы/статусы/оценки/скрины)
     const fp = JSON.stringify([j.rows.map(r=>[r._sheet,r._row,r.updated,r.status,r.scoreM,r.verdictM,String(r.obs||"").slice(0,40)]), Object.keys(j.screens||{}).length, j.resetPending, j.suggestions]);
     if (fp === state.dataFp){
