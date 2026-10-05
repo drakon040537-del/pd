@@ -443,27 +443,29 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.26"
+  VER: "2026-10-05.28"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
 
 
+// Пароль больше нигде не хранится и не пересылается: при входе сервер выдаёт токен сессии,
+// дальше все запросы ходят с token. Токен живёт 7 дней, продлевается при активности.
 const AUTH = {
   user: localStorage.getItem("dash_user") || "",
-  pass: sessionStorage.getItem("dash_pass") || localStorage.getItem("dash_pass_keep") || "",
+  token: localStorage.getItem("dash_token") || "",
   name: localStorage.getItem("dash_name") || "",
   edit: localStorage.getItem("dash_edit") === "1",
   cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
   prod: localStorage.getItem("dash_prod") === "1",
-  ok(){ return !!(this.user && this.pass); },
-  set(u,p,edit,cities,name){ this.user=u; this.pass=p; this.edit=edit; this.cities=cities; this.name=name||u;
-    try{ localStorage.setItem("dash_user",u); sessionStorage.setItem("dash_pass",p);
+  ok(){ return !!(this.user && this.token); },
+  set(u,tok,edit,cities,name){ this.user=u; this.token=tok; this.edit=edit; this.cities=cities; this.name=name||u;
+    try{ localStorage.setItem("dash_user",u); localStorage.setItem("dash_token",tok);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
     localStorage.setItem("dash_name",this.name); }catch(e){} // приватный режим iOS — хранилище может бросать
     return true; },
-  clear(){ try{ ["dash_user","dash_edit","dash_cities","dash_name","dash_prod"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
-    this.user=""; this.pass=""; this.edit=false; this.cities=[]; this.name=""; this.prod=false; }
+  clear(){ try{ ["dash_user","dash_token","dash_edit","dash_cities","dash_name","dash_prod"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
+    this.user=""; this.token=""; this.edit=false; this.cities=[]; this.name=""; this.prod=false; }
 };
 
 
@@ -488,24 +490,29 @@ try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"); }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
 
+// у продюсера вкладка называется ЕГО ИМЕНЕМ (а не городом), внутри — его команды
+function prodTabName(){ return AUTH.name || AUTH.user; }
 function tabs(){
+  if (AUTH.prod) return [prodTabName(), "Рекомендации"];
   let cities = AUTH.cities.includes("all")
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
-  if (AUTH.prod) {
-    const cities = AUTH.cities.filter(c=>CITY_ORDER.includes(c));
-    return cities.concat(["Рекомендации"]); // свой город с разбором + рекомендации
-  }
   return ["Обзор"].concat(cities).concat(["Операторы","Рекомендации"]);
 }
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
 
+// «нет замечаний», «без ошибок», «проблем нет» — это ХОРОШО, а не отрицание
+function normNeg(s){
+  return String(s||"")
+    .replace(/(^|[\s,.!?;])(нет|без)\s+(замечаний|ошибок|проблем|нареканий|претензий|косяков|замечание|ошибки|проблемы)([\s,.!?;]|$)/gi, "$1все хорошо$4")
+    .replace(/(^|[\s,.!?;])(замечаний|ошибок|проблем|нареканий|претензий|косяков)\s+нет([\s,.!?;]|$)/gi, "$1все хорошо$3");
+}
 function catState(t){
-  const s = (t||"").trim();
+  const s = normNeg((t||"").trim());
   if (!s) return null;
   if (s.charAt(0) === "✅") return "ok";
-  if (NEG_RE.test(s)) return "bad"; // «нет …», «не …» — замечание
+  if (NEG_RE.test(s)) return "bad"; // «нет …», «не …» — замечание (кроме «нет замечаний» — см. normNeg)
   const m = s.match(OK_RE);
   if (!m) return "bad";
   const idx = s.toLowerCase().indexOf(m[0].toLowerCase());
@@ -522,7 +529,9 @@ function rowStats(r){
   if (evalN > 0){
     score = ok;
     verdict = bad === 0 ? "норма" : bad <= 2 ? "замечание" : "критично";
-    if (r.scoreM && /^[0-8]$/.test(String(r.scoreM).trim())) score = parseInt(r.scoreM);
+    // ручная оценка: число и строка читаются одинаково («7", " 7 ", 7 → 7)
+    const mScore = String(r.scoreM == null ? "" : r.scoreM).trim().match(/^(\d+)/);
+    if (mScore){ const n = Math.min(8, Math.max(0, parseInt(mScore[1], 10))); score = n; }
     if (r.verdictM) verdict = r.verdictM;
   }
   return {st, ok, bad, score, verdict};
@@ -548,7 +557,14 @@ function hl(t){
   try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
 }
 function esc(s){ s = (s==null?"":String(s)); return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week === "__month__"){ rs = rs.filter(r=>weekInCurrentMonth(r.week)); return rs; } if (state.week) rs = rs.filter(r=>r.week===state.week); return rs; }
+function rowsOf(tab){
+  let rs;
+  if (AUTH.prod){ rs = state.rows; } // сервер уже отдал только его команды
+  else rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab);
+  if (state.week === "__month__"){ rs = rs.filter(r=>weekInCurrentMonth(r.week)); return rs; }
+  if (state.week) rs = rs.filter(r=>r.week===state.week);
+  return rs;
+}
 
 // ---------- черновики ----------
 const dKey = r => "draft:" + r._sheet + ":" + r._row;
@@ -602,19 +618,50 @@ document.addEventListener("keydown", e=>{
   }
 });
 
-// Ctrl+Z в текстовых полях: своя история (перерендеры ломают родную)
+// Ctrl+Z в текстовых полях: своя история (перерендеры ломают родную).
+// История привязана к КОМАНДЕ (город|ник|модель), а не к номеру строки на экране —
+// номер меняется при каждой перерисовке, и откат уводил в чужое поле.
+// Первым в историю кладётся ИСХОДНЫЙ текст поля (то, что было при открытии строки).
 const taHist = {};
+// skey содержит «|», поэтому поле склеиваем через редкий разделитель и НЕ парсим ключ обратно
+function taInfo(el){
+  const det = el.closest ? el.closest("tr.detail") : null;
+  const x = det ? state.lastView[det.dataset.d] : null;
+  if (!x) return null;
+  const field = /^lk/.test(el.id) ? "links" : el.id.slice(el.id.indexOf("_") + 1);
+  return { x: x, field: field, key: skey(x.r) + "\u0000" + field };
+}
+function taHistKey(el){ const i = taInfo(el); return i ? i.key : null; }
+function taBaseline(x, field){ // что было в поле при открытии строки (с учётом черновика)
+  const d = getDraft(x.r) || {};
+  if (/^\d+$/.test(field)) return d["f"+field] !== undefined ? d["f"+field] : (x.r.cats[+field]||"");
+  if (field === "comment") return d.comment !== undefined ? d.comment : (x.r.obs||"");
+  if (field === "reco") return d.reco !== undefined ? d.reco : (x.r.reco||"");
+  if (field === "links") return d.lk !== undefined ? d.lk : (x.r.linksTxt||"");
+  return "";
+}
 document.addEventListener("input", function(e){
   const el = e.target;
   if (el && el.tagName === "TEXTAREA" && el.id){
-    const h = taHist[el.id] = taHist[el.id] || [];
+    const i = taInfo(el);
+    if (!i) return;
+    const h = taHist[i.key] = taHist[i.key] || [];
+    if (!h.length) h.push(taBaseline(i.x, i.field));
     if (h[h.length-1] !== el.value){ h.push(el.value); if (h.length > 60) h.shift(); }
   }
 }, true);
 document.addEventListener("keydown", function(e){
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "я") && e.target && e.target.tagName === "TEXTAREA"){
-    const h = taHist[e.target.id];
-    if (h && h.length){ e.preventDefault(); e.stopPropagation(); h.pop(); e.target.value = h.pop() || ""; e.target.dispatchEvent(new Event("input", {bubbles:true})); }
+    const key = taHistKey(e.target);
+    const h = key ? taHist[key] : null;
+    if (h && h.length > 1){
+      e.preventDefault(); e.stopPropagation();
+      h.pop();
+      e.target.value = h[h.length-1];
+      e.target.dispatchEvent(new Event("input", {bubbles:true}));
+    } else if (h && h.length === 1){
+      e.preventDefault(); e.stopPropagation();
+    }
   }
 }, true);
 
@@ -651,12 +698,18 @@ function startViewAs(mode){ // "" — свой вид, "dir" — директо�
     if (!viewAsActive()) return;
     Object.assign(AUTH, realAuthSnap); // вернуть настоящий доступ
     state.viewAs = null;
+    // вернуть экран, где был до входа в режим; фильтры проду и недели сбросить
+    state.tab = realAuthSnap.tab || "Обзор";
+    state.producer = ""; state.week = ""; state.quick = ""; state.page = 1;
+    if (!tabs().includes(state.tab)) state.tab = tabs()[0];
     toast("Вернулся в свой режим");
+    const lt = document.getElementById("livetext");
+    if (lt) lt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
     load();
     return;
   }
   if (!viewAsActive()){
-    realAuthSnap = { user:AUTH.user, pass:AUTH.pass, edit:AUTH.edit, cities:AUTH.cities.slice(), prod:AUTH.prod, name:AUTH.name };
+    realAuthSnap = { user:AUTH.user, token:AUTH.token, edit:AUTH.edit, cities:AUTH.cities.slice(), prod:AUTH.prod, name:AUTH.name, tab:state.tab };
     realData = { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, links: state.links.slice(), screens: state.screens };
   }
   if (mode === "dir"){
@@ -710,11 +763,11 @@ function render(){
   const openDet = new Set([...document.querySelectorAll("tr.detail.open")].map(d=>d.dataset.d)); // открытые редакторы переживают перерисовку (считаем ДО очистки DOM)
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week})); }catch(e){}
   const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
-  const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡"};
+  const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
     const raw = rowsOf(c);
-    const rs = (state.week==="__month__") ? dedupeRows(raw) : ((!state.week || c==="Сравнение") ? raw : dedupeRows(raw));
+    const rs = (c==="Сравнение") ? raw : dedupeRows(raw); // счётчик вкладки всегда по КОМАНДАМ, не по строкам недель
     const n = rs.length;
     const crit = rs.reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
     let badge = "";
@@ -892,13 +945,30 @@ function render(){
     const out = document.getElementById("aisearchout");
     out.textContent = "🤖 ищу по смыслу…";
     try {
-      const lines = rows.slice(0, 100).map((r,i)=>{ // ищем по ВСЕМ командам: буквальный фильтр мог уже опустошить lastView
+      // ищем по ВСЕМ командам: сервер режет текст на 12000 символов, поэтому команды
+      // уходят пачками (каждая пачка — свой вызов ИИ), результаты склеиваются
+      const lines = rows.map((r,i)=>{
         const t = r.cats.map((c,j)=>c?CATS[j]+": "+c:"").filter(Boolean).join("; ") + (r.obs ? " | " + r.obs : "");
         return i+"|"+(r.opName||r.opNick||"—")+"/"+(r.model||"—")+" ["+r.city+"]: "+t.slice(0,200);
-      }).join("\n");
-      const res = await aiAsk("search", { text: state.search.trim() + "\n" + lines });
-      if (res.error) throw new Error(res.error);
-      const ms = res.matches || [];
+      });
+      const chunks = [];
+      let cur = [], curLen = 0;
+      lines.forEach(l=>{
+        if (curLen + l.length > 8500 && cur.length){ chunks.push(cur); cur = []; curLen = 0; }
+        cur.push(l); curLen += l.length + 1;
+      });
+      if (cur.length) chunks.push(cur);
+      const ms = [];
+      for (let ci=0; ci<chunks.length; ci++){
+        const offset = lines.indexOf(chunks[ci][0]);
+        out.textContent = "🤖 ищу по смыслу… (блок " + (ci+1) + " из " + chunks.length + ", команд всего " + rows.length + ")";
+        const res = await aiAsk("search", { text: state.search.trim() + "\n" + chunks[ci].join("\n") });
+        if (res.error) throw new Error(res.error);
+        (res.matches || []).forEach(m=>{
+          const gi = Number(m.i);
+          if (gi >= 0 && gi < chunks[ci].length) ms.push({ i: offset + gi, why: m.why || "" });
+        });
+      }
       if (!ms.length){ out.innerHTML = '<div class="empty">🤖 подходящих по смыслу не нашлось</div>'; return; }
       out.innerHTML = ms.map(m=>{
         const x = rows[m.i]; if (!x) return "";
@@ -970,7 +1040,6 @@ function render(){
   if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
   view.sort((a,b)=>(a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score));
   state.lastView = view;
-  document.getElementById("f-count").textContent = "показано " + view.length + " из " + rows.length;
 
   // группы по продюсерам
   const groupsMap = {};
@@ -990,6 +1059,9 @@ function render(){
   const PAGE = 12;
   const shown = groups.slice(0, state.page*PAGE);
   const hidden = groups.length - shown.length;
+  // «показано N из M» — N по реально видимым строкам (открытые группы), M — все под фильтр
+  const shownN = shown.reduce((a,g)=>a+g.items.length,0);
+  document.getElementById("f-count").textContent = "показано " + shownN + " из " + view.length + (hidden>0 ? " · ещё группы: " + hidden : "");
 
   document.getElementById("table").innerHTML = groups.length ? shown.map(g=>{
     const open = filterActive || state.grpOpen[g.key];
@@ -1104,7 +1176,7 @@ function render(){
     if (!cur) next = L[0];
     else { const i = L.indexOf(cur); next = (i>=0 && i < L.length-1) ? L[i+1] : (i===-1 ? L[0] : ""); }
     try {
-      const res = await jsonp({ action:"save", sheet:x.r._sheet, row:String(x.r._row), user:AUTH.user, pass:AUTH.pass, f1:"status", v1:next });
+      const res = await jsonp({ action:"save", sheet:x.r._sheet, row:String(x.r._row), f1:"status", v1:next });
       if (res.error) throw new Error(res.error);
       x.r.status = next;
       x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")";
@@ -1138,7 +1210,7 @@ function render(){
       document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
       const full = im.getAttribute("data-full") || "";
-      jsonp({ action:"thumb", id: (full.split("id=")[1] || full), user: AUTH.user, pass: AUTH.pass }).then(res=>{
+      jsonp({ action:"thumb", id: (full.split("id=")[1] || full) }).then(res=>{
         if (res.error || !res.d) return;
         document.getElementById("cam-img").src = "data:image/jpeg;base64," + res.d;
       }).catch(()=>{});
@@ -1153,7 +1225,7 @@ function render(){
     let lastErr = null;
     for (let a=0;a<4;a++){ // Apps Script бывает капризным сразу после загрузки — до 4 фоновых попыток
       try {
-        const res = await jsonp({ action:"delscreen", bkey: dsk, link: dlink, user: AUTH.user, pass: AUTH.pass }, null, 30000);
+        const res = await jsonp({ action:"delscreen", bkey: dsk, link: dlink }, null, 30000);
         if (res.error) throw new Error(res.error);
         return; // сервер подтвердил удаление
       } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,3000)); }
@@ -1183,7 +1255,7 @@ function render(){
     const x = state.lastView[b.dataset.rdel]; if (!x) return;
     if (!confirm("Удалить мониторинг "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+x.r._sheet+", строка "+x.r._row+")? Действие необратимо.")) return;
     try {
-      const res = await jsonp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass });
+      const res = await jsonp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row) });
       if (res.error) throw new Error(res.error);
       toast("✔ Мониторинг удалён");
       setTimeout(load, 600);
@@ -1203,7 +1275,9 @@ function render(){
     if (b.dataset.upl) return; // кнопке фото нужен СВОЙ обработчик: раньше этот блок перезаписывал его — кнопки «не работали»
     b.onclick=(ev)=>{
       ev.stopPropagation();
-      document.getElementById(b.dataset.ta).value = b.dataset.v;
+      const ta = document.getElementById(b.dataset.ta);
+      ta.value = b.dataset.v;
+      ta.dispatchEvent(new Event("input", {bubbles:true})); // ✅/✕ тоже в истории Ctrl+Z и в черновике
     };
   });
   document.querySelectorAll(".qchip").forEach(b=>b.onclick=(ev)=>{
@@ -1264,15 +1338,22 @@ function render(){
         if (!crit){ box.textContent = "🤖 критичных пунктов в этой проверке нет"; return; }
         const res = await aiAsk("chekdraft", { text: crit });
         if (res.error) throw new Error(res.error);
-        box.innerHTML = "<div style=\"white-space:pre-wrap\">" + esc(res.text) + "</div><button class=\"abtn2\" id=\"aisv"+key+"\">💾 записать в «Чек»</button> <span style=\"color:var(--faint);font-size:11px\">— запишется к команде «"+esc(x.r.city+" | "+(x.r.producer||"—"))+"»</span>";
+        // подтверждение перед записью: показываем, ЧТО будет заменено (старый план не затирается молча)
+        const ckey = x.r.city+"|"+(x.r.producer||"");
+        const curPlan = (state.checks||{})[ckey] || "";
+        box.innerHTML = "<div style=\"white-space:pre-wrap\">" + esc(res.text) + "</div>"
+          + "<div style=\"margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;white-space:pre-wrap;font-size:12px;color:var(--dim)\"><b style=\"color:var(--warn)\">Будет заменён текущий «Чек»</b> команды «"+esc(x.r.city+" | "+(x.r.producer||"—"))+"»: " + (curPlan ? esc(curPlan) : "<i>сейчас пусто — просто запишется</i>") + "</div>"
+          + "<div style=\"margin-top:8px\"><button class=\"abtn2\" id=\"aisv"+key+"\">💾 заменить на черновик</button> <button class=\"abtn2\" id=\"aicn"+key+"\">отмена — оставить старый</button></div>";
         document.getElementById("aisv"+key).onclick = async ()=>{
           try {
-            const sp = await jsonp({ action:"setplan", sheet:"Чек", bkey: x.r.city+"|"+(x.r.producer||""), plan: res.text, user: AUTH.user, pass: AUTH.pass });
+            const sp = await jsonp({ action:"setplan", sheet:"Чек", bkey: ckey, plan: res.text });
             if (sp.error) throw new Error(sp.error);
+            state.checks[ckey] = res.text;
             box.innerHTML = "✔ Черновик записан в «Чек»";
             toast("✔ Черновик ИИ записан в «Чек»");
           } catch(e){ toast("Ошибка: "+e.message, true); }
         };
+        document.getElementById("aicn"+key).onclick = ()=>{ box.innerHTML = "Отменено — старый «Чек» не тронут"; };
       } catch(e){ box.textContent = "🤖 " + e.message; }
     };
     const dup = document.getElementById("dup"+key);
@@ -1280,7 +1361,7 @@ function render(){
     const tc = document.getElementById("tc"+key);
     if (tc) tc.onclick = async ()=>{
       try {
-        const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass });
+        const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
         if (res.error) throw new Error(res.error);
         x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
         toast("✔ Отмечено проверенной сегодня");
@@ -1332,7 +1413,7 @@ function renderOperators(rows, st){
           return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*100/9)+"% ("+o.avg.toFixed(1)+"/9)":"–"}</td>
           <td>${(()=>{ const pts=o.perWeek.map((v,i)=>{ if(v===null) return null; const x=8+i*(62/Math.max(1,o.perWeek.length-1||1)); const y=20-v*2.2; return x+","+y.toFixed(1); }).filter(Boolean); const arrow = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═"; const ac = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)"; return pts.length>1?`<svg class="spark" width="70" height="22"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg> <span style="color:${ac}">${arrow}</span>`:`<span style="color:var(--faint)">—</span>`; })()}</td>
           <td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
-          <tr class="opdet" data-o="${i}" style="display:none"><td colspan="7"><div style="padding:10px 6px">${
+          <tr class="opdet" data-o="${i}" style="display:none"><td colspan="8"><div style="padding:10px 6px">${
             o.rows.map(x=>`<div class="drow"><b${x.s.score!==null?(x.s.score===o.best?' style="color:var(--ok)"':(x.s.score===o.worst&&o.best!==o.worst?' style="color:var(--bad)"':"")):""}>${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")} · ${esc(x.r.city)} · ${x.s.verdict?(VLBL[x.s.verdict]||x.s.verdict):"не проверено"}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
           }</div></td></tr>`;
         }).join("")}</tbody></table>` : `<div class="empty">Нет данных</div>`}
@@ -1388,7 +1469,7 @@ function renderSchedule(){
     d.setHours(0,0,0,0);
     const next = new Date(d.getTime() + 7*864e5);
     const off = Math.round((next - today)/864e5);
-    if (off < 0) overdue.push(x);
+    if (off <= 0) overdue.push(x); // порог везде один: 7 дней после проверки = «к перепроверке»/«просрочено»
     else if (off <= 6){ (buckets[off] = buckets[off] || []).push(x); }
     else later.push(x);
   });
@@ -1447,7 +1528,7 @@ function renderSchedule(){
     let ok=0;
     for (const x of list){
       try {
-        const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass });
+        const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
         if (!res.error){ ok++; x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; }
       } catch(e){}
     }
@@ -1460,7 +1541,7 @@ function renderSchedule(){
     if (!confirm("Отметить проверенными сегодня все команды продюсера ("+rows.length+" шт)?")) return;
     let ok=0;
     for (const r of rows){
-      try{ const res=await jsonp({action:"touch", sheet:r[0], row:r[1], user:AUTH.user, pass:AUTH.pass}); if(!res.error){ ok++; const rr=state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if(rr) rr.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; } }catch(e){}
+      try{ const res=await jsonp({action:"touch", sheet:r[0], row:r[1]}); if(!res.error){ ok++; const rr=state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if(rr) rr.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; } }catch(e){}
     }
     toast(ok===rows.length?"✔ Отмечено: "+ok:"Отмечено "+ok+" из "+rows.length, ok!==rows.length);
     renderSchedule();
@@ -1473,7 +1554,7 @@ function renderSchedule(){
     ev.stopPropagation();
     const parts = b.dataset.schTouch.split("|");
     try {
-      const res = await jsonp({ action:"touch", sheet: parts[0], row: parts[1], user: AUTH.user, pass: AUTH.pass });
+      const res = await jsonp({ action:"touch", sheet: parts[0], row: parts[1] });
       if (res.error) throw new Error(res.error);
       const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
       if (r) r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
@@ -1621,7 +1702,7 @@ function renderNotes(kind){
     const store = b.dataset.kind==="check" ? state.checks : state.recs;
     b.disabled = true;
     try {
-      const res = await jsonp({ action:"setplan", sheet: b.dataset.sheet, bkey: b.dataset.key, plan: ta.value, user: AUTH.user, pass: AUTH.pass });
+      const res = await jsonp({ action:"setplan", sheet: b.dataset.sheet, bkey: b.dataset.key, plan: ta.value });
       if (res.error) throw new Error(res.error);
       store[b.dataset.key] = ta.value;
       toast("✔ Сохранено: " + b.dataset.key.split("|")[1]);
@@ -1696,7 +1777,7 @@ async function dupRow(x, key){
   if (!confirm("Скопировать замечания на " + targets.length + " других проверок команды?")) return;
   let done = 0, fb = 0;
   for (const t of targets){
-    const params = { action:"save", sheet:t._sheet, row:String(t._row), user:AUTH.user, pass:AUTH.pass };
+    const params = { action:"save", sheet:t._sheet, row:String(t._row) };
     let n = 1;
     for (let j=0;j<9;j++){
       const v = (x.r.cats[j]||"").trim();
@@ -1720,6 +1801,9 @@ async function dupRow(x, key){
 
 function jsonp(params, _retry, timeoutMs){
   return new Promise((resolve,reject)=>{
+    // авторизация — только токен сессии: пароль в адресе запроса не ходит никогда
+    params = Object.assign({}, params);
+    if (AUTH.token) params.token = AUTH.token;
     const cb="__dashcb_"+Math.random().toString(36).slice(2);
     let done=false, s=null;
     window[cb]=d=>{ if(done) return; done=true; resolve(d); cleanup(); };
@@ -1745,7 +1829,7 @@ function jsonp(params, _retry, timeoutMs){
 async function writePOST(params){
   await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
     headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ user:AUTH.user, pass:AUTH.pass }, params)) });
+    body: JSON.stringify(Object.assign({ token:AUTH.token }, params)) });
 }
 
 function normLinks(text){
@@ -1791,7 +1875,7 @@ function weekInCurrentMonth(w){
 }
 function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim(); }
 const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-function aiAsk(task, extra){ return jsonp(Object.assign({ action:"ai", task: task, user: AUTH.user, pass: AUTH.pass }, extra || {})); }
+function aiAsk(task, extra){ return jsonp(Object.assign({ action:"ai", task: task }, extra || {})); }
 function skey(r){ return r._sheet+"|"+String(r.opNick||"").trim()+"|"+String(r.model||"").trim(); } // стабильный ключ команды
 function ensureThumbs(){ // миниатюры через сервер: приватные файлы, доступ только своим
   document.querySelectorAll("img[data-tk]").forEach(im=>{
@@ -1799,7 +1883,7 @@ function ensureThumbs(){ // миниатюры через сервер: прив
     if (state.thumbData && state.thumbData[lk]){ if (im.src !== state.thumbData[lk]) im.src = state.thumbData[lk]; return; }
     if (im.dataset.loading) return;
     im.dataset.loading = "1";
-    jsonp({ action:"thumb", id: (lk.split("id=")[1] || lk), user: AUTH.user, pass: AUTH.pass }).then(res=>{
+    jsonp({ action:"thumb", id: (lk.split("id=")[1] || lk) }).then(res=>{
       if (res.error || !res.d) { delete im.dataset.loading; return; }
       state.thumbData = state.thumbData || {};
       state.thumbData[lk] = "data:image/jpeg;base64," + res.d;
@@ -1825,10 +1909,12 @@ async function saveRow(x, key){
   }
   const com = document.getElementById("ed"+key+"_comment").value;
   if (com !== (x.r.obs||"")) changes.push(["comment", com]);
+  // ручная оценка/вердикт сравниваются с нормализованным значением сервера —
+  // иначе «7» и " 7 " считались разными и сохранение чужого поля стирало оценку
   const sco = document.getElementById("ed"+key+"_score").value;
-  if (sco !== (x.r.scoreM||"")) changes.push(["score", sco]);
+  if (sco !== String(x.r.scoreM == null ? "" : x.r.scoreM).trim()) changes.push(["score", sco]);
   const ver = document.getElementById("ed"+key+"_verdict").value;
-  if (ver !== (x.r.verdictM||"")) changes.push(["verdict", ver]);
+  if (ver !== String(x.r.verdictM == null ? "" : x.r.verdictM).trim()) changes.push(["verdict", ver]);
   const rec = document.getElementById("ed"+key+"_reco").value;
   if (rec !== (x.r.reco||"")) changes.push(["recs", rec]);
   // ссылки — per строка (колонка U «Ссылки»), сохраняются основным «Сохранить»
@@ -1840,7 +1926,7 @@ async function saveRow(x, key){
   try {
     let viaFallback = false, savedN = 0;
     if (changes.length){
-      const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row), user: AUTH.user, pass: AUTH.pass };
+      const params = { action:"save", sheet: x.r._sheet, row: String(x.r._row) };
       changes.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
       try { const res = await jsonp(params); if (res.error) throw new Error(res.error); savedN = res.saved||0; }
       catch(e1){
@@ -1925,7 +2011,7 @@ document.querySelectorAll(".cdot").forEach(d=>d.onclick=(ev)=>{
 document.getElementById("colorpick").onchange = async function(){
   if (!this.dataset.prod) return;
   try {
-    try { const res = await jsonp({ action:"setcolor", producer: this.dataset.prod, color: this.value, user: AUTH.user, pass: AUTH.pass }); if (res.error) throw new Error(res.error); }
+    try { const res = await jsonp({ action:"setcolor", producer: this.dataset.prod, color: this.value }); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0) throw e1;
       await writePOST({ action:"setcolor", producer: this.dataset.prod, color: this.value });
@@ -1969,7 +2055,7 @@ async function doDelTeam(all){
   if (!confirm(all ? "Удалить команду «"+prod+"» со ВСЕХ недель города "+city+"? Действие необратимо." : "Удалить команду «"+prod+"» с листа "+any._sheet+"? Действие необратимо.")) return;
   msg.textContent = "Удаляю…";
   try {
-    const res = await jsonp({ action:"delteam", sheet: any._sheet, producer: prod, all: all?"1":"0", user: AUTH.user, pass: AUTH.pass });
+    const res = await jsonp({ action:"delteam", sheet: any._sheet, producer: prod, all: all?"1":"0" });
     if (res.error) throw new Error(res.error);
     closeModal("delmodal");
     toast("✔ Удалено листов: " + (res.removed||0));
@@ -2038,10 +2124,11 @@ document.getElementById("rs-do").onclick = async ()=>{
     setTimeout(()=>closeModal("resetmodal"), 1800);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
+// колокольчик виден всегда у редактора (и без заявок) — открывает панель уведомлений
 function updateResetBell(n){
   const b = document.getElementById("resetbell");
   if (!b) return;
-  if (AUTH.edit && AUTH.ok() && n > 0){ b.style.display = ""; b.textContent = "🔔" + n; b.title = "уведомления: " + n; }
+  if (AUTH.edit && AUTH.ok()){ b.style.display = ""; b.textContent = n > 0 ? "🔔" + n : "🔔"; b.title = "уведомления" + (n ? ": " + n : ""); }
   else { b.style.display = "none"; b.textContent = "🔔"; }
 }
 document.getElementById("resetbell").onclick = async ()=>{
@@ -2050,8 +2137,8 @@ document.getElementById("resetbell").onclick = async ()=>{
   list.textContent = "Загружаю…";
   try {
     const parts = await Promise.all([
-      jsonp({ action:"resetlist", user: AUTH.user, pass: AUTH.pass }).catch(()=>({list:[]})),
-      jsonp({ action:"suggestlist", user: AUTH.user, pass: AUTH.pass }).catch(()=>({list:[]}))
+      jsonp({ action:"resetlist" }).catch(()=>({list:[]})),
+      jsonp({ action:"suggestlist" }).catch(()=>({list:[]}))
     ]);
     const rq = parts[0].list || [], sg = parts[1].list || [];
     if (!rq.length && !sg.length){ list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>'; return; }
@@ -2068,7 +2155,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await jsonp({ action:"resetok", row: b.dataset.row, user: AUTH.user, pass: AUTH.pass });
+        const res = await jsonp({ action:"resetok", row: b.dataset.row });
         if (res.error) throw new Error(res.error);
         const code = res.code || "";
         const rowEl = b.closest(".drow");
@@ -2079,7 +2166,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".rsq-no").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await jsonp({ action:"resetno", row: b.dataset.row, user: AUTH.user, pass: AUTH.pass });
+        const res = await jsonp({ action:"resetno", row: b.dataset.row });
         if (res.error) throw new Error(res.error);
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
       } catch(e){ toast("Ошибка: "+e.message, true); }
@@ -2087,7 +2174,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".sg-del").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await jsonp({ action:"suggestdel", row: b.dataset.row, user: AUTH.user, pass: AUTH.pass });
+        const res = await jsonp({ action:"suggestdel", row: b.dataset.row });
         if (res.error) throw new Error(res.error);
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
         if (!list.querySelectorAll(".drow").length) list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>';
@@ -2110,10 +2197,10 @@ document.getElementById("sg-send").onclick = async ()=>{
   try {
     let kind = "", title = "";
     try {
-      const c = await jsonp({ action:"ai", task:"classify", text: text, user: AUTH.user, pass: AUTH.pass });
+      const c = await jsonp({ action:"ai", task:"classify", text: text });
       if (!c.error){ kind = c.kind || ""; title = c.title || ""; }
     } catch(e2){} // ИИ недоступен — отправим без пометки
-    const res = await jsonp({ action:"suggest", text: text, kind: kind, title: title, user: AUTH.user, pass: AUTH.pass });
+    const res = await jsonp({ action:"suggest", text: text, kind: kind, title: title });
     if (res.error) throw new Error(res.error);
     msg.textContent = "✔ Отправлено — спасибо!";
     setTimeout(()=>closeModal("sugmodal"), 1200);
@@ -2129,7 +2216,7 @@ document.getElementById("o-save").onclick = async ()=>{
   if (!nick && !opname && !model){ msg.textContent = "Заполни хотя бы одно поле"; return; }
   msg.textContent = "Сохраняю…";
   try {
-    const res = await jsonp({ action:"setoper", sheet: x.r._sheet, row: String(x.r._row), nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass });
+    const res = await jsonp({ action:"setoper", sheet: x.r._sheet, row: String(x.r._row), nick: nick, opname: opname, model: model });
     if (res.error) throw new Error(res.error);
     x.r.opNick = nick; x.r.opName = opname; x.r.model = model;
     closeModal("opmodal");
@@ -2145,7 +2232,7 @@ document.getElementById("w-go").onclick = async ()=>{
   msg.textContent = "Создаю… (до минуты)";
   try {
     let res = null, viaFallback = false;
-    try { res = await jsonp({ action:"copyweek", base: base, name: name, user: AUTH.user, pass: AUTH.pass }, null, 60000); if (res.error) throw new Error(res.error); }
+    try { res = await jsonp({ action:"copyweek", base: base, name: name }, null, 60000); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0 || String(e1.message).indexOf("Укажи") >= 0) throw e1;
       await writePOST({ action:"copyweek", base: base, name: name });
@@ -2169,7 +2256,7 @@ document.getElementById("w-del-go").onclick = async ()=>{
   if (ans.trim() !== week){ msg.textContent = "Название не совпало — удаление отменено"; return; }
   msg.textContent = "Удаляю… (до минуты)";
   try {
-    const res = await jsonp({ action:"delweek", week: week, user: AUTH.user, pass: AUTH.pass }, null, 60000);
+    const res = await jsonp({ action:"delweek", week: week }, null, 60000);
     if (res.error) throw new Error(res.error);
     if (state.week === week) state.week = "";
     closeModal("weekmodal");
@@ -2197,7 +2284,7 @@ document.getElementById("a-save").onclick = async ()=>{
   msg.textContent = "Добавляю… (до минуты)";
   try {
     let res = null, viaFallback = false;
-    try { res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, user: AUTH.user, pass: AUTH.pass }, null, 60000); if (res.error) throw new Error(res.error); }
+    try { res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model }, null, 60000); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0) throw e1;
       await writePOST({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model });
@@ -2227,44 +2314,57 @@ function hideGate(){ document.getElementById("gate").classList.add("hide"); }
 document.getElementById("loginbtn").onclick = ()=>{
   if (viewAsActive()){ startViewAs(""); return; } // в режиме «глазами» кнопка сначала выводит из режима
   if (AUTH.ok() && anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Сменить вход?")) return;
+  if (AUTH.ok()){ jsonp({ action:"logout" }).catch(()=>{}); } // гасим токен сессии на сервере
   AUTH.clear(); showGate();
 };
 document.getElementById("l-go").onclick = doLogin;
 document.getElementById("l-pass").onkeydown = e=>{ if (e.key==="Enter") doLogin(); };
 document.getElementById("l-eye").onclick = ()=>{ const p = document.getElementById("l-pass"); p.type = p.type === "password" ? "text" : "password"; };
+// вход: пароль уходит ОДНИМ no-cors POST-ом (не в адресе запроса), сервер выдаёт токен сессии,
+// токен забираем маленьким JSONP-опросом по одноразовому nonce
 async function doLogin(){
   const u = document.getElementById("l-user").value.trim();
   const p = document.getElementById("l-pass").value;
-  if (!u || !p){ document.getElementById("l-msg").textContent = "Введи логин и пароль"; return; }
-  document.getElementById("l-msg").textContent = "Проверяю…";
+  const msgEl = document.getElementById("l-msg");
+  if (!u || !p){ msgEl.textContent = "Введи логин и пароль"; return; }
+  msgEl.textContent = "Проверяю…";
   try {
-    // вход = маленький check (надёжен даже на мобильных) + read в load();
-    // большой ответ (105КБ) одним JSONP-скриптом на мобильном WebKit ненадёжен
-    const res = await jsonp({ action:"check", user:u, pass:p });
-    if (res.error || !res.ok){
-
-      document.getElementById("l-msg").textContent =
-        res.error === "forbidden" ? "Неверный ключ доступа — открой ссылку с ?key=... или введи ключ заново" :
-        (res.error || "Неверный логин или пароль");
+    const nonce = "n" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify({ action:"auth", user:u, pass:p, nonce: nonce }) });
+    // no-cors не даёт прочитать ответ — токен забираем опросом (nonce одноразовый, живёт 2 мин)
+    let res = null;
+    for (let i=0;i<12;i++){
+      await new Promise(r=>setTimeout(r, i===0 ? 800 : 1200));
+      try { res = await jsonp({ action:"authpoll", nonce: nonce }, null, 8000); } catch(e2){ res = null; }
+      if (res && !res.pending) break;
+    }
+    if (!res || res.pending) throw new Error("таймаут");
+    if (res.error || !res.token){
+      msgEl.textContent = res.error || "Неверный логин или пароль";
       return;
     }
-    AUTH.set(u, p, !!res.editor, res.cities || [], res.name || u);
+    AUTH.set(u, res.token, !!res.editor, res.cities || [], res.name || u);
     AUTH.prod = !!res.prod;
     try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); }catch(e){}
     state.lastCheck = Date.now();
-    try{ localStorage.setItem("dash_last_user",u); localStorage.setItem("dash_pass_keep",p); }catch(e){} // чекбокс убрали — вход запоминаем всегда
+    try{ localStorage.setItem("dash_last_user",u); }catch(e){}
     historyClean();
     // кэш прошлой сессии может содержать чужие/старые строки — на входе всегда сбрасываем
     try{ sessionStorage.removeItem("dash_cache"); }catch(e){}
+    // после входа — всегда «Обзор» (или первая вкладка роли) с чистыми фильтрами
+    state.tab = tabs().includes("Обзор") ? "Обзор" : tabs()[0];
+    state.producer = ""; state.quick = ""; state.week = ""; state.page = 1; state.search = "";
+    try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:"", quick:"", week:""})); }catch(e){}
     hideGate();
     updateLoginBtn();
     toast("✔ Вход: " + (AUTH.name || u) + (AUTH.edit ? " · редактор" : " · просмотр"));
     load();
   } catch(e){
     const m = String(e && e.message || e);
-    const msgEl = document.getElementById("l-msg");
     if (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0){
-      msgEl.innerHTML = 'Таблица не ответила (2 попытки). Если недавно сайт чинили — браузер мог держать старую версию: <button class="gbtn" id="hardref" style="margin-left:6px">⟳ обновить принудительно</button>';
+      msgEl.innerHTML = 'Таблица не ответила. Если недавно сайт чинили — браузер мог держать старую версию: <button class="gbtn" id="hardref" style="margin-left:6px">⟳ обновить принудительно</button>';
       const hr = document.getElementById("hardref");
       if (hr) hr.onclick = ()=>{
         try{ sessionStorage.removeItem("dash_cache"); }catch(e2){}
@@ -2350,7 +2450,7 @@ function overdueCount(city){
     const d = parseUpd(r.updated);
     if (!d) return;
     d.setHours(0,0,0,0);
-    if (Math.round((new Date(d.getTime()+7*864e5) - today)/864e5) < 0) n++;
+    if (Math.round((new Date(d.getTime()+7*864e5) - today)/864e5) <= 0) n++; // 7 дней и больше = к перепроверке (как везде)
   });
   return n;
 }
@@ -2386,7 +2486,7 @@ async function uploadScreen(blob, x, catIdx){
     await fetch(CONFIG.API_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ user: AUTH.user, pass: AUTH.pass,
+      body: JSON.stringify({ token: AUTH.token,
         sheet: x.r._sheet, row: x.r._row, data: data, small: small,
         cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
     });
@@ -2398,7 +2498,7 @@ async function uploadScreen(blob, x, catIdx){
     const poll = async ()=>{
       tries++;
       try{
-        const j = await jsonp({ action:"screens", user: AUTH.user, pass: AUTH.pass }, null, 20000);
+        const j = await jsonp({ action:"screens" }, null, 20000);
         const now = (j && j.screens ? j.screens : {})[k0] || [];
         const fresh = now.filter(s=>s.link && !beforeLinks.has(s.link));
         if (fresh.length){
@@ -2418,6 +2518,8 @@ async function uploadScreen(blob, x, catIdx){
 
 function applyData(j){
   state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
+  // нормализуем ручную оценку/вердикт сразу: строка и число читаются одинаково
+  state.rows.forEach(r=>{ r.scoreM = String(r.scoreM == null ? "" : r.scoreM).trim(); r.verdictM = String(r.verdictM == null ? "" : r.verdictM).trim(); });
   state.colors = j.colors || {};
   state.plans = j.plans || {};
   state.checks = j.checks || {};
@@ -2461,16 +2563,16 @@ async function load(){
     }
   }catch(e){}
   try{
-    const j=await jsonp({action:"read", user:AUTH.user, pass:AUTH.pass});
+    const j=await jsonp({action:"read"});
     if(j.error)throw new Error(j.error);
     applyData(j);
     try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans })); }catch(e){}
     // проверка ролей не чаще раза в 5 минут (после логина уже была)
     if (Date.now()-(state.lastCheck||0) > 5*60*1000 && !viewAsActive()){ // в режиме «глазами» не переобновляем права
       state.lastCheck = Date.now();
-      jsonp({ action:"check", user: AUTH.user, pass: AUTH.pass }).then(res=>{
+      jsonp({ action:"check" }).then(res=>{
         if (!res.error){
-          AUTH.set(AUTH.user, AUTH.pass, !!res.editor, res.cities || [], res.name || AUTH.user);
+          AUTH.set(AUTH.user, AUTH.token, !!res.editor, res.cities || [], res.name || AUTH.user);
           AUTH.prod = !!res.prod;
           try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); }catch(e){}
           updateLoginBtn();
