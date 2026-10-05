@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.38"
+  VER: "2026-10-05.39"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2211,7 +2211,7 @@ const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
 // (многострочный текст в ячейках) — строгий JSON.parse падает. Чиним перед разбором:
 // выход JSON.stringify компактный, поэтому ЛЮБОЙ сырой перевод строки — внутри строки.
 function safeJsonParse(t){
-  return JSON.parse(String(t)
+  return JSON.parse(String(t).trim() // хвостовой \n от Google — наружу
     .replace(/\r/g, "\\r")
     .replace(/\n/g, "\\n")
     .replace(/\t/g, "\\t"));
