@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.32"
+  VER: "2026-10-05.33"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -612,7 +612,7 @@ function ensureFull(){
   }
   state.fullLoading = true;
   toast("Грузим все недели…");
-  return wp({ action:"read", week:"all" }, 45000).then(j=>{
+  return wp({ action:"read", week:"all" }, 90000).then(j=>{
     if (j.error) throw new Error(j.error);
     applyData(j, true);
     state.fullLoaded = true;
@@ -3019,8 +3019,12 @@ function applyData(j, isHistory){
   render();
   if (document.getElementById("a-prod")) updateProdList();
 }
+let loadingNow = false;
 async function load(){
+  if (loadingNow) return; // не запускать параллельные загрузки
   if (!AUTH.ok()){ showGate(); return; }
+  loadingNow = true;
+  try {
   hideGate(); // вход сохранён — после перезагрузки не показываем окно логина
   try{
     const f = JSON.parse(localStorage.getItem("dash_filters") || "null");
@@ -3049,7 +3053,8 @@ async function load(){
   // по умолчанию сервер отдаёт только открытую неделю; историю просим явно
   const weekReq = state.week === "all" ? "all" : (state.week === "latest" ? "latest" : (state.week === "__month__" ? "all" : state.week));
   try{
-    const j=await wp({action:"read", week: weekReq});
+    // холодное чтение может идти долго, а опросы стоят в очереди за ним — запас 90с
+    const j=await wp({action:"read", week: weekReq}, 90000);
     if(j.error)throw new Error(j.error);
     // автообновление не перерисовывает экран, если данные не изменились (штампы/статусы/оценки/скрины)
     const fp = JSON.stringify([j.rows.map(r=>[r._sheet,r._row,r.updated,r.status,r.scoreM,r.verdictM,String(r.obs||"").slice(0,40)]), Object.keys(j.screens||{}).length, j.resetPending, j.suggestions]);
@@ -3081,6 +3086,8 @@ async function load(){
   }
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("hide")) sp.classList.add("hide");
+  loadingNow = false;
+  } catch(e2){ loadingNow = false; throw e2; }
 }
 window.addEventListener("beforeunload", e=>{
   if (anyDirty()){ e.preventDefault(); e.returnValue = ""; }
