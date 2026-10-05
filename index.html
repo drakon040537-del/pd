@@ -446,7 +446,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.30"
+  VER: "2026-10-05.31"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -826,6 +826,7 @@ function render(){
   if (!tabs().includes(state.tab)) state.tab = tabs()[0]; // сохранённая вкладка может быть скрыта
   setTimeout(ensureThumbs, 30); // миниатюры через сервер (после отрисовки DOM)
   const openDet = new Set([...document.querySelectorAll("tr.detail.open")].map(d=>d.dataset.d)); // открытые редакторы переживают перерисовку (считаем ДО очистки DOM)
+  const wdOpen = !!document.getElementById("weekdrop"); // открытый список недель тоже переживает перерисовку
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week==="latest"?"latest":state.week})); }catch(e){}
   const wks = rememberWeeks(); // полный список недель — не только загруженная
   const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
@@ -854,6 +855,7 @@ function render(){
     + sect("инструменты")+toolTabs.map(tabBtn).join("")
     + weeksHtml;
   document.getElementById("tabs").classList.toggle("mini", !!state.railMini);
+  if (wdOpen) toggleWeekDrop(); // пересобрать открытый список недель (список мог обновиться после догрузки)
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
   let dragCity = null;
   document.querySelectorAll('.tab[data-city]').forEach(b=>{
