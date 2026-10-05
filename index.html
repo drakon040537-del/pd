@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.39"
+  VER: "2026-10-05.40"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2933,7 +2933,7 @@ async function uploadScreen(blob, x, catIdx){
     await fetch(CONFIG.API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ token: AUTH.token,
+      body: JSON.stringify({ action:"upload", token: AUTH.token,
         sheet: x.r._sheet, row: x.r._row, data: data, small: small,
         cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
     }).then(r=>r.text()).then(t=>safeJsonParse(t)).then(j=>{ if (j && j.error) throw new Error(j.error); });
