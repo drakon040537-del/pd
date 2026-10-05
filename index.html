@@ -457,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.35"
+  VER: "2026-10-05.36"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2155,9 +2155,11 @@ function jsonp(params, _retry, timeoutMs){
   });
 }
 async function writePOST(params){
-  await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
+  const j = await fetch(CONFIG.API_URL, { method:"POST",
     headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ token:AUTH.token }, params)) });
+    body: JSON.stringify(Object.assign({ token:AUTH.token }, params)) }).then(r=>r.json());
+  if (j && j.error) throw new Error(j.error);
+  return j;
 }
 
 function normLinks(text){
@@ -2205,36 +2207,19 @@ function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim();
 const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 // ЕДИНАЯ POST-очередь для ВСЕГО: токен в теле (не в адресе), ответ забирается одноразовым опросом aipoll.
 // jsonp остался только для authpoll/aipoll — там нет токена.
+// v36: ЕДИНЫЙ транспорт — обычный POST с читаемым ответом (диагностика показала,
+// что прямой POST работает всегда; no-cors+poll из-за него убраны)
 function wp(params, timeoutMs){
-  return new Promise(async (resolve, reject) => {
-    try {
-      const req = "w" + Date.now().toString(36) + Math.random().toString(36).slice(2);
-      await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
-        headers:{ "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify(Object.assign({}, params, { req: req, token: AUTH.token })) });
-      let res = null, parts = null, n = 0;
-      await new Promise(r => setTimeout(r, 700));
-      const deadline = Date.now() + (timeoutMs || 30000);
-      while (Date.now() < deadline){
-        try { res = await jsonp({ action:"aipoll", req: req, pp: pp }, null, 10000); } catch(e2){ res = null; }
-        if (res && res.ci !== undefined){ // большой ответ по частям: {ci, part, total}
-          parts = parts || [];
-          parts[res.ci] = res.part;
-          const got = parts.filter(x => x !== undefined).length;
-          if (got >= res.total){ res = JSON.parse(parts.join("")); break; }
-          res = null;
-        }
-        if (res && !res.pending) break;
-        await new Promise(r => setTimeout(r, 1000));
-      }
-      if (!res || res.pending) throw new Error("сервер не ответил — попробуй ещё раз");
-      if (res.error) throw new Error(res.error);
-      resolve(res);
-    } catch(e){ reject(e); }
-  });
+  const ctl = ("AbortController" in window) ? new AbortController() : null;
+  const to = ctl ? setTimeout(()=>ctl.abort(), timeoutMs || 30000) : null;
+  return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({}, params, { token: AUTH.token })),
+      signal: ctl ? ctl.signal : undefined })
+    .then(r => r.json())
+    .then(j => { if (j && j.error) throw new Error(j.error); return j; })
+    .finally(() => { if (to) clearTimeout(to); });
 }
-// ИИ — только POST-очередью: текст уходит в POST (не в адресе), ответ забирается опросом aipoll.
-// 60 секунд ожидания, понятные ошибки вместо JSONP_FAIL.
+
 function aiErrText(m){
   m = String(m || "");
   if (m.indexOf("JSONP_FAIL") >= 0) return "нет связи с сервером — проверь сеть и попробуй ещё раз";
@@ -2242,35 +2227,18 @@ function aiErrText(m){
   if (/503|500|перегру/.test(m)) return "Gemini перегружен — попробуй ещё раз через минуту";
   return m;
 }
-function aiAsk(task, extra, aiRetry){
-  if (aiRetry === undefined) aiRetry = true;
-  return new Promise(async (resolve, reject) => {
-    try {
-      const req = "q" + Date.now().toString(36) + Math.random().toString(36).slice(2);
-      const pp = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-      await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
-        headers:{ "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify(Object.assign({ action:"aiq", task: task, req: req, pp: pp, token: AUTH.token }, extra || {})) });
-      let res = null;
-      for (let i = 0; i < 30; i++){ // до 60 секунд: «ИИ думает…»
-        await new Promise(r => setTimeout(r, 2000));
-        try { res = await jsonp({ action:"aipoll", req: req, pp: pp }, null, 10000); } catch(e2){ res = null; }
-        if (res && !res.pending) break;
-      }
-      if (!res || res.pending) throw new Error("ИИ не ответил за 60 секунд — попробуй ещё раз");
-      if (res.error) throw new Error(aiErrText(res.error));
-      resolve(res);
-    } catch(e) {
-      const m = String(e && e.message || "");
-      // Gemini иногда обрезает JSON-ответ — один автоповтор
-      if (aiRetry && m.indexOf("нестандартный") >= 0){
-        console.log("ИИ: повтор после обрезанного ответа");
-        return aiAsk(task, extra, false).then(resolve, reject);
-      }
-      reject(new Error(aiErrText(m)));
-    }
-  });
+function aiAsk(task, extra){
+  const ctl = ("AbortController" in window) ? new AbortController() : null;
+  const to = ctl ? setTimeout(()=>ctl.abort(), 90000) : null;
+  return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action:"aiq", task: task, token: AUTH.token }, extra || {})),
+      signal: ctl ? ctl.signal : undefined })
+    .then(r => r.json())
+    .then(j => { if (j && j.error) throw new Error(aiErrText(j.error)); return j; })
+    .catch(e => { throw new Error(aiErrText(String(e && e.message || e))); })
+    .finally(() => { if (to) clearTimeout(to); });
 }
+
 function strHash(s){ let h = 7; const t = String(s||""); for (let i=0;i<t.length;i++) h = (h*31 + t.charCodeAt(i))|0; return Math.abs(h).toString(36); }
 function skey(r){ return r._sheet+"|"+String(r.opNick||"").trim()+"|"+String(r.model||"").trim(); } // стабильный ключ команды
 function ensureThumbs(){ // миниатюры через сервер: приватные файлы, доступ только своим
@@ -2803,18 +2771,9 @@ async function doLogin(){
   if (!u || !p){ msgEl.textContent = "Введи логин и пароль"; return; }
   msgEl.textContent = "Проверяю…";
   try {
-    const nonce = "n" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-    await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
+    const res = await fetch(CONFIG.API_URL, { method:"POST",
       headers:{ "Content-Type":"text/plain;charset=utf-8" },
-      body: JSON.stringify({ action:"auth", user:u, pass:p, nonce: nonce }) });
-    // no-cors не даёт прочитать ответ — токен забираем опросом (nonce одноразовый, живёт 2 мин)
-    let res = null;
-    for (let i=0;i<12;i++){
-      await new Promise(r=>setTimeout(r, i===0 ? 800 : 1200));
-      try { res = await jsonp({ action:"authpoll", nonce: nonce }, null, 8000); } catch(e2){ res = null; }
-      if (res && !res.pending) break;
-    }
-    if (!res || res.pending) throw new Error("таймаут");
+      body: JSON.stringify({ action:"auth", user:u, pass:p }) }).then(r=>r.json());
     if (res.error || !res.token){
       msgEl.textContent = res.error || "Неверный логин или пароль";
       return;
@@ -2959,12 +2918,12 @@ async function uploadScreen(blob, x, catIdx){
     const small = cv2.toDataURL("image/jpeg", 0.8).split(",")[1];
     toast("📸 Скрин: загружаю на диск…");
     await fetch(CONFIG.API_URL, {
-      method: "POST", mode: "no-cors",
+      method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ token: AUTH.token,
         sheet: x.r._sheet, row: x.r._row, data: data, small: small,
         cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
-    });
+    }).then(r=>r.json()).then(j=>{ if (j && j.error) throw new Error(j.error); });
     toast("📸 Скрин загружаю…"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":""));
     // no-cors не даёт прочитать ответ сервера — подтверждаем ФАКТОМ: опрашиваем лёгкий action=screens
     const k0 = skey(x.r);
