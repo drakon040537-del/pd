@@ -335,7 +335,7 @@
         <div class="ff"><label>Текущая неделя (база)</label><select id="w-base"></select></div>
         <div class="ff"><label>Название новой недели</label><input id="w-name" placeholder="например 28-04.10"></div>
       </div>
-      <p style="color:var(--faint);font-size:12px;margin-bottom:12px">Создаст листы всех твоих городов с теми же командами, но с чистыми полями проверки.</p>
+      <p style="color:var(--faint);font-size:12px;margin-bottom:12px">Создаст листы всех твоих компаний с теми же командами, но с чистыми полями проверки.</p>
       <button class="abtn" id="w-go">Создать</button>
       <span id="w-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
       <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px">
@@ -422,12 +422,23 @@
       <p style="color:var(--faint);font-size:12.5px;margin-bottom:12px">Удалится блок команды со всеми проверками. Действие необратимо.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="abtn" id="d-one">Удалить: только эта неделя</button>
-        <button class="abtn2" id="d-all">Удалить: все недели города</button>
+        <button class="abtn2" id="d-all">Удалить: все недели компании</button>
       </div>
       <span id="d-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
     </div>
   </div>
-    <div class="modal-ov" id="planmodal">
+    <div class="modal-ov" id="taskmodal">
+    <div class="modal" style="width:min(480px,94vw)">
+      <button class="x" id="task-x">✕</button>
+      <h3>📌 Поручить продюсеру — <span id="tk-team"></span></h3>
+      <div style="color:var(--faint);font-size:12px;margin-bottom:8px">Появится у продюсера во вкладке «Мои задачи». Он отметит «сделано», а ты увидишь и сможешь вернуть в работу.</div>
+      <textarea id="tk-text" style="width:100%;min-height:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="что исправить (конкретно)"></textarea>
+      <button class="abtn" id="tk-save" style="margin-top:8px">Поставить задачу</button>
+      <span id="tk-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
+      <div id="tk-list" style="margin-top:10px"></div>
+    </div>
+  </div>
+  <div class="modal-ov" id="planmodal">
     <div class="modal" style="width:min(560px,94vw)">
       <button class="x" id="plan-x">✕</button>
       <h3>🗓 План работ — <span id="pl-prod"></span> <span id="pl-city" style="color:var(--faint);font-size:12px"></span></h3>
@@ -446,7 +457,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.31"
+  VER: "2026-10-05.32"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -509,12 +520,13 @@ try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }
 // у продюсера вкладка называется ЕГО ИМЕНЕМ (а не городом), внутри — его команды
 function prodTabName(){ return AUTH.name || AUTH.user; }
 function tabs(){
-  if (AUTH.prod) return [prodTabName(), "Рекомендации"];
+  if (AUTH.prod) return [prodTabName(), "Мои задачи", "Рекомендации"];
   let cities = AUTH.cities.includes("all")
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
   const tools = ["Операторы","Рекомендации"];
+  if (AUTH.edit) tools.push("Мои задачи"); // свод задач продюсерам (ставит редактор)
   if (AUTH.edit || AUTH.cities.includes("all")) tools.push("Итог"); // итоги дня по сверкам — смотрящему/директору
   return ["Обзор"].concat(cities).concat(tools);
 }
@@ -579,6 +591,8 @@ function esc(s){ s = (s==null?"":String(s)); return s.split("&").join("&amp;").s
 function weekOpen_(r){
   return !state.week || state.week==="latest" || state.week==="all" || state.week==="__month__" || r.week===state.week;
 }
+// на «все недели» и «месяц» менять/добавлять/удалять нельзя — только просмотр (п.6)
+function weekPinned(){ return state.week === "all" || state.week === "__month__"; }
 // недели: «latest» (по умолчанию — сервер отдал только открытую), «all», «__month__» или точное название
 function rowsOf(tab){
   let rs;
@@ -598,7 +612,7 @@ function ensureFull(){
   }
   state.fullLoading = true;
   toast("Грузим все недели…");
-  return jsonp({ action:"read", week:"all" }, null, 45000).then(j=>{
+  return wp({ action:"read", week:"all" }, 45000).then(j=>{
     if (j.error) throw new Error(j.error);
     applyData(j, true);
     state.fullLoaded = true;
@@ -618,7 +632,8 @@ function ensureFull(){
 // ---------- черновики ----------
 const dKey = r => "draft:" + r._sheet + ":" + r._row;
 function getDraft(r){ try{ return JSON.parse(localStorage.getItem(dKey(r)) || "null"); }catch(e){ return null; } }
-function setDraft(r, d){ localStorage.setItem(dKey(r), JSON.stringify(d)); }
+function setDraft(r, d){ d.ts = Date.now(); localStorage.setItem(dKey(r), JSON.stringify(d)); }
+function draftTime(d){ try { return new Date(d.ts).toLocaleString("ru-RU", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
 function clearDraft(r){ localStorage.removeItem(dKey(r)); }
 function draftVal(r, j){ const d = getDraft(r); return d && d["f"+j] !== undefined ? d["f"+j] : (r.cats[j]||""); }
 function draftIsDirty(r){ return !!getDraft(r); }
@@ -829,7 +844,7 @@ function render(){
   const wdOpen = !!document.getElementById("weekdrop"); // открытый список недель тоже переживает перерисовку
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week==="latest"?"latest":state.week})); }catch(e){}
   const wks = rememberWeeks(); // полный список недель — не только загруженная
-  const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
+  const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
     const raw = rowsOf(c);
@@ -844,7 +859,7 @@ function render(){
   const sect = t => `<div class="rsect">${t}</div>`;
   const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
   const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
-  const toolTabs = tabs().filter(c=>["Операторы","Сравнение","Чек","Рекомендации","Итог"].includes(c));
+  const toolTabs = tabs().filter(c=>["Операторы","Сравнение","Чек","Рекомендации","Итог","Мои задачи"].includes(c));
   const weekLabel = state.week==="latest" ? "последняя" : state.week==="all" ? "все" : state.week==="__month__" ? "месяц" : state.week;
   const weeksHtml = wks.length
     ? sect("недели") + `<button class="wtab" id="weekdrop-btn" title="выбрать неделю"><span>🗓</span><span>Неделя</span><span class="cnt">${esc(weekLabel)}</span></button>`
@@ -894,6 +909,7 @@ function render(){
   if (state.tab==="Чек"){ renderNotes("check"); return; }
   if (state.tab==="Рекомендации"){ renderNotes("recs"); return; }
   if (state.tab==="Итог"){ renderItog(); return; }
+  if (state.tab==="Мои задачи"){ renderMyTasks(); return; }
   const checkedN = withScore.length;
   document.getElementById("pbar").innerHTML = rows.length ? `<div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(checkedN/rows.length*100)}%"></div></div>
     <div style="color:var(--faint);font-size:11.5px;margin-top:4px">прогресс проверки: ${checkedN} из ${rows.length} (${Math.round(checkedN/rows.length*100)}%)</div>` : "";
@@ -912,8 +928,8 @@ function render(){
       const pWs = pSt.filter(x=>x.score!==null);
       const dl = (c,p,goodUp)=>{ const d=c-p; if(!d) return ""; const up=d>0; const good = goodUp ? up : !up; return `<span class="delta ${good?"up":"down"}">${up?"▲":"▼"}${Math.abs(d)}</span>`; };
       tileDelta = { ok: dl(withScore.filter(x=>x.verdict==="норма").length, pWs.filter(x=>x.verdict==="норма").length, true), warn: dl(withScore.filter(x=>x.verdict==="замечание").length, pWs.filter(x=>x.verdict==="замечание").length, false), bad: dl(withScore.filter(x=>x.verdict==="критично").length, pWs.filter(x=>x.verdict==="критично").length, false) };
-      const pAvg = pWs.length ? pWs.reduce((a,x)=>a+x.score,0)/pWs.length*100/9 : null;
-      const cAvg = withScore.length ? withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/9 : null;
+      const pAvg = pWs.length ? pWs.reduce((a,x)=>a+x.score,0)/pWs.length*100/8 : null;
+      const cAvg = withScore.length ? withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/8 : null;
       if (pAvg!==null && cAvg!==null){ const d=Math.round(cAvg-pAvg); tileDelta.avg = `<span class="delta ${d>=0?"up":"down"}">${d>0?"▲":"▼"}${Math.abs(d)}%</span>`; }
     }
   }
@@ -926,7 +942,7 @@ function render(){
       <div class="tile ok click ${state.quick==="ok"?"on":""}" data-q="ok"><div class="n">${withScore.filter(x=>x.verdict==="норма").length}</div><div class="l">нормально${tileDelta.ok||""}</div></div>
       <div class="tile warn click ${state.quick==="warn"?"on":""}" data-q="warn"><div class="n">${withScore.filter(x=>x.verdict==="замечание").length}</div><div class="l">есть замечания${tileDelta.warn||""}</div></div>
       <div class="tile bad click ${state.quick==="crit"?"on":""}" data-q="crit"><div class="n">${withScore.filter(x=>x.verdict==="критично").length}</div><div class="l">критично${tileDelta.bad||""}</div></div>
-      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/9)+"%":"–"}</div><div class="l">средняя оценка</div></div>
+      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/8)+"%":"–"}</div><div class="l">средняя оценка</div></div>
     </div>
     <div class="grid">
       <div class="card"><h2>Топ проблем по категориям</h2><div id="cats"></div></div>
@@ -935,7 +951,7 @@ function render(){
     </div>
     <div class="card">
       <h2>Команды <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
-      <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем городам и неделям…" style="width:290px" value="${esc(state.search)}">
+      <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
         <button class="abtn2" id="aisearch" title="поиск по смыслу (ИИ)" style="${AUTH.edit?"":"display:none"}">🤖 смысл</button>
         <span class="count" id="f-count"></span>
       </div>
@@ -948,7 +964,7 @@ function render(){
     withScore.filter(x=>x.verdict==="норма").length,
     withScore.filter(x=>x.verdict==="замечание").length,
     withScore.filter(x=>x.verdict==="критично").length];
-  const avgVal = withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/9) : null;
+  const avgVal = withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/8) : null;
   const prevT = state.tileVals || [];
   document.querySelectorAll("#content .tile .n").forEach(function(el, i){
     const isAvg = i === 5;
@@ -1026,7 +1042,7 @@ function render(){
           const ss = rs.map(rowStats).filter(x=>x.score!==null);
           return "компания " + clabel(c) + ": команд " + rs.length + ", проверено " + ss.length +
             ", норма " + ss.filter(x=>x.verdict==="норма").length + ", замечания " + ss.filter(x=>x.verdict==="замечание").length +
-            ", критично " + ss.filter(x=>x.verdict==="критично").length + ", средняя " + (ss.length ? Math.round(ss.reduce((a,x)=>a+x.score,0)/ss.length*100/9)+"%" : "–");
+            ", критично " + ss.filter(x=>x.verdict==="критично").length + ", средняя " + (ss.length ? Math.round(ss.reduce((a,x)=>a+x.score,0)/ss.length*100/8)+"%" : "–");
         };
         parts.push(mk(cur)); parts.push(mk(prev));
       });
@@ -1195,6 +1211,11 @@ function render(){
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
         <button class="abtn2" id="aiv${key}" title="ИИ разбирает текст проверки и предлагает вердикт — применяет только «принять»">🤖 разобрать</button>
         <button class="abtn2" id="aich${key}" title="черновик плана в «Чек» по критичным пунктам">🤖 черновик чека</button>
+        <button class="abtn2" id="aifull${key}" title="ИИ находит все ошибки по всем полям и переписывает комментарий">🤖 полный разбор</button>
+        <button class="abtn2" id="aicmp${key}" title="сравнение этой команды с прошлой неделей">🤖 сравнить с прошлой неделей</button>
+        <button class="abtn2" id="aiodv${key}" title="3 совета оператору простыми словами — ничего не отправляет, только копирует">💬 совет оператору</button>
+        <button class="abtn2" id="aitone${key}" title="проверка тона общего комментария">🧐 тон комментария</button>
+        <button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">📌 поручить продюсеру</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
         <div class="aibox" id="aibox${key}" style="display:none"></div>`
         : `<div class="dgrid">${readDet}</div>` +
@@ -1202,9 +1223,9 @@ function render(){
       const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(clabel(x.r.city))}${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
-        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/9</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${(x.s.score*100/9).toFixed(1)}%"></div></div></div>`
+        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${(x.s.score*100/8).toFixed(1)}%"></div></div></div>`
         : '<span style="color:var(--faint)">–</span>';
-      const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.reco?`<span class="markc" title="есть рекомендации">💡</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/9">⭐</span>`:"") + `</span>`;
+      const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.reco?`<span class="markc" title="есть рекомендации">💡</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/8">⭐</span>`:"") + `</span>`;
       const updCell = (()=>{ const u = dueInfo(x.r); if (!u) return '<span style="color:var(--faint);font-size:11.5px">—</span>';
         const nx = String(u.nextDay).padStart(2,"0")+"."+String(u.nextMonth).padStart(2,"0");
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
@@ -1220,9 +1241,9 @@ function render(){
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(clabel(g.city))}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
-        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру">＋ мониторинг</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду">🗑 удалить</button>`:""}
+        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":""}>＋ мониторинг</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":""}>🗑 удалить</button>`:""}
       </div>
-      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Город</th>":""}<th>Ссылки</th><th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Компания</th>":""}<th>Ссылки</th><th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
   }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "")
     : `<div class="empty">Нет данных по фильтру</div>`;
@@ -1254,6 +1275,7 @@ function render(){
   document.querySelectorAll(".addg").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
     if (!AUTH.edit){ toast("Добавлять команды может только редактор", true); return; }
+    if (weekPinned()){ toast("Сначала выбери конкретную неделю в списке недель", true); return; }
     const parts = b.dataset.addg.split("|");
     document.getElementById("a-city").value = parts[0] || "Томск";
     updateProdList();
@@ -1274,7 +1296,7 @@ function render(){
     if (!cur) next = L[0];
     else { const i = L.indexOf(cur); next = (i>=0 && i < L.length-1) ? L[i+1] : (i===-1 ? L[0] : ""); }
     try {
-      const res = await jsonp({ action:"save", sheet:x.r._sheet, row:String(x.r._row), f1:"status", v1:next });
+      const res = await wp({ action:"save", sheet:x.r._sheet, row:String(x.r._row), f1:"status", v1:next });
       if (res.error) throw new Error(res.error);
       x.r.status = next;
       x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")";
@@ -1308,7 +1330,7 @@ function render(){
       document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
       const full = im.getAttribute("data-full") || "";
-      jsonp({ action:"thumb", id: (full.split("id=")[1] || full) }).then(res=>{
+      wp({ action:"thumb", id: (full.split("id=")[1] || full) }).then(res=>{
         if (res.error || !res.d) return;
         document.getElementById("cam-img").src = "data:image/jpeg;base64," + res.d;
       }).catch(()=>{});
@@ -1323,7 +1345,7 @@ function render(){
     let lastErr = null;
     for (let a=0;a<4;a++){ // Apps Script бывает капризным сразу после загрузки — до 4 фоновых попыток
       try {
-        const res = await jsonp({ action:"delscreen", bkey: dsk, link: dlink }, null, 30000);
+        const res = await wp({ action:"delscreen", bkey: dsk, link: dlink }, 30000);
         if (res.error) throw new Error(res.error);
         return; // сервер подтвердил удаление
       } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,3000)); }
@@ -1353,7 +1375,7 @@ function render(){
     const x = state.lastView[b.dataset.rdel]; if (!x) return;
     if (!confirm("Удалить мониторинг "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+x.r._sheet+", строка "+x.r._row+")? Действие необратимо.")) return;
     try {
-      const res = await jsonp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row) });
+      const res = await wp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row) });
       if (res.error) throw new Error(res.error);
       toast("✔ Мониторинг удалён");
       setTimeout(load, 600);
@@ -1366,7 +1388,26 @@ function render(){
     const d = document.querySelector(`tr.detail[data-d="${tr.dataset.i}"]`);
     if (d.classList.contains("open") && rowDirty(tr.dataset.i) && !confirm("Есть несохранённые правки (они сохранены в черновик и не пропадут). Закрыть?")) return;
     d.classList.toggle("open");
-    if (d.classList.contains("open")) d.scrollIntoView({behavior:"smooth", block:"nearest"});
+    if (d.classList.contains("open")){
+      // п.12: черновик прошлого сеанса — спрашиваем, восстановить ли его
+      const x0 = state.lastView[tr.dataset.i];
+      const dr = x0 ? getDraft(x0.r) : null;
+      if (dr && dr.ts && !dr.__asked){
+        dr.__asked = 1;
+        if (confirm("Есть черновик этой проверки от " + draftTime(dr) + " — восстановить его?")){
+          setDraft(x0.r, dr); // оставляем
+        } else {
+          clearDraft(x0.r); // сбрасываем поля на значения из таблицы
+          for (let j=0;j<9;j++){ const el = document.getElementById("ed"+tr.dataset.i+"_"+j); if (el) el.value = x0.r.cats[j]||""; }
+          const c = document.getElementById("ed"+tr.dataset.i+"_comment"); if (c) c.value = x0.r.obs||"";
+          const rc = document.getElementById("ed"+tr.dataset.i+"_reco"); if (rc) rc.value = x0.r.reco||"";
+          const lk = document.getElementById("lk"+tr.dataset.i); if (lk) lk.value = x0.r.linksTxt||"";
+          const sc = document.getElementById("ed"+tr.dataset.i+"_score"); if (sc) sc.value = x0.r.scoreM||"";
+          const vd = document.getElementById("ed"+tr.dataset.i+"_verdict"); if (vd) vd.value = x0.r.verdictM||"";
+        }
+      }
+      d.scrollIntoView({behavior:"smooth", block:"nearest"});
+    }
   });
   document.querySelectorAll("a.rlink").forEach(a=>a.onclick=(ev)=>ev.stopPropagation()); // клик по ссылке не открывает/не закрывает редактор
   document.querySelectorAll(".qbtn").forEach(b=>{
@@ -1423,7 +1464,7 @@ function render(){
       const box = document.getElementById("aibox"+key);
       box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
       try {
-        let text = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = el ? el.value.trim() : ""; return v ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 3000);
+        let text = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = el ? el.value.trim() : ""; return v ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 6000);
         const com = document.getElementById("ed"+key+"_comment"); if (com && com.value.trim()) text += "; доп: " + com.value.trim().slice(0,500);
         const res = await aiAsk("verdict", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
@@ -1453,7 +1494,7 @@ function render(){
           + "<div style=\"margin-top:8px\"><button class=\"abtn2\" id=\"aisv"+key+"\">💾 заменить на черновик</button> <button class=\"abtn2\" id=\"aicn"+key+"\">отмена — оставить старый</button></div>";
         document.getElementById("aisv"+key).onclick = async ()=>{
           try {
-            const sp = await jsonp({ action:"setplan", sheet:"Чек", bkey: ckey, plan: res.text });
+            const sp = await wp({ action:"setplan", sheet:"Чек", bkey: ckey, plan: res.text });
             if (sp.error) throw new Error(sp.error);
             state.checks[ckey] = res.text;
             box.innerHTML = "✔ Черновик записан в «Чек»";
@@ -1463,12 +1504,121 @@ function render(){
         document.getElementById("aicn"+key).onclick = ()=>{ box.innerHTML = "Отменено — старый «Чек» не тронут"; };
       } catch(e){ box.textContent = "🤖 " + e.message; }
     };
+    // — 🤖 полный разбор (п.13) —
+    const aifull = document.getElementById("aifull"+key);
+    if (aifull) aifull.onclick = async ()=>{
+      const box = document.getElementById("aibox"+key);
+      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      try {
+        const parts = [];
+        CATS.forEach((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = el ? el.value.trim() : ""; if (v) parts.push(n+": "+v); });
+        const com = document.getElementById("ed"+key+"_comment");
+        const oldCom = com ? com.value.trim() : "";
+        if (oldCom) parts.push("Общий комментарий: " + oldCom);
+        const rec = document.getElementById("ed"+key+"_reco"); if (rec && rec.value.trim()) parts.push("Рекомендации: " + rec.value.trim());
+        const text = parts.join("\n").slice(0, 8000);
+        const res = await aiAsk("fullaudit", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
+        if (res.error) throw new Error(res.error);
+        const list = (res.errors||[]).map(e2=>`<div class="drow"><b>❌ ${esc(e2.category||"—")}</b><span>«${esc(e2.quote||"")}» — ${esc(e2.why||"")}<br><span style="color:var(--ok)">исправить: ${esc(e2.fix||"")}</span></span></div>`).join("") || '<div class="empty">Ошибок не нашёл</div>';
+        const newCom = res.general_comment || "";
+        const newComHtml = "<div class=\"drow\"><b>✍️ переписанный комментарий</b><span style=\"white-space:pre-wrap\">" + esc(newCom || "(менять нечего)") + "</span></div>";
+        const oldHtml = "<div class=\"drow\"><b>текущий комментарий</b><span style=\"white-space:pre-wrap;color:var(--dim)\">" + esc(oldCom || "(пусто)") + "</span></div>";
+        box.innerHTML = "<b>🤖 нашёл ошибок: " + (res.errors||[]).length + "</b>" + list + oldHtml + newComHtml +
+          (newCom ? '<button class=\"abtn2\" id=\"aiokc'+key+'\">✅ принять в комментарий</button> <button class=\"abtn2\" id=\"ainoc'+key+'\">отмена</button>' : '');
+        const okc = document.getElementById("aiokc"+key);
+        if (okc) okc.onclick = ()=>{ if (com){ com.value = newCom; com.dispatchEvent(new Event("input", {bubbles:true})); } box.innerHTML = "🤖 принято — не забудь «Сохранить в таблицу»"; };
+        const noc = document.getElementById("ainoc"+key);
+        if (noc) noc.onclick = ()=>{ box.innerHTML = "Отменено — комментарий не тронут"; };
+      } catch(e){ box.textContent = "🤖 " + e.message; }
+    };
+    // — 🤖 сравнить с прошлой неделей (п.14) —
+    const aicmp = document.getElementById("aicmp"+key);
+    if (aicmp) aicmp.onclick = async ()=>{
+      const box = document.getElementById("aibox"+key);
+      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      try {
+        if (!state.fullLoaded){ box.textContent = "грузим историю недель…"; await ensureFull(); }
+        const cur = x.r;
+        const cand = state.rows.filter(r=>r.city===cur.city && (r.opNick||"")===(cur.opNick||"") && (r.model||"")===(cur.model||"") && r.week!==cur.week);
+        const prev = cand.sort((a,b)=>weekKey(b)-weekKey(a))[0];
+        if (!prev){ box.innerHTML = '<div class="empty">прошлой недели у этой команды нет — сравнивать не с чем</div>'; return; }
+        const dump = r => CATS.map((n,j)=>{ const v=(r.cats[j]||"").trim(); return v ? n+": "+v : ""; }).filter(Boolean).join("; ") + (r.obs?" | комментарий: "+r.obs:"");
+        const text = ("ПРОШАЯ НЕДЕЛЯ (" + prev.week + "): " + dump(prev) + "\nЭТА НЕДЕЛЯ (" + cur.week + "): " + dump(cur)).slice(0, 8000);
+        const res = await aiAsk("teamdelta", { text: text, ckey: skey(cur) + "|" + prev.week + "|" + strHash(text) });
+        if (res.error) throw new Error(res.error);
+        if (res.missing){ box.innerHTML = '<div class="empty">прошлой недели нет — сравнивать не с чем</div>'; return; }
+        const sec = (t, arr) => arr.length ? `<div class="drow"><b>${t}</b><span>${arr.map(z=>"• "+esc(z)).join("<br>")}</span></div>` : "";
+        box.innerHTML = "<b>🤖 " + esc(cur.week) + " против " + esc(prev.week) + "</b>" +
+          sec("🟢 стало лучше", res.better) + sec("🔴 стало хуже", res.worse) + sec("⚪ без изменений", res.same) +
+          '<div style="color:var(--faint);font-size:11px;margin-top:6px">только по данным, ничего не придумано</div>';
+      } catch(e){ box.textContent = "🤖 " + e.message; }
+    };
+    // — 💬 совет оператору (п.15): показать + копировать, ничего не отправляет —
+    const aiodv = document.getElementById("aiodv"+key);
+    if (aiodv) aiodv.onclick = async ()=>{
+      const box = document.getElementById("aibox"+key);
+      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      try {
+        const crit = CATS.map((n,j)=>{ const v = (x.r.cats[j]||"").trim(); return (v && catState(v)==="bad") ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 4000);
+        if (!crit){ box.textContent = "🤖 замечаний по категориям нет — совета не нужно"; return; }
+        const res = await aiAsk("opadvice", { text: crit, ckey: skey(x.r) + "|" + strHash(crit) });
+        if (res.error) throw new Error(res.error);
+        box.innerHTML = "<b>💬 советы оператору</b><ol style=\"margin:6px 0 0 18px\">" + res.tips.map(t=>"<li>"+esc(t)+"</li>").join("") + "</ol>" +
+          '<button class=\"abtn2\" id=\"odvcp'+key+'\">📋 скопировать</button> <span style=\"color:var(--faint);font-size:11px\">ничего не отправляется</span>';
+        document.getElementById("odvcp"+key).onclick = ()=>{
+          const txt = res.tips.map((t,i)=>(i+1)+". "+t).join("\n");
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast("📋 Скопировано")).catch(()=>{});
+          else prompt("Скопируй:", txt);
+        };
+      } catch(e){ box.textContent = "🤖 " + e.message; }
+    };
+    // — 🧐 тон комментария (п.16) —
+    const aitone = document.getElementById("aitone"+key);
+    if (aitone) aitone.onclick = async ()=>{
+      const box = document.getElementById("aibox"+key);
+      const com = document.getElementById("ed"+key+"_comment");
+      const oldCom = com ? com.value.trim() : "";
+      if (!oldCom){ box.style.display = ""; box.textContent = "🧐 общий комментарий пуст — проверять тон нечего"; return; }
+      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      try {
+        const catsTxt = CATS.map((n,j)=>{ const v=(x.r.cats[j]||"").trim(); return v ? n+" — "+v : ""; }).filter(Boolean).join("; ").slice(0,3000);
+        const text = ("КОММЕНТАРИЙ: " + oldCom + "\nКАТЕГОРИИ: " + catsTxt).slice(0, 8000);
+        const res = await aiAsk("tonecheck", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
+        if (res.error) throw new Error(res.error);
+        const list = (res.issues||[]).map(i2=>`<div class="drow"><b>⚠ ${esc(i2.quote||"")}</b><span>${esc(i2.why||"")}<br><span style="color:var(--ok)">вариант: ${esc(i2.suggestion||"")}</span></span></div>`).join("") || '<div class="empty">Тон в порядке — проблем не нашёл</div>';
+        const rw = res.rewritten || "";
+        box.innerHTML = "<b>🧐 тон комментария</b>" + list +
+          (rw ? '<div class="drow"><b>✍️ переписанный целиком</b><span style="white-space:pre-wrap">' + esc(rw) + '</span></div><button class="abtn2" id="toneok'+key+'">✅ принять в комментарий</button> <button class="abtn2" id="toneno'+key+'">отмена</button>' : '');
+        const tok = document.getElementById("toneok"+key);
+        if (tok) tok.onclick = ()=>{ if (com && rw){ com.value = rw; com.dispatchEvent(new Event("input", {bubbles:true})); } box.innerHTML = "🧐 принято — не забудь «Сохранить в таблицу»"; };
+        const tno = document.getElementById("toneno"+key);
+        if (tno) tno.onclick = ()=>{ box.innerHTML = "Отменено — комментарий не тронут"; };
+      } catch(e){ box.textContent = "🤖 " + e.message; }
+    };
+    // — 📌 поручить продюсеру (п.11) —
+    const tsk = document.getElementById("tsk"+key);
+    if (tsk) tsk.onclick = ()=>{
+      document.getElementById("tk-team").textContent = (x.r.opName||x.r.opNick||"—") + " / " + (x.r.model||"—") + " · " + clabel(x.r.city);
+      document.getElementById("tk-text").value = "";
+      document.getElementById("tk-msg").textContent = "";
+      document.getElementById("tk-text").dataset.sheet = x.r._sheet;
+      document.getElementById("tk-text").dataset.nick = x.r.opNick || "";
+      document.getElementById("tk-text").dataset.model = x.r.model || "";
+      document.getElementById("tk-text").dataset.producer = x.r.producer || "";
+      const lt = (state.tasks||[]).filter(t=>t.sheet===x.r._sheet && t.nick===x.r.opNick && t.model===x.r.model);
+      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")} · от ${esc(t.from||"—")}</b><span>${esc(t.text)}${t.status==="сделана"?" <button class=\"qbtn tk-reopen\" data-row=\""+t.row+"\" title=\"вернуть в работу\">вернуть в работу</button>":""}</span></div>`).join("") : "";
+      document.querySelectorAll(".tk-reopen").forEach(b2=>b2.onclick=async (ev)=>{
+        ev.stopPropagation();
+        try { const r2 = await wp({ action:"taskreopen", row: b2.dataset.row }); if (r2.error) throw new Error(r2.error); toast("↩ Вернул в работу"); setTimeout(load, 600); } catch(e2){ toast("Ошибка: "+e2.message, true); }
+      });
+      openModal("taskmodal");
+    };
     const dup = document.getElementById("dup"+key);
     if (dup) dup.onclick = ()=>dupRow(x, key);
     const tc = document.getElementById("tc"+key);
     if (tc) tc.onclick = async ()=>{
       try {
-        const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
+        const res = await wp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
         if (res.error) throw new Error(res.error);
         x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
         toast("✔ Отмечено проверенной сегодня");
@@ -1516,10 +1666,10 @@ function renderOperators(rows, st){
 
   document.getElementById("content").innerHTML = `
     <div class="card"><h2>Рейтинг операторов <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по оперу: вся история проверок</span></h2>
-      ${ops.length ? `<table><thead><tr><th>Оператор</th><th>Ник CB</th><th>Проверок</th><th>Средняя оценка</th><th>Тренд</th><th>Критичных</th><th>Города</th><th>Продюсеры</th></tr></thead><tbody>${
+      ${ops.length ? `<table><thead><tr><th>Оператор</th><th>Ник CB</th><th>Проверок</th><th>Средняя оценка</th><th>Тренд</th><th>Критичных</th><th>Компании</th><th>Продюсеры</th></tr></thead><tbody>${
         ops.map((o,i)=>{
           const nick = o.rows.find(x=>x.r.opNick);
-          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*100/9)+"% ("+o.avg.toFixed(1)+"/9)":"–"}</td>
+          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*100/8)+"% ("+o.avg.toFixed(1)+"/8)":"–"}</td>
           <td>${(()=>{ const pts=o.perWeek.map((v,i)=>{ if(v===null) return null; const x=8+i*(62/Math.max(1,o.perWeek.length-1||1)); const y=20-v*2.2; return x+","+y.toFixed(1); }).filter(Boolean); const arrow = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═"; const ac = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)"; return pts.length>1?`<svg class="spark" width="70" height="22"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg> <span style="color:${ac}">${arrow}</span>`:`<span style="color:var(--faint)">—</span>`; })()}</td>
           <td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
           <tr class="opdet" data-o="${i}" style="display:none"><td colspan="8"><div style="padding:10px 6px">${
@@ -1637,7 +1787,7 @@ function renderSchedule(){
     let ok=0;
     for (const x of list){
       try {
-        const res = await jsonp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
+        const res = await wp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
         if (!res.error){ ok++; x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; }
       } catch(e){}
     }
@@ -1650,7 +1800,7 @@ function renderSchedule(){
     if (!confirm("Отметить проверенными сегодня все команды продюсера ("+rows.length+" шт)?")) return;
     let ok=0;
     for (const r of rows){
-      try{ const res=await jsonp({action:"touch", sheet:r[0], row:r[1]}); if(!res.error){ ok++; const rr=state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if(rr) rr.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; } }catch(e){}
+      try{ const res=await wp({action:"touch", sheet:r[0], row:r[1]}); if(!res.error){ ok++; const rr=state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if(rr) rr.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; } }catch(e){}
     }
     toast(ok===rows.length?"✔ Отмечено: "+ok:"Отмечено "+ok+" из "+rows.length, ok!==rows.length);
     renderSchedule();
@@ -1663,7 +1813,7 @@ function renderSchedule(){
     ev.stopPropagation();
     const parts = b.dataset.schTouch.split("|");
     try {
-      const res = await jsonp({ action:"touch", sheet: parts[0], row: parts[1] });
+      const res = await wp({ action:"touch", sheet: parts[0], row: parts[1] });
       if (res.error) throw new Error(res.error);
       const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
       if (r) r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
@@ -1775,7 +1925,7 @@ function renderSummary(rows, st){
           valid.map((p,i)=>'<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(p.avg)+'" r="3.5" fill="var(--accent)"/><text x="'+xs(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="var(--faint)">'+esc(p.w)+'</text><text x="'+xs(i).toFixed(1)+'" y="'+(parseFloat(ys(p.avg))-7).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--ink)">'+p.avg.toFixed(1)+'</text>').join("") +
           '</svg>';
       })()}</div>
-      <div class="card" style="grid-column:1/-1"><h2>Динамика городов по неделям</h2>
+      <div class="card" style="grid-column:1/-1"><h2>Динамика компаний по неделям</h2>
         ${dyn.length?`<table><thead><tr><th>Неделя</th>${cities.map(c=>`<th>${c==="Новосибирск"?"НСК":c}</th>`).join("")}</tr></thead><tbody>${
           dyn.map(d=>`<tr><td style="font-weight:600">${esc(d.w)}</td>${d.cells.map(x=>`<td ${x.tot?`data-cw="${esc(d.w)}" data-cc="${esc(x.c)}" style="cursor:pointer"`:""}>${x.tot?`<span style="color:var(--ok)">${x.ok}</span> / <span style="color:var(--warn)">${x.warn}</span> / <span style="color:var(--bad)">${x.bad}</span> <span style="color:var(--faint);font-size:11px">(${x.checked}/${x.tot} пров.)</span>`:'<span style="color:var(--faint)">—</span>'}</td>`).join("")}</tr>`).join("")
         }</tbody></table>
@@ -1790,6 +1940,42 @@ function renderSummary(rows, st){
       </div>
     </div>`;
   document.querySelectorAll("[data-cw]").forEach(td=>td.onclick=()=>{ state.week=td.dataset.cw; state.tab=td.dataset.cc; state.search=""; state.quick=""; state.page=1; render(); toast("Фильтр: "+clabel(td.dataset.cc)+" · "+td.dataset.cw); });
+}
+
+// ---------- «Мои задачи» (п.11): прод видит свои, отмечает «сделано»; редактор возвращает в работу ----------
+function renderMyTasks(){
+  document.getElementById("pbar").innerHTML = "";
+  const list = (state.tasks||[]).slice();
+  const open = list.filter(t=>t.status!=="сделана");
+  const done = list.filter(t=>t.status==="сделана").sort((a,b)=>String(b.done).localeCompare(String(a.done)));
+  const rowHtml = t=>`<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+      <b>${esc(t.nick||"—")} / ${esc(t.model||"—")}</b>
+      <span style="color:var(--faint);font-size:11.5px">${esc(clabel(t.city||""))} · ${esc(t.producer||"—")}</span>
+      <span class="ptag ${t.status==="сделана"?"pt-ok":"pt-warn"}">${t.status==="сделана"?"✅ сделано "+esc(t.done||""):"📌 в работе"}</span>
+    </div>
+    <div style="white-space:pre-wrap;font-size:13px;margin:4px 0 8px">${esc(t.text)}</div>
+    <div style="color:var(--faint);font-size:11.5px">от ${esc(t.from||"—")} · ${esc(t.when||"")}</div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      ${t.status!=="сделана"?`<button class="abtn2 tk-done" data-row="${t.row}">✅ сделано</button>`:""}
+      ${AUTH.edit&&t.status==="сделана"?`<button class="abtn2 tk-re" data-row="${t.row}">↩ вернуть в работу</button>`:""}
+    </div>
+  </div>`;
+  document.getElementById("content").innerHTML = `
+    <div class="card" style="margin-bottom:14px"><h2>📌 ${AUTH.edit?"Задачи продюсерам":"Мои задачи"}</h2>
+      <div style="color:var(--faint);font-size:12px">${AUTH.edit?"ставятся из карточки команды («📌 поручить продюсеру»); сделанное можно вернуть в работу":"отмечай «сделано», когда исправишь — смотрящий увидит"}</div></div>
+    ${open.length?open.map(rowHtml).join(""):'<div class="empty">Открытых задач нет 🎉</div>'}
+    ${done.length?`<div class="rsect" style="margin-top:14px">сделанные</div>` + done.map(rowHtml).join(""):""}`;
+  document.querySelectorAll(".tk-done").forEach(b=>b.onclick=async (ev)=>{
+    ev.stopPropagation();
+    try { const r = await wp({ action:"taskdone", row: b.dataset.row }); if (r.error) throw new Error(r.error); toast("✅ Отмечено сделанным"); setTimeout(load, 500); }
+    catch(e){ toast("Ошибка: "+e.message, true); }
+  });
+  document.querySelectorAll(".tk-re").forEach(b=>b.onclick=async (ev)=>{
+    ev.stopPropagation();
+    try { const r = await wp({ action:"taskreopen", row: b.dataset.row }); if (r.error) throw new Error(r.error); toast("↩ Вернул в работу"); setTimeout(load, 500); }
+    catch(e){ toast("Ошибка: "+e.message, true); }
+  });
 }
 
 // ---------- «Итог» — последний итог дня по сверкам (лист «Итог», только чтение) ----------
@@ -1844,7 +2030,7 @@ function renderNotes(kind){
     const store = b.dataset.kind==="check" ? state.checks : state.recs;
     b.disabled = true;
     try {
-      const res = await jsonp({ action:"setplan", sheet: b.dataset.sheet, bkey: b.dataset.key, plan: ta.value });
+      const res = await wp({ action:"setplan", sheet: b.dataset.sheet, bkey: b.dataset.key, plan: ta.value });
       if (res.error) throw new Error(res.error);
       store[b.dataset.key] = ta.value;
       toast("✔ Сохранено: " + b.dataset.key.split("|")[1]);
@@ -1898,14 +2084,14 @@ function renderCompare(rows, st){
         const good = (d===null || d===0 || !m[3]) ? null : (m[3]>0 ? d>0 : d<0);
         const dc = good===null ? "var(--faint)" : (good ? "var(--ok)" : "var(--bad)");
         const ar = d===null ? "" : (d>0?"▲":d<0?"▼":"—");
-        const disp = v => m[6]==="pct" ? (v===null?"–":Math.round(v*100/9)+"%") : fmt(v);
-        const show = d===null ? "–" : (m[6]==="pct" ? ar+Math.abs(Math.round(d*100/9))+"%" : ar+Math.abs(d));
+        const disp = v => m[6]==="pct" ? (v===null?"–":Math.round(v*100/8)+"%") : fmt(v);
+        const show = d===null ? "–" : (m[6]==="pct" ? ar+Math.abs(Math.round(d*100/8))+"%" : ar+Math.abs(d));
         return `<tr><td>${m[0]}</td><td>${disp(m[1])}${m[4]?miniBar(m[4]):""}</td><td>${disp(m[2])}${m[5]?miniBar(m[5]):""}</td><td style="color:${dc};font-weight:600">${show}</td></tr>`;
       }).join("")}
       </tbody></table>
       <h2 style="margin-top:16px">Проблемные категории (недели A → B)</h2>
       ${catRows.length?`<table><thead><tr><th>Категория</th><th>${esc(a)}</th><th>${esc(b)}</th><th>Δ</th></tr></thead><tbody>${catRows.map(x=>{ const d=x.b-x.a; return `<tr><td>${esc(x.n)}</td><td>${x.a}</td><td>${x.b}</td><td style="color:${d>0?"var(--bad)":d<0?"var(--ok)":"var(--faint)"};font-weight:600">${d>0?"+":""}${d}</td></tr>`; }).join("")}</tbody></table>`:`<div class="empty">Проблемных категорий нет 🎉</div>`}
-      <p style="color:var(--faint);font-size:12px;margin-top:10px">Новые недели добавляются сами (лист «Город (даты)») или кнопкой 🗓 Новая неделя.</p>
+      <p style="color:var(--faint);font-size:12px;margin-top:10px">Новые недели добавляются сами (лист компании) или кнопкой 🗓 Новая неделя.</p>
     </div>`;
   const sa=document.getElementById("cmp-a"), sb=document.getElementById("cmp-b");
   sa.onchange=e=>{state.cmpA=e.target.value;renderCompare(rows,st);};
@@ -1928,7 +2114,7 @@ async function dupRow(x, key){
     }
     try {
       let res = null;
-      try { res = await jsonp(params); if (res.error) throw new Error(res.error); }
+      try { res = await wp(params); if (res.error) throw new Error(res.error); }
       catch(e1){
         if (String(e1.message).indexOf("прав") >= 0) throw e1;
         await writePOST(Object.assign({ action:"save" }, params));
@@ -1962,7 +2148,7 @@ function jsonp(params, _retry, timeoutMs){
       // или удалить уже другую строку (строки ниже сдвигаются после удаления)
       const a = String(params.action || "");
       const noRetry = (a === "add" || a === "delrow");
-      if (!_retry && !noRetry){ jsonp(params, true, timeoutMs).then(resolve, reject); return; }
+      if (!_retry && !noRetry){ wp(params, true, timeoutMs).then(resolve, reject); return; }
       reject(new Error(kind==="JSONP_FAIL" ? "JSONP_FAIL" : noRetry ? "нет ответа от таблицы — операция могла выполниться" : "нет ответа от таблицы (таймаут)"));
     }
     document.head.appendChild(s);
@@ -2017,6 +2203,36 @@ function weekInCurrentMonth(w){
 }
 function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim(); }
 const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+// ЕДИНАЯ POST-очередь для ВСЕГО: токен в теле (не в адресе), ответ забирается одноразовым опросом aipoll.
+// jsonp остался только для authpoll/aipoll — там нет токена.
+function wp(params, timeoutMs){
+  return new Promise(async (resolve, reject) => {
+    try {
+      const req = "w" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+      await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
+        headers:{ "Content-Type":"text/plain;charset=utf-8" },
+        body: JSON.stringify(Object.assign({}, params, { req: req, token: AUTH.token })) });
+      let res = null, parts = null, n = 0;
+      await new Promise(r => setTimeout(r, 700));
+      const deadline = Date.now() + (timeoutMs || 30000);
+      while (Date.now() < deadline){
+        try { res = await jsonp({ action:"aipoll", req: req, pp: pp }, null, 10000); } catch(e2){ res = null; }
+        if (res && res.ci !== undefined){ // большой ответ по частям: {ci, part, total}
+          parts = parts || [];
+          parts[res.ci] = res.part;
+          const got = parts.filter(x => x !== undefined).length;
+          if (got >= res.total){ res = JSON.parse(parts.join("")); break; }
+          res = null;
+        }
+        if (res && !res.pending) break;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      if (!res || res.pending) throw new Error("сервер не ответил — попробуй ещё раз");
+      if (res.error) throw new Error(res.error);
+      resolve(res);
+    } catch(e){ reject(e); }
+  });
+}
 // ИИ — только POST-очередью: текст уходит в POST (не в адресе), ответ забирается опросом aipoll.
 // 60 секунд ожидания, понятные ошибки вместо JSONP_FAIL.
 function aiErrText(m){
@@ -2026,23 +2242,33 @@ function aiErrText(m){
   if (/503|500|перегру/.test(m)) return "Gemini перегружен — попробуй ещё раз через минуту";
   return m;
 }
-function aiAsk(task, extra){
+function aiAsk(task, extra, aiRetry){
+  if (aiRetry === undefined) aiRetry = true;
   return new Promise(async (resolve, reject) => {
     try {
       const req = "q" + Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const pp = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
       await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
         headers:{ "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify(Object.assign({ action:"aiq", task: task, req: req, token: AUTH.token }, extra || {})) });
+        body: JSON.stringify(Object.assign({ action:"aiq", task: task, req: req, pp: pp, token: AUTH.token }, extra || {})) });
       let res = null;
       for (let i = 0; i < 30; i++){ // до 60 секунд: «ИИ думает…»
         await new Promise(r => setTimeout(r, 2000));
-        try { res = await jsonp({ action:"aipoll", req: req }, null, 10000); } catch(e2){ res = null; }
+        try { res = await jsonp({ action:"aipoll", req: req, pp: pp }, null, 10000); } catch(e2){ res = null; }
         if (res && !res.pending) break;
       }
       if (!res || res.pending) throw new Error("ИИ не ответил за 60 секунд — попробуй ещё раз");
       if (res.error) throw new Error(aiErrText(res.error));
       resolve(res);
-    } catch(e) { reject(new Error(aiErrText(e && e.message))); }
+    } catch(e) {
+      const m = String(e && e.message || "");
+      // Gemini иногда обрезает JSON-ответ — один автоповтор
+      if (aiRetry && m.indexOf("нестандартный") >= 0){
+        console.log("ИИ: повтор после обрезанного ответа");
+        return aiAsk(task, extra, false).then(resolve, reject);
+      }
+      reject(new Error(aiErrText(m)));
+    }
   });
 }
 function strHash(s){ let h = 7; const t = String(s||""); for (let i=0;i<t.length;i++) h = (h*31 + t.charCodeAt(i))|0; return Math.abs(h).toString(36); }
@@ -2053,7 +2279,7 @@ function ensureThumbs(){ // миниатюры через сервер: прив
     if (state.thumbData && state.thumbData[lk]){ if (im.src !== state.thumbData[lk]) im.src = state.thumbData[lk]; return; }
     if (im.dataset.loading) return;
     im.dataset.loading = "1";
-    jsonp({ action:"thumb", id: (lk.split("id=")[1] || lk) }).then(res=>{
+    wp({ action:"thumb", id: (lk.split("id=")[1] || lk) }).then(res=>{
       if (res.error || !res.d) { delete im.dataset.loading; return; }
       state.thumbData = state.thumbData || {};
       state.thumbData[lk] = "data:image/jpeg;base64," + res.d;
@@ -2090,7 +2316,7 @@ async function flushRowSave(qk){
   const params = { action:"save", sheet: q.x.r._sheet, row: String(q.x.r._row) };
   entries.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
   try {
-    const res = await jsonp(params);
+    const res = await wp(params);
     if (res.error) throw new Error(res.error);
     delete state.optimistic[qk];
     delete state.failedSaves[q.key];
@@ -2182,12 +2408,28 @@ document.getElementById("a-prod").onchange = e=>{
 };
 document.getElementById("addbtn").onclick = ()=>{
   if (!AUTH.edit){ toast("Добавлять команды может только редактор — войди (🔑)", true); return; }
+  if (weekPinned()){ toast("Сначала выбери конкретную неделю в списке недель (сейчас «все»/«месяц»)", true); return; }
   document.getElementById("a-msg").textContent = "";
   updateProdList();
   try{ const last = JSON.parse(localStorage.getItem("dash_addlast")||"null"); if (last && last.city){ document.getElementById("a-city").value = last.city; updateProdList(); const sel0=document.getElementById("a-prod"); if (last.prod && Array.from(sel0.options).some(o=>o.textContent===last.prod)) sel0.value = last.prod; } }catch(e){}
   openModal("addmodal");
 };
 document.getElementById("add-x").onclick = ()=>closeModal("addmodal");
+document.getElementById("task-x").onclick = ()=>closeModal("taskmodal");
+document.getElementById("tk-save").onclick = async ()=>{
+  const ta = document.getElementById("tk-text");
+  const msg = document.getElementById("tk-msg");
+  const text = ta.value.trim();
+  if (!text){ msg.textContent = "Напиши, что исправить"; return; }
+  msg.textContent = "Ставлю…";
+  try {
+    const r = await wp({ action:"taskadd", sheet: ta.dataset.sheet, nick: ta.dataset.nick, model: ta.dataset.model, producer: ta.dataset.producer, text: text });
+    if (r.error) throw new Error(r.error);
+    msg.textContent = "✔ Задача поставлена — продюсер увидит во вкладке «Мои задачи»";
+    ta.value = "";
+    setTimeout(load, 500);
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
+};
 document.getElementById("plan-x").onclick = ()=>closeModal("planmodal");
 document.getElementById("pl-save").onclick = async ()=>{
   const key = document.getElementById("pl-text").dataset.key;
@@ -2196,7 +2438,7 @@ document.getElementById("pl-save").onclick = async ()=>{
   const params = { action:"setplan", bkey: key, plan: document.getElementById("pl-text").value }; // bkey: «key» занят секретным ключом
   try {
     let res = null;
-    try { res = await jsonp(params); if (res.error) throw new Error(res.error); }
+    try { res = await wp(params); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0) throw e1;
       await writePOST(params);
@@ -2219,7 +2461,7 @@ document.querySelectorAll(".cdot").forEach(d=>d.onclick=(ev)=>{
 document.getElementById("colorpick").onchange = async function(){
   if (!this.dataset.prod) return;
   try {
-    try { const res = await jsonp({ action:"setcolor", producer: this.dataset.prod, color: this.value }); if (res.error) throw new Error(res.error); }
+    try { const res = await wp({ action:"setcolor", producer: this.dataset.prod, color: this.value }); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0) throw e1;
       await writePOST({ action:"setcolor", producer: this.dataset.prod, color: this.value });
@@ -2254,6 +2496,7 @@ document.getElementById("weekbtn").onclick = ()=>{
 document.getElementById("week-x").onclick = ()=>closeModal("weekmodal");
 document.getElementById("del-x").onclick = ()=>closeModal("delmodal");
 async function doDelTeam(all){
+  if (weekPinned()){ toast("Удаление — только с конкретной неделей: выбери её в списке недель", true); closeModal("delmodal"); return; }
   const ov = document.getElementById("delmodal");
   const parts = (ov.dataset.key||"").split("|");
   const city = parts[0]||"", prod = parts[1]||"";
@@ -2263,7 +2506,7 @@ async function doDelTeam(all){
   if (!confirm(all ? "Удалить команду «"+prod+"» со ВСЕХ недель компании "+clabel(city)+"? Действие необратимо." : "Удалить команду «"+prod+"» с листа "+any._sheet+"? Действие необратимо.")) return;
   msg.textContent = "Удаляю…";
   try {
-    const res = await jsonp({ action:"delteam", sheet: any._sheet, producer: prod, all: all?"1":"0" });
+    const res = await wp({ action:"delteam", sheet: any._sheet, producer: prod, all: all?"1":"0" });
     if (res.error) throw new Error(res.error);
     closeModal("delmodal");
     toast("✔ Удалено листов: " + (res.removed||0));
@@ -2309,7 +2552,7 @@ document.getElementById("rs-send").onclick = async ()=>{
   if (!login){ msg.textContent = "Введи логин"; return; }
   msg.textContent = "Отправляю заявку…";
   try {
-    const res = await jsonp({ action:"resetreq", login: login });
+    const res = await wp({ action:"resetreq", login: login });
     if (res.error) throw new Error(res.error);
     document.getElementById("rs-step1").style.display = "none";
     document.getElementById("rs-step2").style.display = "";
@@ -2327,7 +2570,7 @@ document.getElementById("rs-do").onclick = async ()=>{
   if (p1.length < 6){ msg.textContent = "Пароль слишком короткий (минимум 6 символов)"; return; }
   msg.textContent = "Меняю…";
   try {
-    const res = await jsonp({ action:"resetdo", login: login, code: code, newpass: p1 });
+    const res = await wp({ action:"resetdo", login: login, code: code, newpass: p1 });
     if (res.error) throw new Error(res.error);
     msg.textContent = "✔ Пароль изменён — теперь войди с новым паролем";
     try { sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); } catch(e){}
@@ -2347,8 +2590,8 @@ document.getElementById("resetbell").onclick = async ()=>{
   list.textContent = "Загружаю…";
   try {
     const parts = await Promise.all([
-      jsonp({ action:"resetlist" }).catch(()=>({list:[]})),
-      jsonp({ action:"suggestlist" }).catch(()=>({list:[]}))
+      wp({ action:"resetlist" }).catch(()=>({list:[]})),
+      wp({ action:"suggestlist" }).catch(()=>({list:[]}))
     ]);
     const rq = parts[0].list || [], sg = parts[1].list || [];
     if (!rq.length && !sg.length){ list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>'; return; }
@@ -2365,7 +2608,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await jsonp({ action:"resetok", row: b.dataset.row });
+        const res = await wp({ action:"resetok", row: b.dataset.row });
         if (res.error) throw new Error(res.error);
         const code = res.code || "";
         const rowEl = b.closest(".drow");
@@ -2376,7 +2619,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".rsq-no").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await jsonp({ action:"resetno", row: b.dataset.row });
+        const res = await wp({ action:"resetno", row: b.dataset.row });
         if (res.error) throw new Error(res.error);
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
       } catch(e){ toast("Ошибка: "+e.message, true); }
@@ -2385,7 +2628,7 @@ document.getElementById("resetbell").onclick = async ()=>{
       ev.stopPropagation();
       const nk = b.dataset.kind === "баг" ? "идея" : (b.dataset.kind === "идея" ? "баг" : "баг");
       try {
-        const res = await jsonp({ action:"suggestset", row: b.dataset.row, kind: nk });
+        const res = await wp({ action:"suggestset", row: b.dataset.row, kind: nk });
         if (res.error) throw new Error(res.error);
         b.textContent = "[" + nk + "]"; b.dataset.kind = nk;
       } catch(e){ toast("Ошибка: "+e.message, true); }
@@ -2395,7 +2638,7 @@ document.getElementById("resetbell").onclick = async ()=>{
       const t = prompt("Заголовок предложения:", b.dataset.title || "");
       if (t === null) return;
       try {
-        const res = await jsonp({ action:"suggestset", row: b.dataset.row, kind: b.dataset.kind, title: t.trim() });
+        const res = await wp({ action:"suggestset", row: b.dataset.row, kind: b.dataset.kind, title: t.trim() });
         if (res.error) throw new Error(res.error);
         b.dataset.title = t.trim();
         b.previousSibling.textContent = t.trim() ? t.trim() + " — " : "";
@@ -2405,7 +2648,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".sg-del").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await jsonp({ action:"suggestdel", row: b.dataset.row });
+        const res = await wp({ action:"suggestdel", row: b.dataset.row });
         if (res.error) throw new Error(res.error);
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
         if (!list.querySelectorAll(".drow").length) list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>';
@@ -2428,10 +2671,10 @@ document.getElementById("sg-send").onclick = async ()=>{
   try {
     let kind = "", title = "";
     try {
-      const c = await jsonp({ action:"ai", task:"classify", text: text });
+      const c = await wp({ action:"ai", task:"classify", text: text });
       if (!c.error){ kind = c.kind || ""; title = c.title || ""; }
     } catch(e2){} // ИИ недоступен — отправим без пометки
-    const res = await jsonp({ action:"suggest", text: text, kind: kind, title: title });
+    const res = await wp({ action:"suggest", text: text, kind: kind, title: title });
     if (res.error) throw new Error(res.error);
     msg.textContent = "✔ Отправлено — спасибо!";
     setTimeout(()=>closeModal("sugmodal"), 1200);
@@ -2447,7 +2690,7 @@ document.getElementById("o-save").onclick = async ()=>{
   if (!nick && !opname && !model){ msg.textContent = "Заполни хотя бы одно поле"; return; }
   msg.textContent = "Сохраняю…";
   try {
-    const res = await jsonp({ action:"setoper", sheet: x.r._sheet, row: String(x.r._row), nick: nick, opname: opname, model: model });
+    const res = await wp({ action:"setoper", sheet: x.r._sheet, row: String(x.r._row), nick: nick, opname: opname, model: model });
     if (res.error) throw new Error(res.error);
     x.r.opNick = nick; x.r.opName = opname; x.r.model = model;
     closeModal("opmodal");
@@ -2463,7 +2706,7 @@ document.getElementById("w-go").onclick = async ()=>{
   msg.textContent = "Создаю… (до минуты)";
   try {
     let res = null, viaFallback = false;
-    try { res = await jsonp({ action:"copyweek", base: base, name: name }, null, 60000); if (res.error) throw new Error(res.error); }
+    try { res = await wp({ action:"copyweek", base: base, name: name }, 60000); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0 || String(e1.message).indexOf("Укажи") >= 0) throw e1;
       await writePOST({ action:"copyweek", base: base, name: name });
@@ -2487,7 +2730,7 @@ document.getElementById("w-del-go").onclick = async ()=>{
   if (ans.trim() !== week){ msg.textContent = "Название не совпало — удаление отменено"; return; }
   msg.textContent = "Удаляю… (до минуты)";
   try {
-    const res = await jsonp({ action:"delweek", week: week }, null, 60000);
+    const res = await wp({ action:"delweek", week: week }, 60000);
     if (res.error) throw new Error(res.error);
     if (state.week === week) state.week = "";
     closeModal("weekmodal");
@@ -2515,7 +2758,7 @@ document.getElementById("a-save").onclick = async ()=>{
   msg.textContent = "Добавляю… (до минуты)";
   try {
     let res = null, viaFallback = false;
-    try { res = await jsonp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model }, null, 60000); if (res.error) throw new Error(res.error); }
+    try { res = await wp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model }, 60000); if (res.error) throw new Error(res.error); }
     catch(e1){
       if (String(e1.message).indexOf("прав") >= 0) throw e1;
       await writePOST({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model });
@@ -2545,7 +2788,7 @@ function hideGate(){ document.getElementById("gate").classList.add("hide"); }
 document.getElementById("loginbtn").onclick = ()=>{
   if (viewAsActive()){ startViewAs(""); return; } // в режиме «глазами» кнопка сначала выводит из режима
   if (AUTH.ok() && anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Сменить вход?")) return;
-  if (AUTH.ok()){ jsonp({ action:"logout" }).catch(()=>{}); } // гасим токен сессии на сервере
+  if (AUTH.ok()){ wp({ action:"logout" }).catch(()=>{}); } // гасим токен сессии на сервере
   AUTH.clear(); showGate();
 };
 document.getElementById("l-go").onclick = doLogin;
@@ -2614,7 +2857,7 @@ function liveEval(vals){
   const evalN = st.filter(x=>x!==null).length;
   if (!evalN) return "заполни категории — оценка посчитается сама";
   const verdict = bad===0 ? "норма" : bad<=2 ? "замечание" : "критично";
-  return "оценка сейчас: " + ok + "/9 · " + (VLBL[verdict]||verdict);
+  return "оценка сейчас: " + ok + "/8 · " + (VLBL[verdict]||verdict);
 }
 function getPhrases(code){ try{ return (JSON.parse(localStorage.getItem("dash_phrases")||"{}")[code]) || []; }catch(e){ return []; } }
 function addPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); const L=all[code]||[]; if(v && !L.includes(v)){ L.push(v); all[code]=L; localStorage.setItem("dash_phrases",JSON.stringify(all)); } }catch(e){} }
@@ -2730,7 +2973,7 @@ async function uploadScreen(blob, x, catIdx){
     const poll = async ()=>{
       tries++;
       try{
-        const j = await jsonp({ action:"screens" }, null, 20000);
+        const j = await wp({ action:"screens" }, 20000);
         const now = (j && j.screens ? j.screens : {})[k0] || [];
         const fresh = now.filter(s=>s.link && !beforeLinks.has(s.link));
         if (fresh.length){
@@ -2762,6 +3005,7 @@ function applyData(j, isHistory){
   state.links = j.links || []; // legacy, больше не приходит от сервера
   state.screens = j.screens || {};
   state.itog = j.itog || []; // итоги дня по сверкам (лист «Итог», только чтение)
+  state.tasks = j.tasks || []; // «Мои задачи» (лист «Задачи»; прод видит только свои — фильтр на сервере)
   if (viewAsActive()) realData = { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, links: state.links.slice(), screens: state.screens };
   filterViewData(); // если включён режим «глазами» — маскируем данные сразу после загрузки
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
@@ -2805,7 +3049,7 @@ async function load(){
   // по умолчанию сервер отдаёт только открытую неделю; историю просим явно
   const weekReq = state.week === "all" ? "all" : (state.week === "latest" ? "latest" : (state.week === "__month__" ? "all" : state.week));
   try{
-    const j=await jsonp({action:"read", week: weekReq});
+    const j=await wp({action:"read", week: weekReq});
     if(j.error)throw new Error(j.error);
     // автообновление не перерисовывает экран, если данные не изменились (штампы/статусы/оценки/скрины)
     const fp = JSON.stringify([j.rows.map(r=>[r._sheet,r._row,r.updated,r.status,r.scoreM,r.verdictM,String(r.obs||"").slice(0,40)]), Object.keys(j.screens||{}).length, j.resetPending, j.suggestions]);
@@ -2821,7 +3065,7 @@ async function load(){
     // проверка ролей не чаще раза в 5 минут (после логина уже была)
     if (Date.now()-(state.lastCheck||0) > 5*60*1000 && !viewAsActive()){ // в режиме «глазами» не переобновляем права
       state.lastCheck = Date.now();
-      jsonp({ action:"check" }).then(res=>{
+      wp({ action:"check" }).then(res=>{
         if (!res.error){
           AUTH.set(AUTH.user, AUTH.token, !!res.editor, res.cities || [], res.name || AUTH.user);
           AUTH.prod = !!res.prod;
