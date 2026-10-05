@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="https://script.google.com">
-<title>Мониторинг команд — продюсеры</title>
+<title>Мониторинг</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 <style>
   :root{
@@ -47,7 +47,8 @@
   .bar-track{background:var(--panel2);border-radius:5px;height:16px;overflow:hidden}
   .bar-fill{height:100%;border-radius:5px;transition:width .5s}
   .val{color:var(--ink);font-weight:600;text-align:right}
-  .stacks{display:flex;align-items:flex-end;gap:26px;height:170px;padding:0 8px}
+  .stacks{display:flex;align-items:flex-end;justify-content:center;gap:26px;height:170px;padding:0 8px}
+  .bar-row:hover .bar-fill{background:var(--bad)!important}
   .stcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--dim);height:100%;justify-content:flex-end}
   .stcol .stack{width:52px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:6px 6px 0 0;overflow:hidden;flex:1}
   .stcol .sum{font-weight:700;color:var(--ink);font-size:14px}
@@ -281,11 +282,11 @@
 <div class="wrap">
   <div id="splash"><div class="loadbars"><i></i><i></i><i></i><i></i></div><div class="stxt">Загружаем данные…</div></div>
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
-    <button id="refresh" class="iconbtn" title="обновить сейчас">⟳</button>
-    <button id="resetbell" class="iconbtn" style="display:none" title="заявки на смену пароля">🔔</button>
+    <button id="resetbell" class="iconbtn" style="display:none" title="уведомления">🔔</button>
+    <button id="sugbtn" class="iconbtn" style="display:none" title="предложение или ошибка">💡</button>
     <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Мониторинг</button>
-    <button id="weekbtn" class="abtn2" style="display:none">🗓 Неделя</button>
+    <button id="weekbtn" class="abtn2" style="display:none">＋ неделя</button>
     <select id="viewas" class="abtn2" style="display:none" title="посмотреть глазами другого пользователя"></select>
     <button id="loginbtn" class="abtn2">🔑 Вход</button>
   </div>
@@ -387,6 +388,16 @@
       <div id="rsq-list"></div>
     </div>
   </div>
+  <div class="modal-ov" id="sugmodal">
+    <div class="modal" style="width:min(440px,94vw)">
+      <button class="x" id="sg-x">✕</button>
+      <h3>💡 Предложение</h3>
+      <div style="color:var(--dim);font-size:12.5px;margin-bottom:8px">Идея, неудобство или ошибка — напиши, смотрящий это увидит.</div>
+      <textarea id="sg-text" style="width:100%;min-height:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="что улучшить или что сломалось…"></textarea>
+      <button class="abtn" id="sg-send" style="margin-top:8px">Отправить</button>
+      <div id="sg-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
+    </div>
+  </div>
   <div class="modal-ov" id="uplmodal">
     <div class="modal" style="width:min(460px,94vw)">
       <button class="x" id="u-x">✕</button>
@@ -427,15 +438,11 @@
 // ================== НАСТРОЙКИ ==================
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
-  API_KEY: "",
   REFRESH_MIN: 5,
-  VER: "2026-10-03.24"
+  VER: "2026-10-03.25"
 };
-(function(){
-  const p = new URLSearchParams(location.search).get("key");
-  if (p) { try{ localStorage.setItem("dash_key", p); }catch(e){} }
-})();
-CONFIG.API_KEY = localStorage.getItem("dash_key") || "";
+
+try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
 
 
 const AUTH = {
@@ -458,11 +465,6 @@ const AUTH = {
 
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу","Плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","playlist","sites","kadr","room"];
-const PRODUCERS = {
-  "Томск": ["Фуад","Минько","Дащинский","Кравчук","Соколов","Валов"],
-  "Новосибирск": ["Иванов","Пирожков","Козлов","Фаткулин","Васильченко","Пышков","Глушков","Белых","Бологов","Феоктистов","Черников"],
-  "Онлайн": ["Калдузов","Салихов","Околот","Шевченко","Гаврилов","Неустроев","Капитонов","Замирбек"]
-};
 const PH = {
   oko: ["не отписал шапку","не отписал конец брейка","нет скрина рабочего стола"],
   model: ["блокнот не используется","микрофон выключен","общение не ведётся","модель не управляется"],
@@ -475,9 +477,9 @@ const PH = {
   room: ["пустая комната","перегруженный фон","не подходит команде","плохой свет/оттенки"]
 };
 const OK_RE = new RegExp("(^|[\\s,.!?])(все хорошо|все отлично|все нравится|работа есть|работает хорошо|нравится|молодец|старается|отлично|активное|хорошая|хорошо|поддерживает|вовлечена|сработаны)", "i");
-const NEG_RE = new RegExp("\\b(не|нет)\\s", "i");
+const NEG_RE = new RegExp("(^|[^а-яёА-ЯЁ])(не|нет)(?![а-яёА-ЯЁ])", "i"); // «нет», «не …» как отдельные слова
 
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, thumbCache:{}, viewAs:null };
+const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, viewAs:null, thumbData:{} };
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"); }catch(e){}
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
@@ -487,7 +489,8 @@ function tabs(){
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
-  return ["Обзор"].concat(AUTH.edit?["Сводка"]:[]).concat(["Расписание"]).concat(cities).concat(["Операторы","Сравнение","Чек","Рекомендации"]);
+  if (AUTH.prod) return ["Рекомендации"]; // продюсер: только рекомендации и недели
+  return ["Обзор"].concat(cities).concat(["Операторы","Рекомендации"]);
 }
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
 
@@ -495,8 +498,13 @@ function catState(t){
   const s = (t||"").trim();
   if (!s) return null;
   if (s.charAt(0) === "✅") return "ok";
-  if (OK_RE.test(s) && !NEG_RE.test(s)) return "ok";
-  return "bad";
+  if (NEG_RE.test(s)) return "bad"; // «нет …», «не …» — замечание
+  const m = s.match(OK_RE);
+  if (!m) return "bad";
+  const idx = s.toLowerCase().indexOf(m[0].toLowerCase());
+  const pre = s.slice(Math.max(0, idx - 4), idx).toLowerCase();
+  if (/не\s*$|нет\s*$|не-$/.test(pre)) return "bad"; // «не хорошо», «не-нравится» — отрицание перед хорошим словом
+  return "ok";
 }
 function rowStats(r){
   const st = r.cats.map(catState);
@@ -533,7 +541,7 @@ function hl(t){
   try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
 }
 function esc(s){ return (s||"").split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week && tab!=="Сравнение") rs = rs.filter(r=>r.week===state.week); return rs; }
+function rowsOf(tab){ let rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab); if (state.week === "__month__"){ rs = rs.filter(r=>weekInCurrentMonth(r.week)); return rs; } if (state.week) rs = rs.filter(r=>r.week===state.week); return rs; }
 
 // ---------- черновики ----------
 const dKey = r => "draft:" + r._sheet + ":" + r._row;
@@ -587,27 +595,46 @@ document.addEventListener("keydown", e=>{
   }
 });
 
+// Ctrl+Z в текстовых полях: своя история (перерендеры ломают родную)
+const taHist = {};
+document.addEventListener("input", function(e){
+  const el = e.target;
+  if (el && el.tagName === "TEXTAREA" && el.id){
+    const h = taHist[el.id] = taHist[el.id] || [];
+    if (h[h.length-1] !== el.value){ h.push(el.value); if (h.length > 60) h.shift(); }
+  }
+}, true);
+document.addEventListener("keydown", function(e){
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "я") && e.target && e.target.tagName === "TEXTAREA"){
+    const h = taHist[e.target.id];
+    if (h && h.length){ e.preventDefault(); e.stopPropagation(); h.pop(); e.target.value = h.pop() || ""; e.target.dispatchEvent(new Event("input", {bubbles:true})); }
+  }
+}, true);
+
 // ---------- режим «посмотреть глазами» (только для редактора) ----------
 function viewAsActive(){ return !!state.viewAs; }
 function filterViewData(){
   if (!state.viewAs) return;
+  const src = realData || { rows: state.rows, plans: state.plans, checks: state.checks, recs: state.recs, links: state.links, screens: state.screens };
+  state.rows = src.rows.slice(); state.plans = src.plans; state.checks = src.checks; state.recs = src.recs;
+  state.links = src.links.slice(); state.screens = src.screens;
   if (state.viewAs.type==="prod"){
     const name = state.viewAs.name;
     state.rows = state.rows.filter(r=>r.producer===name);
     const cities = [...new Set(state.rows.map(r=>r.city).filter(Boolean))];
-    if (cities.length) AUTH.cities = cities;
+    AUTH.cities = cities.length ? cities : ["all"];
     const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[1]===name) o[k]=m[k]; }); return o; };
     state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
-    state.links = (state.links||[]).filter(l=>String(l.key).split("|")[1]===name);
+    state.links = state.links.filter(l=>String(l.key).split("|")[1]===name);
   } else if (state.viewAs.type==="city"){
     const c = state.viewAs.name;
     state.rows = state.rows.filter(r=>r.city===c);
     AUTH.cities = [c];
     const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[0]===c) o[k]=m[k]; }); return o; };
     state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
-    state.links = (state.links||[]).filter(l=>String(l.key).split("|")[0]===c);
+    state.links = state.links.filter(l=>String(l.key).split("|")[0]===c);
   } else { return; }
-  const okRows = {}; state.rows.forEach(r=>okRows[r._sheet+"|"+r._row]=1);
+  const okRows = {}; state.rows.forEach(r=>okRows[skey(r)]=1);
   const sc = {}; Object.keys(state.screens||{}).forEach(k=>{ if (okRows[k]) sc[k]=state.screens[k]; });
   state.screens = sc;
 }
@@ -621,7 +648,10 @@ function startViewAs(mode){ // "" — свой вид, "dir" — директо�
     load();
     return;
   }
-  if (!viewAsActive()) realAuthSnap = { user:AUTH.user, pass:AUTH.pass, edit:AUTH.edit, cities:AUTH.cities.slice(), prod:AUTH.prod, name:AUTH.name };
+  if (!viewAsActive()){
+    realAuthSnap = { user:AUTH.user, pass:AUTH.pass, edit:AUTH.edit, cities:AUTH.cities.slice(), prod:AUTH.prod, name:AUTH.name };
+    realData = { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, links: state.links.slice(), screens: state.screens };
+  }
   if (mode === "dir"){
     state.viewAs = { type:"dir" };
     AUTH.edit = false; AUTH.prod = false; AUTH.cities = ["all"];
@@ -644,8 +674,9 @@ function updateViewAs(){
   const sel = document.getElementById("viewas");
   if (!sel) return;
   if (!AUTH.edit && !viewAsActive()){ sel.style.display = "none"; return; } // в режиме «глазами» селектор остаётся — им же выходим
+  const srcRows = (viewAsActive() && realData) ? realData.rows : state.rows; // список продюсеров — из полных данных
   const prods = [];
-  state.rows.forEach(r=>{ if (r.producer && !prods.includes(r.producer)) prods.push(r.producer); });
+  srcRows.forEach(r=>{ if (r.producer && !prods.includes(r.producer)) prods.push(r.producer); });
   sel.innerHTML = ['<option value="">👁 вид: я (редактор)</option>']
     .concat(['<option value="city:Томск">🏙 как Томск</option><option value="city:Новосибирск">🏙 как НСК</option><option value="city:Онлайн">🔵 как Онлайн</option>'])
     .concat(prods.sort().map(p=>`<option value="prod:${esc(p)}">👤 как ${esc(p)}</option>`))
@@ -654,8 +685,10 @@ function updateViewAs(){
   sel.value = state.viewAs ? (state.viewAs.type==="dir" ? "dir" : state.viewAs.type==="city" ? "city:"+state.viewAs.name : "prod:"+state.viewAs.name) : "";
 }
 document.getElementById("viewas").onchange = function(){ startViewAs(this.value); };
-let realAuthSnap = null;
+let realAuthSnap = null, realData = null;
 function updateLoginBtn(){
+  const h1 = document.querySelector("header h1");
+  if (h1) h1.textContent = AUTH.prod ? ("Мониторинг — " + (AUTH.name || AUTH.user)) : "Мониторинг команд";
   const nm = state.viewAs ? (state.viewAs.type==="dir" ? "Директор (просмотр)" : state.viewAs.name + " (просмотр)") : (AUTH.name || AUTH.user);
   document.getElementById("loginbtn").textContent = AUTH.ok() ? "👤 " + nm + (state.viewAs ? " · выйти из режима" : " · сменить вход") : "🔑 Вход";
   const ab = document.getElementById("addbtn");
@@ -665,14 +698,16 @@ function updateLoginBtn(){
 }
 
 function render(){
+  if (!tabs().includes(state.tab)) state.tab = tabs()[0]; // сохранённая вкладка может быть скрыта
+  setTimeout(ensureThumbs, 30); // миниатюры через сервер (после отрисовки DOM)
   const openDet = new Set([...document.querySelectorAll("tr.detail.open")].map(d=>d.dataset.d)); // открытые редакторы переживают перерисовку (считаем ДО очистки DOM)
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week})); }catch(e){}
-  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
+  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
   const icons = {"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡"};
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
     const raw = rowsOf(c);
-    const rs = (!state.week && c!=="Сравнение") ? dedupeRows(raw) : raw;
+    const rs = (state.week==="__month__") ? dedupeRows(raw) : ((!state.week || c==="Сравнение") ? raw : dedupeRows(raw));
     const n = rs.length;
     const crit = rs.reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
     let badge = "";
@@ -719,7 +754,7 @@ function render(){
   let rows = rowsOf(state.tab);
   if (state.search) rows = state.rows.slice(); // глобальный поиск: все города и недели
   // «все недели»: одна строка на команду (самая свежая), иначе команды удваиваются копиями
-  if (!state.week && state.tab!=="Сравнение") rows = dedupeRows(rows);
+  if ((!state.week || state.week==="__month__") && state.tab!=="Сравнение") rows = dedupeRows(rows);
   const st = rows.map(rowStats);
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
@@ -825,11 +860,11 @@ function render(){
   const catCounts = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length}));
   catCounts.sort((a,b)=>b.c-a.c);
   const mx = Math.max(1,...catCounts.map(x=>x.c));
-  document.getElementById("cats").innerHTML = catCounts.map(x=>
-    `<div class="bar-row"><span class="lbl">${x.n}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.c/mx*100)}%;background:${x.c>=mx*0.8?"var(--bad)":x.c>=mx*0.4?"#d67f42":"var(--ok)"}"></div></div><span class="val">${x.c}</span></div>`).join("");
+  document.getElementById("cats").innerHTML = catCounts.map((x,i)=>
+    `<div class="bar-row"><span class="lbl">${x.n}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.c/mx*100)}%;background:${i===0&&x.c>0?"var(--bad)":"#8a5560"}"></div></div><span class="val">${x.c}</span></div>`).join("");
 
   if (state.tab==="Обзор"){
-    const cities = tabs().filter(c=>c!=="Обзор"&&c!=="Операторы");
+    const cities = tabs().filter(c=>CITY_ORDER.includes(c));
     const counts = cities.map(c=>({
       c,
       ok: st.filter((x,i)=>rows[i].city===c&&x.verdict==="норма").length,
@@ -845,7 +880,7 @@ function render(){
   } else {
     const segs = ["критично","замечание","норма"].map(v=>({v,n:withScore.filter(x=>x.verdict===v).length,
       color:v==="норма"?"var(--ok)":v==="замечание"?"var(--warn)":"var(--bad)"})).filter(x=>x.n);
-    const tot = segs.reduce((a,s)=>a+s.n,0)||1;
+    const tot = segs.reduce((a,s)=>a+s.n,0); // 0 проверенных = честный 0
     let acc=0;
     const svg = `<svg class="dyn" width="190" height="190" viewBox="0 0 42 42">
       <circle cx="21" cy="21" r="15.9" fill="none" stroke="#22262d" stroke-width="6"></circle>
@@ -895,10 +930,10 @@ function render(){
     const gkeyEsc = esc(g.key);
     const rowsHtml = g.items.map(({x,key})=>{
       const dr = getDraft(x.r);
-      const rowScreens = (state.screens||{})[x.r._sheet+"|"+x.r._row] || [];
+      const rowScreens = (state.screens||{})[skey(x.r)] || [];
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.length ? rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"🔗")}</a>`).join("") : '<span style="color:var(--faint)">—</span>';
-      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbCache||{})[s.link] || driveThumb(s.link,320))}" data-key="${esc(s.link)}" data-big="${esc(driveThumb(s.link,1600))}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(x.r._sheet+"|"+x.r._row)}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,320)))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         const scr = rowScreens.filter(s=>String(s.cat)===n);
@@ -916,7 +951,7 @@ function render(){
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>💡 Рекомендации (их видит команда)</b><textarea id="ed${key}_reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки (одна в строке: «Название = URL»; сохраняются кнопкой «Сохранить»)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc(dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||""))}</textarea></div>
-        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}/9</option>`).join("")}</select></div>
+        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
       const inner = AUTH.edit ? `<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
@@ -1017,12 +1052,15 @@ function render(){
     openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
   });
   document.querySelectorAll(".sthumb img").forEach(im=>{
-    im.onload=()=>{ state.thumbCache=state.thumbCache||{}; if (im.dataset.key) state.thumbCache[im.dataset.key]=im.src; }; // запоминаем рабочий адрес — после ⟳ картинка не мигает
-    im.onerror=()=>{ const n=(+im.dataset.n||0)+1; im.dataset.n=n; if(n<3) setTimeout(()=>{ im.src=im.src+(im.src.indexOf("?")>=0?"&":"?")+"r="+Date.now(); },3000); }; // холодный thumbnail даёт 404 — ретраим со сбросом кэша
     im.onclick=()=>{
-      document.getElementById("cam-img").src = im.getAttribute("data-big") || im.src;
+      document.getElementById("cam-img").src = BLANK;
       document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
+      const full = im.getAttribute("data-full") || "";
+      jsonp({ action:"thumb", id: (full.split("id=")[1] || full), user: AUTH.user, pass: AUTH.pass }).then(res=>{
+        if (res.error || !res.d) return;
+        document.getElementById("cam-img").src = "data:image/jpeg;base64," + res.d;
+      }).catch(()=>{});
     };
   });
   document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
@@ -1152,7 +1190,7 @@ function renderOperators(rows, st){
     o.cities.add(r.city); o.prods.add(r.producer||"—");
     o.rows.push({r, s});
   });
-  const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+  const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
   const ops = Object.entries(map).map(([name,o])=>{
     const perWeek = weeks.map(w=>{
       const rs = o.rows.filter(x=>x.r.week===w && x.s.score!==null);
@@ -1333,7 +1371,7 @@ function toggleWeekDrop(){
   if (ex){ ex.remove(); return; }
   const btn = document.getElementById("weekdrop-btn");
   if (!btn) return;
-  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
+  const wks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
   if (!wks.length) return;
   const tabs = document.getElementById("tabs");
   const tr = tabs.getBoundingClientRect(), br = btn.getBoundingClientRect();
@@ -1342,6 +1380,7 @@ function toggleWeekDrop(){
   div.style.top = (br.bottom - tr.top + 4) + "px";
   div.style.left = (br.left - tr.left) + "px";
   div.innerHTML = `<button class="witem ${!state.week?"on":""}" data-w="">все недели</button>`
+    + `<button class="witem ${state.week==="__month__"?"on":""}" data-w="__month__">🗓 месяц</button>`
     + wks.map(w=>`<button class="witem ${state.week===w?"on":""}" data-w="${esc(w)}">${esc(w)}</button>`).join("");
   tabs.appendChild(div);
   div.querySelectorAll(".witem").forEach(b=>b.onclick=()=>{ state.week = b.dataset.w; state.page = 1; closeWeekDrop(); render(); });
@@ -1379,8 +1418,8 @@ function renderSummary(rows, st){
   document.getElementById("pbar").innerHTML = "";
   const allR = state.rows;
   const allS = allR.map(rowStats);
-  const weeks = [...new Set(allR.map(r=>r.week).filter(Boolean))];
-  const cities = tabs().filter(c=>c!=="Обзор"&&c!=="Сводка"&&c!=="Операторы"&&c!=="Сравнение");
+  const weeks = [...new Set(allR.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+  const cities = tabs().filter(c=>CITY_ORDER.includes(c));
   const dyn = weeks.map(w=>{
     const cells = cities.map(c=>{
       const idx = allR.map((r,i)=>(r.week===w&&r.city===c)?i:-1).filter(i=>i>=0);
@@ -1398,7 +1437,7 @@ function renderSummary(rows, st){
   const mx = Math.max(1,...topCats.map(x=>x.c));
   const gm = {};
   allR.forEach((r,i)=>{
-    const k = r.city+"|"+(r.producer||"—");
+    const k = r.city+"|"+((r.opName||r.opNick||"")+"|"+(r.model||"")).toLowerCase(); // команда, а не строка недели
     if (!gm[k]) gm[k] = {city:r.city, producer:r.producer||"—", tot:0, none:0};
     gm[k].tot++; if (allS[i].score===null) gm[k].none++;
   });
@@ -1426,7 +1465,7 @@ function renderSummary(rows, st){
       : `<div class="empty">Нет недель</div>`}
       </div>
       <div class="card"><h2>Топ-5 проблем (${esc(document.getElementById("weeklabel").textContent)})</h2>
-        ${topCats.map(x=>`<div class="bar-row"><span class="lbl">${x.n}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.c/mx*100)}%;background:${x.c>=mx*0.8?"var(--bad)":x.c>=mx*0.4?"#d67f42":"var(--ok)"}"></div></div><span class="val">${x.c}</span></div>`).join("")}
+        ${topCats.map((x,i)=>`<div class="bar-row"><span class="lbl">${x.n}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.c/mx*100)}%;background:${i===0&&x.c>0?"var(--bad)":"#8a5560"}"></div></div><span class="val">${x.c}</span></div>`).join("")}
       </div>
       <div class="card"><h2>Команды без проверок</h2>
         ${nogoods.length?nogoods.map(g=>`<div class="drow"><b>${esc(g.producer)}</b><span style="color:var(--dim)">${esc(g.city)} · команд: ${g.tot}</span></div>`).join(""):`<div class="empty">Все команды проверены 🎉</div>`}
@@ -1474,14 +1513,19 @@ function renderNotes(kind){
 
 // ---------- связь с таблицей ----------
 function renderCompare(rows, st){
-  const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>(parseInt(a)||0)-(parseInt(b)||0));
+  const weeks = [...new Set(rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
   if (!weeks.length){ document.getElementById("content").innerHTML = '<div class="card"><div class="empty">Нет недель</div></div>'; return; }
   const a = state.cmpA || weeks[weeks.length-2] || weeks[0];
   const b = state.cmpB || weeks[weeks.length-1];
+  const teamsOf = w=>{ // уникальные команды недели, а не строки-копии
+    const seen = {};
+    rows.forEach(r=>{ if (r.week!==w) return; const k=(r.opName||r.opNick||"")+"|"+(r.model||"").toLowerCase(); seen[k]=r; });
+    return Object.values(seen);
+  };
   const agg = w=>{
-    const idx = rows.map((r,i)=>r.week===w?i:-1).filter(i=>i>=0);
-    const checked = idx.map(i=>st[i]).filter(x=>x.score!==null);
-    return { total: idx.length, checked: checked.length,
+    const uRows = teamsOf(w);
+    const checked = uRows.map(r=>rowStats(r)).filter(x=>x.score!==null);
+    return { total: uRows.length, checked: checked.length,
       ok: checked.filter(x=>x.verdict==="норма").length,
       warn: checked.filter(x=>x.verdict==="замечание").length,
       bad: checked.filter(x=>x.verdict==="критично").length,
@@ -1489,15 +1533,15 @@ function renderCompare(rows, st){
   };
   const A = agg(a), B = agg(b);
   const fmt = v => v===null ? "–" : v;
-  const rowsM = [
-    ["команд всего", A.total, B.total],
-    ["проверено", A.checked, B.checked],
-    ["🟢 нормально", A.ok, B.ok, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
-    ["🟡 есть замечания", A.warn, B.warn, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
-    ["🔴 критично", A.bad, B.bad, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
-    ["средняя оценка", A.avg===null?null:Math.round(A.avg*100/9)+"%", B.avg===null?null:Math.round(B.avg*100/9)+"%"]
+  const rowsM = [ // m[3]: направление «хорошо» (1 — рост хорош, -1 — рост плох, 0 — нейтрально)
+    ["команд всего", A.total, B.total, 0],
+    ["проверено", A.checked, B.checked, 0],
+    ["🟢 нормально", A.ok, B.ok, 1, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
+    ["🟡 есть замечания", A.warn, B.warn, -1, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
+    ["🔴 критично", A.bad, B.bad, -1, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
+    ["средняя оценка", A.avg===null?null:A.avg, B.avg===null?null:B.avg, 1, null, null, "pct"]
   ];
-  const catRows = CATS.map((n,i)=>({ n, a: rows.filter(r=>r.week===a && rowStats(r).st[i]==="bad").length, b: rows.filter(r=>r.week===b && rowStats(r).st[i]==="bad").length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
+  const catRows = CATS.map((n,i)=>({ n, a: teamsOf(a).filter(r=>rowStats(r).st[i]==="bad").length, b: teamsOf(b).filter(r=>rowStats(r).st[i]==="bad").length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
   document.getElementById("content").innerHTML = `
     <div class="card"><h2>Сравнение недель</h2>
       <div class="filters">
@@ -1509,8 +1553,12 @@ function renderCompare(rows, st){
       ${rowsM.map(m=>{
         const va = typeof m[1]==="number"?m[1]:null, vb = typeof m[2]==="number"?m[2]:null;
         const d = (va!==null&&vb!==null) ? vb-va : null;
-        const dc = d===null?"":d>0?"var(--ok)":d<0?"var(--bad)":"var(--faint)";
-        return `<tr><td>${m[0]}</td><td>${fmt(m[1])}${m[3]?miniBar(m[3]):""}</td><td>${fmt(m[2])}${m[4]?miniBar(m[4]):""}</td><td style="color:${dc};font-weight:600">${d===null?"–":(d>0?"+":"")+d}</td></tr>`;
+        const good = (d===null || d===0 || !m[3]) ? null : (m[3]>0 ? d>0 : d<0);
+        const dc = good===null ? "var(--faint)" : (good ? "var(--ok)" : "var(--bad)");
+        const ar = d===null ? "" : (d>0?"▲":d<0?"▼":"—");
+        const disp = v => m[6]==="pct" ? (v===null?"–":Math.round(v*100/9)+"%") : fmt(v);
+        const show = d===null ? "–" : (m[6]==="pct" ? ar+Math.abs(Math.round(d*100/9))+"%" : ar+Math.abs(d));
+        return `<tr><td>${m[0]}</td><td>${disp(m[1])}${m[4]?miniBar(m[4]):""}</td><td>${disp(m[2])}${m[5]?miniBar(m[5]):""}</td><td style="color:${dc};font-weight:600">${show}</td></tr>`;
       }).join("")}
       </tbody></table>
       <h2 style="margin-top:16px">Проблемные категории (недели A → B)</h2>
@@ -1523,7 +1571,8 @@ function renderCompare(rows, st){
 }
 
 async function dupRow(x, key){
-  const targets = state.rows.filter(r=>r._sheet===x.r._sheet && r.producer===x.r.producer && r.opNick===x.r.opNick && r._row!==x.r._row);
+  const targets = state.rows.filter(r=>r._sheet===x.r._sheet && r.producer===x.r.producer && r.model===x.r.model && r._row!==x.r._row
+    && (x.r.opNick ? r.opNick===x.r.opNick : (r.opNick===x.r.opNick && r.opName===x.r.opName))); // та же модель; пустой ник не захватывает блок
   if (!targets.length){ toast("У этой команды нет других проверок на неделе", true); return; }
   if (!confirm("Скопировать замечания на " + targets.length + " других проверок команды?")) return;
   let done = 0, fb = 0;
@@ -1556,7 +1605,7 @@ function jsonp(params, _retry, timeoutMs){
     let done=false, s=null;
     window[cb]=d=>{ if(done) return; done=true; resolve(d); cleanup(); };
     const q = new URLSearchParams(params);
-    q.set("callback", cb); q.set("key", CONFIG.API_KEY);
+    q.set("callback", cb);
     s=document.createElement("script");
     s.src=CONFIG.API_URL+"?"+q.toString();
     s.onerror=()=>{ if(done) return; done=true; cleanup(); retryOrReject("JSONP_FAIL"); };
@@ -1577,7 +1626,7 @@ function jsonp(params, _retry, timeoutMs){
 async function writePOST(params){
   await fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors",
     headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ key:CONFIG.API_KEY, user:AUTH.user, pass:AUTH.pass }, params)) });
+    body: JSON.stringify(Object.assign({ user:AUTH.user, pass:AUTH.pass }, params)) });
 }
 
 function normLinks(text){
@@ -1606,7 +1655,38 @@ function normLinks(text){
   }).filter(Boolean).join("\n");
 }
 // «Обновлено» хранится как «dd.MM HH:mm (кто)» — на экране показываем только дату и время
+// конец недели «дд-дд.мм» / «дд.мм-дд.мм» → дата (для сортировки и «месяца»)
+function weekEndDate(w){
+  const m = String(w||"").match(/(\d{1,2})(?:\.(\d{1,2}))?-(\d{1,2})\.(\d{1,2})/);
+  if (!m) return null;
+  const d = new Date(new Date().getFullYear(), +m[4]-1, +m[3]);
+  if (d - new Date() > 200*864e5) d.setFullYear(d.getFullYear()-1); // декабрь → январь
+  return d;
+}
+function weekKey(w){ const d = weekEndDate(w); return d ? d.getTime() : 0; }
+function weekInCurrentMonth(w){
+  const d = weekEndDate(w);
+  if (!d) return true;
+  const now = new Date();
+  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
 function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim(); }
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+function skey(r){ return r._sheet+"|"+String(r.opNick||"").trim()+"|"+String(r.model||"").trim(); } // стабильный ключ команды
+function ensureThumbs(){ // миниатюры через сервер: приватные файлы, доступ только своим
+  document.querySelectorAll("img[data-tk]").forEach(im=>{
+    const lk = im.getAttribute("data-tk"); if (!lk) return;
+    if (state.thumbData && state.thumbData[lk]){ if (im.src !== state.thumbData[lk]) im.src = state.thumbData[lk]; return; }
+    if (im.dataset.loading) return;
+    im.dataset.loading = "1";
+    jsonp({ action:"thumb", id: (lk.split("id=")[1] || lk), user: AUTH.user, pass: AUTH.pass }).then(res=>{
+      if (res.error || !res.d) { delete im.dataset.loading; return; }
+      state.thumbData = state.thumbData || {};
+      state.thumbData[lk] = "data:image/jpeg;base64," + res.d;
+      document.querySelectorAll('img[data-tk="'+lk+'"]').forEach(x=>{ x.src = state.thumbData[lk]; });
+    }).catch(()=>{ delete im.dataset.loading; });
+  });
+}
 // Drive-ссылки: uc?export=view блокируется браузером (ORB) — показываем через thumbnail
 function driveThumb(u, w){
   const m = String(u||"").match(/[?&]id=([\w-]+)/);
@@ -1746,7 +1826,7 @@ function nextWeekLabel(label){
   return m1===m2 ? f1+"-"+f2+"."+m2 : f1+"."+m1+"-"+f2+"."+m2;
 }
 document.getElementById("weekbtn").onclick = ()=>{
-  const weeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
+  const weeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
   const sel = document.getElementById("w-base");
   sel.innerHTML = weeks.map(w=>`<option>${esc(w)}</option>`).join("") || "<option>— нет недель —</option>";
   const del = document.getElementById("w-del");
@@ -1764,7 +1844,7 @@ async function doDelTeam(all){
   const parts = (ov.dataset.key||"").split("|");
   const city = parts[0]||"", prod = parts[1]||"";
   const msg = document.getElementById("d-msg");
-  const any = state.rows.find(r=>r.city===city && r.producer===prod);
+  const any = state.rows.find(r=>r.city===city && r.producer===prod && (!state.week || state.week==="__month__" || r.week===state.week)); // открытая неделя
   if (!any){ msg.textContent = "Команда не найдена"; return; }
   if (!confirm(all ? "Удалить команду «"+prod+"» со ВСЕХ недель города "+city+"? Действие необратимо." : "Удалить команду «"+prod+"» с листа "+any._sheet+"? Действие необратимо.")) return;
   msg.textContent = "Удаляю…";
@@ -1780,7 +1860,6 @@ document.getElementById("d-one").onclick = ()=>doDelTeam(false);
 document.getElementById("d-all").onclick = ()=>doDelTeam(true);
 document.getElementById("op-x").onclick = ()=>closeModal("opmodal");
 document.getElementById("cam-x").onclick = ()=>closeModal("cammodal");
-document.getElementById("cam-img").onerror=function(){ const n=(+this.dataset.n||0)+1; this.dataset.n=n; if(n<3) setTimeout(()=>{ this.src=this.src+(this.src.indexOf("?")>=0?"&":"?")+"r="+Date.now(); },3000); }; // большой просмотр тоже переживает холодный thumbnail
 // ---------- окно вставки фото (кнопка или Ctrl+V) ----------
 let uplTarget = null;
 function openUpload(x, catIdx, label){
@@ -1842,7 +1921,7 @@ document.getElementById("rs-do").onclick = async ()=>{
 function updateResetBell(n){
   const b = document.getElementById("resetbell");
   if (!b) return;
-  if (AUTH.edit && AUTH.ok() && n > 0){ b.style.display = ""; b.textContent = "🔔" + n; b.title = "заявки на смену пароля: " + n; }
+  if (AUTH.edit && AUTH.ok() && n > 0){ b.style.display = ""; b.textContent = "🔔" + n; b.title = "уведомления: " + n; }
   else { b.style.display = "none"; b.textContent = "🔔"; }
 }
 document.getElementById("resetbell").onclick = async ()=>{
@@ -1850,10 +1929,22 @@ document.getElementById("resetbell").onclick = async ()=>{
   const list = document.getElementById("rsq-list");
   list.textContent = "Загружаю…";
   try {
-    const res = await jsonp({ action:"resetlist", user: AUTH.user, pass: AUTH.pass });
-    if (res.error) throw new Error(res.error);
-    if (!res.list || !res.list.length){ list.innerHTML = '<div class="empty">Заявок нет</div>'; return; }
-    list.innerHTML = res.list.map(r=>`<div class="drow" style="align-items:center"><b>${esc(r.login)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.created)}</span><span><button class="abtn2 rsq-ok" data-row="${r.row}">✅ Разрешить</button> <button class="abtn2 rsq-no" data-row="${r.row}" title="отклонить">✕</button></span></div>`).join("");
+    const parts = await Promise.all([
+      jsonp({ action:"resetlist", user: AUTH.user, pass: AUTH.pass }).catch(()=>({list:[]})),
+      jsonp({ action:"suggestlist", user: AUTH.user, pass: AUTH.pass }).catch(()=>({list:[]}))
+    ]);
+    const rq = parts[0].list || [], sg = parts[1].list || [];
+    if (!rq.length && !sg.length){ list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>'; return; }
+    let html = "";
+    if (rq.length){
+      html += '<div style="color:var(--faint);font-size:12px;margin:4px 0">заявки на смену пароля</div>';
+      html += rq.map(r=>`<div class="drow" style="align-items:center"><b>${esc(r.login)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.created)}</span><span><button class="abtn2 rsq-ok" data-row="${r.row}">✅ Разрешить</button> <button class="abtn2 rsq-no" data-row="${r.row}" title="отклонить">✕</button></span></div>`).join("");
+    }
+    if (sg.length){
+      html += '<div style="color:var(--faint);font-size:12px;margin:10px 0 4px">предложения</div>';
+      html += sg.map(r=>`<div class="drow" style="align-items:flex-start"><b>${esc(r.who)}</b><span style="white-space:pre-wrap">${esc(r.when)}: ${esc(r.text)}</span><span><button class="abtn2 sg-del" data-row="${r.row}" title="убрать из списка">✕</button></span></div>`).join("");
+    }
+    list.innerHTML = html;
     list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
@@ -1873,7 +1964,35 @@ document.getElementById("resetbell").onclick = async ()=>{
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
       } catch(e){ toast("Ошибка: "+e.message, true); }
     });
+    list.querySelectorAll(".sg-del").forEach(b=>b.onclick=async (ev)=>{
+      ev.stopPropagation();
+      try {
+        const res = await jsonp({ action:"suggestdel", row: b.dataset.row, user: AUTH.user, pass: AUTH.pass });
+        if (res.error) throw new Error(res.error);
+        const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
+        if (!list.querySelectorAll(".drow").length) list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>';
+      } catch(e){ toast("Ошибка: "+e.message, true); }
+    });
   } catch(e){ list.textContent = "Ошибка: " + e.message; }
+};
+// предложение от любого аккаунта
+document.getElementById("sugbtn").onclick = ()=>{
+  document.getElementById("sg-text").value = "";
+  document.getElementById("sg-msg").textContent = "";
+  openModal("sugmodal");
+};
+document.getElementById("sg-x").onclick = ()=>closeModal("sugmodal");
+document.getElementById("sg-send").onclick = async ()=>{
+  const text = document.getElementById("sg-text").value.trim();
+  const msg = document.getElementById("sg-msg");
+  if (!text){ msg.textContent = "Напиши предложение или опиши ошибку"; return; }
+  msg.textContent = "Отправляю…";
+  try {
+    const res = await jsonp({ action:"suggest", text: text, user: AUTH.user, pass: AUTH.pass });
+    if (res.error) throw new Error(res.error);
+    msg.textContent = "✔ Отправлено — спасибо!";
+    setTimeout(()=>closeModal("sugmodal"), 1200);
+  } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
 document.getElementById("o-save").onclick = async ()=>{
   const ov = document.getElementById("opmodal");
@@ -1948,7 +2067,7 @@ document.getElementById("a-save").onclick = async ()=>{
   const opname = document.getElementById("a-opname").value.trim();
   const model = document.getElementById("a-model").value.trim();
   if (!prod){ msg.textContent = "Укажи продюсера"; return; }
-  const any = state.rows.find(r=>r.city===city);
+  const any = state.rows.find(r=>r.city===city && (!state.week || state.week==="__month__" || r.week===state.week)); // открытая неделя
   if (!any){ msg.textContent = "На листе " + city + " пока нет строк — создай блок продюсера в таблице"; return; }
   msg.textContent = "Добавляю… (до минуты)";
   try {
@@ -1992,18 +2111,13 @@ async function doLogin(){
   const u = document.getElementById("l-user").value.trim();
   const p = document.getElementById("l-pass").value;
   if (!u || !p){ document.getElementById("l-msg").textContent = "Введи логин и пароль"; return; }
-  if (!CONFIG.API_KEY){
-    const k = prompt("Введи ключ доступа к дашборду (из ссылки с ?key=...):");
-    if (!k){ document.getElementById("l-msg").textContent = "Нужен ключ доступа — открой ссылку с ?key=..."; return; }
-    try{ localStorage.setItem("dash_key", k); }catch(e){} CONFIG.API_KEY = k;
-  }
   document.getElementById("l-msg").textContent = "Проверяю…";
   try {
     // вход = маленький check (надёжен даже на мобильных) + read в load();
     // большой ответ (105КБ) одним JSONP-скриптом на мобильном WebKit ненадёжен
     const res = await jsonp({ action:"check", user:u, pass:p });
     if (res.error || !res.ok){
-      if (res.error === "forbidden"){ localStorage.removeItem("dash_key"); CONFIG.API_KEY = ""; }
+
       document.getElementById("l-msg").textContent =
         res.error === "forbidden" ? "Неверный ключ доступа — открой ссылку с ?key=... или введи ключ заново" :
         (res.error || "Неверный логин или пароль");
@@ -2029,7 +2143,7 @@ async function doLogin(){
       const hr = document.getElementById("hardref");
       if (hr) hr.onclick = ()=>{
         try{ sessionStorage.removeItem("dash_cache"); }catch(e2){}
-        location.replace(location.href.split("#")[0].split("?")[0] + "?key=" + encodeURIComponent(CONFIG.API_KEY||"") + "&r=" + Date.now());
+        location.replace(location.href.split("#")[0].split("?")[0] + "?r=" + Date.now());
       };
     } else {
       msgEl.textContent = "Не удалось проверить: " + m;
@@ -2076,7 +2190,7 @@ function dueInfo(r){
   const next = new Date(d.getTime() + 7*864e5);
   return { days, nextDay: next.getDate(), nextMonth: next.getMonth()+1 };
 }
-function isDue(r){ const u = dueInfo(r); return !!u && u.days >= 6; }
+function isDue(r){ const u = dueInfo(r); return !!u && u.days >= 7; } // порог «к перепроверке» везде 7 дней
 // одна строка на команду (город+опер+модель): берём строку с самой свежей «Обновлено»
 function dedupeRows(rows){
   const map = {}, out = [];
@@ -2138,17 +2252,22 @@ async function uploadScreen(blob, x, catIdx){
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     const data = cv.toDataURL("image/jpeg", 0.85).split(",")[1];
+    const scale2 = Math.min(1, 480/Math.max(img.width, img.height));
+    const cv2 = document.createElement("canvas");
+    cv2.width = Math.round(img.width*scale2); cv2.height = Math.round(img.height*scale2);
+    cv2.getContext("2d").drawImage(img, 0, 0, cv2.width, cv2.height);
+    const small = cv2.toDataURL("image/jpeg", 0.8).split(",")[1];
     toast("📸 Скрин: загружаю на диск…");
     await fetch(CONFIG.API_URL, {
       method: "POST", mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ key: CONFIG.API_KEY, user: AUTH.user, pass: AUTH.pass,
-        sheet: x.r._sheet, row: x.r._row, data: data,
+      body: JSON.stringify({ user: AUTH.user, pass: AUTH.pass,
+        sheet: x.r._sheet, row: x.r._row, data: data, small: small,
         cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
     });
     toast("📸 Скрин загружаю…"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":""));
     // no-cors не даёт прочитать ответ сервера — подтверждаем ФАКТОМ: опрашиваем лёгкий action=screens
-    const k0 = x.r._sheet+"|"+x.r._row;
+    const k0 = skey(x.r);
     const beforeLinks = new Set(((state.screens||{})[k0]||[]).map(s=>s.link));
     let tries = 0;
     const poll = async ()=>{
@@ -2180,6 +2299,7 @@ function applyData(j){
   state.recs = j.recs || {};
   state.links = j.links || [];
   state.screens = j.screens || {};
+  if (viewAsActive()) realData = { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, links: state.links.slice(), screens: state.screens };
   filterViewData(); // если включён режим «глазами» — маскируем данные сразу после загрузки
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
   dot.className="dot-live";
@@ -2187,18 +2307,14 @@ function applyData(j){
   txt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
   updateLoginBtn();
   updateViewAs();
-  updateResetBell(j.resetPending || 0);
+  updateResetBell((j.resetPending || 0) + (j.suggestions || 0));
+  document.getElementById("sugbtn").style.display = AUTH.ok() ? "" : "none";
   render();
   if (document.getElementById("a-prod")) updateProdList();
 }
 async function load(){
   if (!AUTH.ok()){ showGate(); return; }
   hideGate(); // вход сохранён — после перезагрузки не показываем окно логина
-  if (!CONFIG.API_KEY){
-    const k=prompt("Введи ключ доступа к дашборду:");
-    if(k){try{localStorage.setItem("dash_key",k);}catch(e){} CONFIG.API_KEY=k;}
-    else{ return; }
-  }
   try{
     const f = JSON.parse(localStorage.getItem("dash_filters") || "null");
     if (f && !state.rows.length){
@@ -2244,10 +2360,6 @@ async function load(){
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("hide")) sp.classList.add("hide");
 }
-document.getElementById("refresh").onclick=()=>{
-  if (anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Обновить данные?")) return;
-  load();
-};
 window.addEventListener("beforeunload", e=>{
   if (anyDirty()){ e.preventDefault(); e.returnValue = ""; }
 });
