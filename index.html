@@ -380,7 +380,7 @@
         <div style="color:var(--dim);font-size:12.5px;margin-bottom:8px">Заявка отправлена. Когда дадут код — введи его здесь вместе с новым паролем.</div>
         <input id="rs-login2" placeholder="твой логин" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
         <input id="rs-code" placeholder="код от смотрящего" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
-        <input id="rs-pass" type="password" placeholder="новый пароль (мин. 6 символов)" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
+        <input id="rs-pass" type="password" placeholder="новый пароль (мин. 8 символов)" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
         <input id="rs-pass2" type="password" placeholder="новый пароль ещё раз" style="width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit;margin-bottom:8px">
         <button class="abtn" id="rs-do">Сменить пароль</button>
       </div>
@@ -502,7 +502,10 @@ const NEG_RE = new RegExp("(^|[^а-яёА-ЯЁ])(не|нет)(?![а-яёА-ЯЁ]
 // отображение компаний (внутри везде ключи городов — данные и таблица не трогаются)
 const CITY_LABEL = { "Томск":"ArtLife", "Новосибирск":"VVCAM", "Онлайн":"DIAMOND" };
 const clabel = c => CITY_LABEL[c] || c;
-const state = { tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"latest", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, viewAs:null, thumbData:{}, fullLoaded:false, fullLoading:false, itog:[], dataFp:"", optimistic:{}, failedSaves:{}, knownWeeks:[] };
+// шкала оценки: категорий 9 → оценка 0–9 везде (ручной выбор, авто-оценка, проценты)
+const MAX_SCORE = 9;
+const pct = v => Math.round(v * 100 / MAX_SCORE);
+const state = { aiBox:{}, panels:{}, fieldOkSeq:{}, serverLatest:"", tab:"Обзор", producer:"", search:"", lastView:[], rows:[], colors:{}, quick:"", grpOpen:{}, page:1, plans:{}, week:"latest", cmpA:"", cmpB:"", schedCity:"", schedV:"", railMini:false, lastCheck:0, cityOrder:null, viewAs:null, thumbData:{}, fullLoaded:false, fullLoading:false, itog:[], dataFp:"", optimistic:{}, failedSaves:{}, knownWeeks:[] };
 try{ state.knownWeeks = JSON.parse(localStorage.getItem("dash_weeks")||"[]"); }catch(e){}
 function rememberWeeks(){ // список недель держим даже когда загружена только открытая
   const now = [...new Set(state.rows.map(r=>r.week).filter(Boolean))];
@@ -533,10 +536,23 @@ function tabs(){
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
 
 // «нет замечаний», «без ошибок», «проблем нет» — это ХОРОШО, а не отрицание
+// B: «норм», «ок», «👍», «ошибок не обнаружено», «замечаний не выявлено» — тоже хорошо
+// (граница слова — пробел/знак препинания/скобка/тире; «не норм», «не ок» остаются замечанием через NEG_RE)
+const NEG_NOUNS = "замечаний|ошибок|проблем|нареканий|претензий|косяков|нарушений|замечание|ошибки|проблемы";
+const NN_D = "[\\s,.!?;:()\\-—]";
+const NN_FOUND = "(обнаружено|обнаружены|выявлено|выявлены|найдено|найдены|замечено|замечены)";
+const NN_RE = [
+  [new RegExp("(^|" + NN_D + ")(нет|без)\\s+(" + NEG_NOUNS + ")(?=" + NN_D + "|$)", "gi"), "$1все хорошо"],
+  [new RegExp("(^|" + NN_D + ")(" + NEG_NOUNS + ")\\s+нет(?=" + NN_D + "|$)", "gi"), "$1все хорошо"],
+  [new RegExp("(^|" + NN_D + ")(" + NEG_NOUNS + ")\\s+не\\s+" + NN_FOUND + "(?=" + NN_D + "|$)", "gi"), "$1все хорошо"],
+  [new RegExp("(^|" + NN_D + ")не\\s+" + NN_FOUND + "\\s+(" + NEG_NOUNS + ")(?=" + NN_D + "|$)", "gi"), "$1все хорошо"],
+  [new RegExp("(^|" + NN_D + ")(ок|окей|ok|okay|норм|нормально|норма)(?=" + NN_D + "|$)", "gi"), "$1все хорошо"],
+  [/👍+/g, " все хорошо "]
+];
 function normNeg(s){
-  return String(s||"")
-    .replace(/(^|[\s,.!?;])(нет|без)\s+(замечаний|ошибок|проблем|нареканий|претензий|косяков|замечание|ошибки|проблемы)([\s,.!?;]|$)/gi, "$1все хорошо$4")
-    .replace(/(^|[\s,.!?;])(замечаний|ошибок|проблем|нареканий|претензий|косяков)\s+нет([\s,.!?;]|$)/gi, "$1все хорошо$3");
+  let t = String(s||"");
+  NN_RE.forEach(p=>{ t = t.replace(p[0], p[1]); });
+  return t;
 }
 function catState(t){
   const s = normNeg((t||"").trim());
@@ -561,12 +577,14 @@ function rowStats(r){
     verdict = bad === 0 ? "норма" : bad <= 2 ? "замечание" : "критично";
     // ручная оценка: число и строка читаются одинаково («7", " 7 ", 7 → 7)
     const mScore = String(r.scoreM == null ? "" : r.scoreM).trim().match(/^(\d+)/);
-    if (mScore){ const n = Math.min(8, Math.max(0, parseInt(mScore[1], 10))); score = n; }
+    if (mScore){ const n = Math.min(MAX_SCORE, Math.max(0, parseInt(mScore[1], 10))); score = n; }
     if (r.verdictM) verdict = r.verdictM;
   }
   return {st, ok, bad, score, verdict};
 }
-const scoreCls = n => n>=6 ? "score-ok" : n>=3 ? "score-warn" : "score-bad";
+// пороги цвета — те же доли шкалы, что раньше (6/8 = 75%, 3/8 = 37.5%), теперь от 9
+const scoreCls = n => n/MAX_SCORE>=0.75 ? "score-ok" : n/MAX_SCORE>=0.375 ? "score-warn" : "score-bad";
+const scoreFill = n => n/MAX_SCORE>=0.75 ? "sf-g" : n/MAX_SCORE>=0.375 ? "sf-y" : "sf-r";
 const chipCls = {"норма":"c-ok","замечание":"c-warn","критично":"c-bad"};
 const VLBL = { "норма":"нормально", "замечание":"есть замечания", "критично":"критично" };
 function animNum(el, to, suffix){
@@ -587,12 +605,22 @@ function hl(t){
   try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
 }
 function esc(s){ s = (s==null?"":String(s)); return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
-// строка относится к открытой неделе (при «latest» сервер уже отдал только её)
-function weekOpen_(r){
-  return !state.week || state.week==="latest" || state.week==="all" || state.week==="__month__" || r.week===state.week;
-}
 // на «все недели» и «месяц» менять/добавлять/удалять нельзя — только просмотр (п.6)
 function weekPinned(){ return state.week === "all" || state.week === "__month__"; }
+// D3/D12: «последняя» = неделя с максимальной датой (сервер присылает её имя), даже если загружена вся история
+function realRows(){ return (viewAsActive() && realData) ? realData.rows : state.rows; }
+function latestWeekName(){
+  if (state.serverLatest) return state.serverLatest;
+  return [...new Set(realRows().map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b)).pop() || "";
+}
+// открытая (редактируемая) неделя: выбранная конкретная или последняя; на «все/месяц» — никакая
+function openWeekName(){
+  if (weekPinned()) return "";
+  return (!state.week || state.week === "latest") ? latestWeekName() : state.week;
+}
+function weekOpen_(r){ const w = openWeekName(); return !!w && r.week === w; }
+// строку можно править: редактор, не режим «глазами», строка из открытой недели
+function rowEditable(r){ return AUTH.edit && !viewAsActive() && weekOpen_(r); }
 // недели: «latest» (по умолчанию — сервер отдал только открытую), «all», «__month__» или точное название
 function rowsOf(tab){
   let rs;
@@ -601,6 +629,8 @@ function rowsOf(tab){
   if (state.week === "__month__"){ rs = rs.filter(r=>weekInCurrentMonth(r.week)); return rs; }
   // конкретная старая неделя: фильтруем на фронте (все недели уже загружены)
   if (state.week && state.week !== "latest" && state.week !== "all") rs = rs.filter(r=>r.week===state.week);
+  // «последняя»: после догрузки истории в state.rows все недели — показываем только последнюю (кроме вкладок истории)
+  else if ((!state.week || state.week === "latest") && !HISTORY_TABS.includes(tab)){ const lw = latestWeekName(); if (lw) rs = rs.filter(r=>r.week===lw); }
   return rs;
 }
 // вкладки, которым нужна вся история (тренды, динамика, сравнение, freshest-строки)
@@ -617,9 +647,12 @@ function ensureFull(){
     applyData(j, true);
     state.fullLoaded = true;
     state.fullLoading = false;
-    // после полной загрузки список недель — точный (убираем устаревшие)
-    state.knownWeeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
-    try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){}
+    state.dataFp = "";
+    // после полной загрузки список недель — точный (сервер прислал weeks; запасной вариант — по строкам)
+    if (!Array.isArray(j.weeks)){
+      state.knownWeeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+      try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){}
+    }
     toast("История загружена");
     fullWaiters.splice(0).forEach(f=>f());
   }).catch(e=>{
@@ -630,13 +663,58 @@ function ensureFull(){
 }
 
 // ---------- черновики ----------
-const dKey = r => "draft:" + r._sheet + ":" + r._row;
-function getDraft(r){ try{ return JSON.parse(localStorage.getItem(dKey(r)) || "null"); }catch(e){ return null; } }
-function setDraft(r, d){ d.ts = Date.now(); localStorage.setItem(dKey(r), JSON.stringify(d)); }
+// D7: ключ = «лист|ник|модель#строка» (команда + строка), а не номер строки или индекс на экране.
+// Строки сдвинулись → черновик команды переезжает за ней, только если такая команда в листе ОДНА.
+function rk(r){ return skey(r) + "#" + r._row; }
+const dKey = r => "draft2:" + rk(r);
+const dKeyOld = r => "draft:" + r._sheet + ":" + r._row; // формат до v41 (без ключа команды)
+let _dc = null; // кэш черновиков на одну перерисовку (F3)
+function draftCacheReset(){ _dc = null; }
+function getDraft(r){
+  const k = rk(r);
+  if (_dc && k in _dc) return _dc[k];
+  let d = null;
+  try {
+    const raw = localStorage.getItem(dKey(r));
+    if (raw){ const x = JSON.parse(raw); d = (x && (!x.u || x.u === AUTH.user)) ? x : null; }
+    else {
+      const old = localStorage.getItem(dKeyOld(r));
+      if (old){ const x = JSON.parse(old); if (x){ x.__legacy = 1; d = x; } }
+      else {
+        const pref = "draft2:" + skey(r) + "#";
+        const cand = [];
+        for (let i=0;i<localStorage.length;i++){ const kk = localStorage.key(i); if (kk && kk.indexOf(pref) === 0) cand.push(kk); }
+        if (cand.length === 1 && realRows().filter(x=>skey(x)===skey(r)).length === 1){
+          const x = JSON.parse(localStorage.getItem(cand[0]) || "null");
+          if (x && (!x.u || x.u === AUTH.user)){ localStorage.setItem(dKey(r), JSON.stringify(x)); localStorage.removeItem(cand[0]); d = x; }
+        }
+      }
+    }
+  } catch(e){ d = null; }
+  if (!_dc) _dc = {};
+  _dc[k] = d;
+  return d;
+}
+function setDraft(r, d){
+  d.ts = Date.now(); d.u = AUTH.user; delete d.__legacy;
+  try { localStorage.setItem(dKey(r), JSON.stringify(d)); localStorage.removeItem(dKeyOld(r)); } catch(e){}
+  draftCacheReset();
+}
 function draftTime(d){ try { return new Date(d.ts).toLocaleString("ru-RU", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); } catch(e){ return ""; } }
-function clearDraft(r){ localStorage.removeItem(dKey(r)); }
+function clearDraft(r){ try { localStorage.removeItem(dKey(r)); localStorage.removeItem(dKeyOld(r)); } catch(e){} draftCacheReset(); }
 function draftVal(r, j){ const d = getDraft(r); return d && d["f"+j] !== undefined ? d["f"+j] : (r.cats[j]||""); }
 function draftIsDirty(r){ return !!getDraft(r); }
+// при смене ника/модели (setoper) ключ строки меняется — переносим черновик/ошибки/ИИ-блок
+function renameRowKey(oldRk, newRk){
+  if (oldRk === newRk) return;
+  try { const v = localStorage.getItem("draft2:" + oldRk); if (v){ localStorage.setItem("draft2:" + newRk, v); localStorage.removeItem("draft2:" + oldRk); } } catch(e){}
+  [state.failedSaves, state.optimistic, state.fieldOkSeq].forEach(m=>{ if (m && m[oldRk]){ m[newRk] = m[oldRk]; delete m[oldRk]; } });
+  const oid = "k" + strHash(oldRk), nid = "k" + strHash(newRk);
+  if (state.aiBox[oid]){ state.aiBox[nid] = state.aiBox[oid]; delete state.aiBox[oid]; }
+  draftCacheReset();
+}
+// параметры адресации строки для сервера: лист+строка И ключ команды (сервер сверяет перед записью)
+function rowKeyParams(r){ return { sheet: r._sheet, row: String(r._row), knick: String(r.opNick||"").trim(), kmodel: String(r.model||"").trim(), kop: String(r.opName||"").trim() }; }
 function rowDirty(key){
   const x = state.lastView[key]; if (!x) return false;
   for (let j=0;j<9;j++){
@@ -652,9 +730,79 @@ function rowDirty(key){
   return false;
 }
 function anyDirty(){
+  if ([...document.querySelectorAll("#content textarea[data-orig]")].some(t=>t.value !== t.dataset.orig)) return true;
   return [...document.querySelectorAll("tr.detail.open")].some(d=>rowDirty(d.dataset.d));
 }
+// есть ли отправки, которые ещё не подтвердил сервер
+function pendingWrites(){ return Object.keys(saveQueue).length + inflightSaves; }
 
+// ---------- ИИ-блоки и панели, переживающие перерисовку ----------
+// state.aiBox[id] = функция, рисующая содержимое aibox строки; после render() вызывается заново
+function aiShow(key, build){
+  state.aiBox[key] = build;
+  const box = document.getElementById("aibox" + key);
+  if (box){ box.style.display = ""; build(box); }
+}
+function aiMsg(key, text){ aiShow(key, b=>{ b.textContent = text; }); }
+function aiHide(key){ delete state.aiBox[key]; const box = document.getElementById("aibox" + key); if (box) box.style.display = "none"; }
+function panelShow(id, build){ state.panels[id] = build; const o = document.getElementById(id); if (o) build(o); }
+function panelMsg(id, text){ panelShow(id, o=>{ o.textContent = text; }); }
+
+// перерисовка с сохранением фокуса/каретки, открытых карточек, ИИ-блоков и несохранённого текста заметок
+function captureUi(){
+  const ui = { focus:null, dirty:{} };
+  const a = document.activeElement;
+  if (a && a.id && /^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName) && a.closest && a.closest("#content")){
+    let s = null, e = null; try { s = a.selectionStart; e = a.selectionEnd; } catch(err){}
+    ui.focus = { id:a.id, val:a.value, s:s, e:e, st:a.scrollTop };
+  }
+  document.querySelectorAll("#content textarea[data-orig]").forEach(t=>{ if (t.id && t.value !== t.dataset.orig) ui.dirty[t.id] = t.value; });
+  return ui;
+}
+function restoreUi(ui){
+  Object.keys(ui.dirty).forEach(id=>{ const t = document.getElementById(id); if (t && t.dataset.orig !== undefined && t.value === t.dataset.orig) t.value = ui.dirty[id]; });
+  Object.keys(state.aiBox||{}).forEach(k=>{ const b = document.getElementById("aibox"+k); if (b){ b.style.display = ""; try { state.aiBox[k](b); } catch(e){} } });
+  Object.keys(state.panels||{}).forEach(id=>{ const o = document.getElementById(id); if (o){ try { state.panels[id](o); } catch(e){} } });
+  const f = ui.focus; if (!f) return;
+  const el = document.getElementById(f.id); if (!el) return;
+  if (el.tagName === "TEXTAREA" && el.value !== f.val) el.value = f.val;
+  try { el.focus({preventScroll:true}); } catch(e){ try { el.focus(); } catch(e2){} }
+  try { if (f.s !== null && f.s !== undefined && el.setSelectionRange) el.setSelectionRange(f.s, f.e); } catch(e){}
+  if (f.st) el.scrollTop = f.st;
+}
+function render(){
+  const ui = captureUi();
+  draftCacheReset();
+  renderMain();
+  restoreUi(ui);
+}
+// фоновые события (ответ сервера, загрузка скрина) не перерисовывают экран посреди набора текста:
+// перерисовка откладывается до ухода фокуса из поля
+let pendingRender = false;
+function typingNow(){ const a = document.activeElement; return !!(a && a.closest && a.closest("#content") && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && /^(text|search|)$/.test(a.type||"")))); }
+function softRender(){ if (typingNow()){ pendingRender = true; return; } pendingRender = false; render(); }
+document.addEventListener("focusout", ()=>{ if (pendingRender) setTimeout(()=>{ if (pendingRender && !typingNow()){ pendingRender = false; render(); } }, 80); });
+
+// C: горячие клавиши действуют на строку, в которой стоит курсор (или на единственную открытую)
+function focusedDetail(){
+  const a = document.activeElement;
+  const d = a && a.closest ? a.closest("tr.detail.open") : null;
+  if (d) return d;
+  const open = document.querySelectorAll("tr.detail.open");
+  return open.length === 1 ? open[0] : null;
+}
+// C: почему список пуст — подсказка вместо «Нет данных»
+function emptyReason(){
+  if (!state.rows.length) return AUTH.prod ? "Твоих команд в загруженных данных нет — проверь неделю или попроси смотрящего добавить" : "Данные ещё не загружены или нет доступа к компаниям этого аккаунта";
+  const why = [];
+  if (state.search) why.push("поиск «" + state.search + "»");
+  if (state.quick) why.push("быстрый фильтр");
+  if (state.producer) why.push("продюсер «" + state.producer + "»");
+  if (state.week && state.week !== "latest" && state.week !== "all") why.push(state.week === "__month__" ? "только текущий месяц" : "неделя " + state.week);
+  if (state.week === "latest" && latestWeekName()) why.push("показана только последняя неделя (" + latestWeekName() + ")");
+  if (viewAsActive()) why.push("режим «глазами …»");
+  return "Ничего не найдено" + (why.length ? ": " + why.join(", ") + " — сбрось фильтры или выбери «все недели»" : "");
+}
 let toastTimer = null, searchTimer = null;
 function toast(msg, isErr){
   const t = document.getElementById("toast");
@@ -673,12 +821,12 @@ document.addEventListener("keydown", e=>{
   if (e.key === "Escape"){
     const open = document.querySelectorAll(".modal-ov.show");
     if (open.length){ open.forEach(ov=>closeModal(ov.id)); return; }
-    const det = document.querySelector("tr.detail.open");
+    const det = focusedDetail();
     if (det){ if (!rowDirty(det.dataset.d) || confirm("Есть несохранённые правки (черновик сохранён). Закрыть?")) det.classList.remove("open"); }
   }
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)){
-    const det = document.querySelector("tr.detail.open");
-    if (det){ const btn = document.getElementById("sv"+det.dataset.d); if (btn) btn.click(); }
+    const det = focusedDetail();
+    if (det){ e.preventDefault(); const btn = document.getElementById("sv"+det.dataset.d); if (btn) btn.click(); }
   }
 });
 
@@ -693,7 +841,7 @@ function taInfo(el){
   const x = det ? state.lastView[det.dataset.d] : null;
   if (!x) return null;
   const field = /^lk/.test(el.id) ? "links" : el.id.slice(el.id.indexOf("_") + 1);
-  return { x: x, field: field, key: skey(x.r) + "\u0000" + field };
+  return { x: x, field: field, key: rk(x.r) + "\u0000" + field };
 }
 function taHistKey(el){ const i = taInfo(el); return i ? i.key : null; }
 function taBaseline(x, field){ // что было в поле при открытии строки (с учётом черновика)
@@ -733,9 +881,9 @@ document.addEventListener("keydown", function(e){
 function viewAsActive(){ return !!state.viewAs; }
 function filterViewData(){
   if (!state.viewAs) return;
-  const src = realData || { rows: state.rows, plans: state.plans, checks: state.checks, recs: state.recs, links: state.links, screens: state.screens };
+  const src = realData || snapData();
   state.rows = src.rows.slice(); state.plans = src.plans; state.checks = src.checks; state.recs = src.recs;
-  state.links = src.links.slice(); state.screens = src.screens;
+  state.screens = src.screens; state.tasks = (src.tasks||[]).slice(); state.itog = (src.itog||[]).slice();
   if (state.viewAs.type==="prod"){
     const name = state.viewAs.name;
     state.rows = state.rows.filter(r=>r.producer===name);
@@ -743,25 +891,32 @@ function filterViewData(){
     AUTH.cities = cities.length ? cities : ["all"];
     const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[1]===name) o[k]=m[k]; }); return o; };
     state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
-    state.links = state.links.filter(l=>String(l.key).split("|")[1]===name);
+    state.tasks = state.tasks.filter(t=>t.producer===name); // видны только его задачи
+    state.itog = [];
   } else if (state.viewAs.type==="city"){
     const c = state.viewAs.name;
     state.rows = state.rows.filter(r=>r.city===c);
     AUTH.cities = [c];
     const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[0]===c) o[k]=m[k]; }); return o; };
     state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
-    state.links = state.links.filter(l=>String(l.key).split("|")[0]===c);
+    state.tasks = state.tasks.filter(t=>t.city===c || String(t.sheet||"").indexOf(c) >= 0);
+    state.itog = [];
   } else { return; }
   const okRows = {}; state.rows.forEach(r=>okRows[skey(r)]=1);
   const sc = {}; Object.keys(state.screens||{}).forEach(k=>{ if (okRows[k]) sc[k]=state.screens[k]; });
   state.screens = sc;
 }
+function snapData(){ return { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, screens: state.screens, tasks: (state.tasks||[]).slice(), itog: (state.itog||[]).slice() }; }
 function startViewAs(mode){ // "" — свой вид, "dir" — директор, "prod:Имя" — продюсер
   if (!AUTH.edit && !viewAsActive()) return; // из режима «глазами» выходить можно всегда
   if (!mode){
     if (!viewAsActive()) return;
     Object.assign(AUTH, realAuthSnap); // вернуть настоящий доступ
     state.viewAs = null;
+    // U4: вернуть ПОЛНЫЕ данные редактора (а не отфильтрованные) и заставить следующую загрузку примениться
+    if (realData){ state.rows = realData.rows.slice(); state.plans = realData.plans; state.checks = realData.checks; state.recs = realData.recs; state.screens = realData.screens; state.tasks = (realData.tasks||[]).slice(); state.itog = (realData.itog||[]).slice(); }
+    realData = null;
+    state.dataFp = "";
     // вернуть экран, где был до входа в режим; фильтры проду и недели сбросить
     state.tab = realAuthSnap.tab || "Обзор";
     state.producer = ""; state.week = "latest"; state.quick = ""; state.page = 1;
@@ -769,12 +924,13 @@ function startViewAs(mode){ // "" — свой вид, "dir" — директо�
     toast("Вернулся в свой режим");
     const lt = document.getElementById("livetext");
     if (lt) lt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
+    render(); updateLoginBtn(); updateViewAs();
     load();
     return;
   }
   if (!viewAsActive()){
     realAuthSnap = { user:AUTH.user, token:AUTH.token, edit:AUTH.edit, cities:AUTH.cities.slice(), prod:AUTH.prod, name:AUTH.name, tab:state.tab };
-    realData = { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, links: state.links.slice(), screens: state.screens };
+    realData = snapData();
   }
   if (mode === "dir"){
     state.viewAs = { type:"dir" };
@@ -828,7 +984,9 @@ document.getElementById("viewas").onchange = function(){ startViewAs(this.value)
 let realAuthSnap = null, realData = null;
 function updateLoginBtn(){
   const h1 = document.querySelector("header h1");
-  if (h1) h1.textContent = AUTH.prod ? ("Мониторинг — " + (AUTH.name || AUTH.user)) : "Мониторинг команд";
+  if (h1) h1.textContent = state.viewAs
+    ? "Мониторинг — глазами " + (state.viewAs.type==="dir" ? "директора" : state.viewAs.type==="city" ? clabel(state.viewAs.name) : state.viewAs.name)
+    : AUTH.prod ? ("Мониторинг — " + (AUTH.name || AUTH.user)) : "Мониторинг команд";
   const nm = state.viewAs ? (state.viewAs.type==="dir" ? "Директор (просмотр)" : state.viewAs.name + " (просмотр)") : (AUTH.name || AUTH.user);
   document.getElementById("loginbtn").textContent = AUTH.ok() ? "👤 " + nm + (state.viewAs ? " · выйти из режима" : " · сменить вход") : "🔑 Вход";
   const ab = document.getElementById("addbtn");
@@ -837,7 +995,7 @@ function updateLoginBtn(){
   if (wb) wb.style.display = AUTH.edit ? "" : "none";
 }
 
-function render(){
+function renderMain(){
   if (!tabs().includes(state.tab)) state.tab = tabs()[0]; // сохранённая вкладка может быть скрыта
   setTimeout(ensureThumbs, 30); // миниатюры через сервер (после отрисовки DOM)
   const openDet = new Set([...document.querySelectorAll("tr.detail.open")].map(d=>d.dataset.d)); // открытые редакторы переживают перерисовку (считаем ДО очистки DOM)
@@ -896,8 +1054,9 @@ function render(){
 
   let rows = rowsOf(state.tab);
   if (state.search) rows = state.rows.slice(); // глобальный поиск: все города и недели
-  // «все недели»: одна строка на команду (самая свежая), иначе команды удваиваются копиями
-  if ((!state.week || state.week==="__month__") && state.tab!=="Сравнение") rows = dedupeRows(rows);
+  // «все недели» и «месяц»: одна строка на команду (самая свежая), иначе команды удваиваются копиями
+  // (вкладка «Операторы» на «все» показывает историю по неделям — её не схлопываем)
+  if ((!state.week || state.week==="__month__" || state.week==="all") && state.tab!=="Сравнение" && !(state.week==="all" && state.tab==="Операторы")) rows = dedupeRows(rows);
   const st = rows.map(rowStats);
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
@@ -928,8 +1087,8 @@ function render(){
       const pWs = pSt.filter(x=>x.score!==null);
       const dl = (c,p,goodUp)=>{ const d=c-p; if(!d) return ""; const up=d>0; const good = goodUp ? up : !up; return `<span class="delta ${good?"up":"down"}">${up?"▲":"▼"}${Math.abs(d)}</span>`; };
       tileDelta = { ok: dl(withScore.filter(x=>x.verdict==="норма").length, pWs.filter(x=>x.verdict==="норма").length, true), warn: dl(withScore.filter(x=>x.verdict==="замечание").length, pWs.filter(x=>x.verdict==="замечание").length, false), bad: dl(withScore.filter(x=>x.verdict==="критично").length, pWs.filter(x=>x.verdict==="критично").length, false) };
-      const pAvg = pWs.length ? pWs.reduce((a,x)=>a+x.score,0)/pWs.length*100/8 : null;
-      const cAvg = withScore.length ? withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/8 : null;
+      const pAvg = pWs.length ? pct(pWs.reduce((a,x)=>a+x.score,0)/pWs.length) : null;
+      const cAvg = withScore.length ? pct(withScore.reduce((a,x)=>a+x.score,0)/withScore.length) : null;
       if (pAvg!==null && cAvg!==null){ const d=Math.round(cAvg-pAvg); tileDelta.avg = `<span class="delta ${d>=0?"up":"down"}">${d>0?"▲":"▼"}${Math.abs(d)}%</span>`; }
     }
   }
@@ -942,7 +1101,7 @@ function render(){
       <div class="tile ok click ${state.quick==="ok"?"on":""}" data-q="ok"><div class="n">${withScore.filter(x=>x.verdict==="норма").length}</div><div class="l">нормально${tileDelta.ok||""}</div></div>
       <div class="tile warn click ${state.quick==="warn"?"on":""}" data-q="warn"><div class="n">${withScore.filter(x=>x.verdict==="замечание").length}</div><div class="l">есть замечания${tileDelta.warn||""}</div></div>
       <div class="tile bad click ${state.quick==="crit"?"on":""}" data-q="crit"><div class="n">${withScore.filter(x=>x.verdict==="критично").length}</div><div class="l">критично${tileDelta.bad||""}</div></div>
-      <div class="tile"><div class="n">${withScore.length?Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/8)+"%":"–"}</div><div class="l">средняя оценка</div></div>
+      <div class="tile"><div class="n">${withScore.length?pct(withScore.reduce((a,x)=>a+x.score,0)/withScore.length)+"%":"–"}</div><div class="l">средняя оценка</div></div>
     </div>
     <div class="grid">
       <div class="card"><h2>Топ проблем по категориям</h2><div id="cats"></div></div>
@@ -964,7 +1123,7 @@ function render(){
     withScore.filter(x=>x.verdict==="норма").length,
     withScore.filter(x=>x.verdict==="замечание").length,
     withScore.filter(x=>x.verdict==="критично").length];
-  const avgVal = withScore.length ? Math.round(withScore.reduce((a,x)=>a+x.score,0)/withScore.length*100/8) : null;
+  const avgVal = withScore.length ? pct(withScore.reduce((a,x)=>a+x.score,0)/withScore.length) : null;
   const prevT = state.tileVals || [];
   document.querySelectorAll("#content .tile .n").forEach(function(el, i){
     const isAvg = i === 5;
@@ -1020,7 +1179,7 @@ function render(){
         return ((r.opName||r.opNick||"—")+"/"+(r.model||"—")+": "+r.cats.map((c,j)=>c?CATS[j]+" — "+c:"").filter(Boolean).join("; ") || s.verdict).slice(0, 160);
       }).filter(Boolean).slice(0, 60);
       if (!lines.length){ out.textContent = "🤖 замечаний за период нет"; return; }
-      const res = await aiAsk("weekgroup", { text: lines.join("\n"), ckey: clabel(state.tab) + "|" + (state.week||"latest") + "|" + strHash(lines.join("|")) });
+      const res = await aiAsk("weekgroup", { text: lines.join("\n").slice(0, 10000), ckey: clabel(state.tab) + "|" + (state.week||"latest") + "|" + strHash(lines.join("|")) });
       if (res.error) throw new Error(res.error);
       out.innerHTML = res.groups.map(g=>"<div>• <b>"+esc(g.title)+"</b> — "+esc(g.count)+" шт</div>").join("");
     } catch(e){ out.textContent = "🤖 " + e.message; }
@@ -1030,7 +1189,8 @@ function render(){
     const out = document.getElementById("aideltaout");
     try {
       if (!state.fullLoaded){ out.textContent = "грузим историю недель…"; await ensureFull(); }
-      const wksAll = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+      // C: неделя, которая ещё не началась (создана заранее), в сравнение не попадает
+      const wksAll = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].filter(w=>weekKey(w) - 6*864e5 <= Date.now()).sort((a,b)=>weekKey(a)-weekKey(b));
       const cur = wksAll[wksAll.length-1], prev = wksAll[wksAll.length-2];
       if (!cur){ out.textContent = "нет данных за неделю"; return; }
       if (!prev){ out.innerHTML = '<div class="empty">прошлой недели нет — сравнивать не с чем</div>'; return; }
@@ -1042,7 +1202,7 @@ function render(){
           const ss = rs.map(rowStats).filter(x=>x.score!==null);
           return "компания " + clabel(c) + ": команд " + rs.length + ", проверено " + ss.length +
             ", норма " + ss.filter(x=>x.verdict==="норма").length + ", замечания " + ss.filter(x=>x.verdict==="замечание").length +
-            ", критично " + ss.filter(x=>x.verdict==="критично").length + ", средняя " + (ss.length ? Math.round(ss.reduce((a,x)=>a+x.score,0)/ss.length*100/8)+"%" : "–");
+            ", критично " + ss.filter(x=>x.verdict==="критично").length + ", средняя " + (ss.length ? pct(ss.reduce((a,x)=>a+x.score,0)/ss.length)+"%" : "–");
         };
         parts.push(mk(cur)); parts.push(mk(prev));
       });
@@ -1061,7 +1221,7 @@ function render(){
       // уходят пачками (каждая пачка — свой вызов ИИ), результаты склеиваются
       const lines = rows.map((r,i)=>{
         const t = r.cats.map((c,j)=>c?CATS[j]+": "+c:"").filter(Boolean).join("; ") + (r.obs ? " | " + r.obs : "");
-        return i+"|"+(r.opName||r.opNick||"—")+"/"+(r.model||"—")+" ["+r.city+"]: "+t.slice(0,200);
+        return i+"|"+(r.opName||r.opNick||"—")+"/"+(r.model||"—")+" ["+clabel(r.city)+"]: "+t.slice(0,200);
       });
       const chunks = [];
       let cur = [], curLen = 0;
@@ -1074,7 +1234,7 @@ function render(){
       for (let ci=0; ci<chunks.length; ci++){
         const offset = lines.indexOf(chunks[ci][0]);
         out.textContent = "🤖 ИИ думает… (блок " + (ci+1) + " из " + chunks.length + ", команд всего " + rows.length + ")";
-        const res = await aiAsk("search", { text: state.search.trim() + "\n" + chunks[ci].join("\n"), ckey: strHash(state.search.trim()) + "|" + ci });
+        const res = await aiAsk("search", { text: state.search.trim() + "\n" + chunks[ci].join("\n"), ckey: strHash(state.search.trim() + "\n" + chunks[ci].join("\n")) }); // C: кэш по запросу И данным
         if (res.error) throw new Error(res.error);
         (res.matches || []).forEach(m=>{
           const gi = Number(m.i);
@@ -1098,9 +1258,7 @@ function render(){
     state.search = e.target.value;
     clearTimeout(searchTimer); // перерисовка не на каждый символ, а 200мс после паузы
     searchTimer = setTimeout(()=>{
-      state.page = 1; render();
-      const f2=document.getElementById("f-search");
-      if (f2){ f2.focus(); f2.setSelectionRange(f2.value.length,f2.value.length); }
+      state.page = 1; render(); // C: фокус и позицию каретки сохраняет render() (раньше каретка прыгала в конец)
     }, 200);
   };
 
@@ -1151,11 +1309,17 @@ function render(){
   else if (state.quick==="draft") view = view.filter(x=>draftIsDirty(x.r));
   if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
   view.sort((a,b)=>(a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score));
-  state.lastView = view;
+  // D2/D8/U1: DOM-ключ строки — стабильный id из «лист|ник|модель#строка», а не индекс в отсортированном виде:
+  // после пересортировки/перерисовки кнопки, черновики, ошибки сохранения и ИИ-ответы остаются у СВОЕЙ команды
+  const usedIds = {};
+  view.forEach(x=>{ let id = "k" + strHash(rk(x.r)); while (usedIds[id]) id += "x"; usedIds[id] = 1; x.id = id; });
+  state.lastView = {}; view.forEach(x=>{ state.lastView[x.id] = x; });
+  state.lastViewList = view;
 
   // группы по продюсерам
   const groupsMap = {};
-  view.forEach((x,key)=>{
+  view.forEach((x)=>{
+    const key = x.id;
     const gk = x.r.city+"|"+(x.r.producer||"—");
     if (!groupsMap[gk]) groupsMap[gk] = {city:x.r.city, producer:x.r.producer||"—", items:[], ok:0, warn:0, bad:0, none:0};
     const g = groupsMap[gk];
@@ -1179,6 +1343,7 @@ function render(){
     const open = filterActive || state.grpOpen[g.key];
     const gkeyEsc = esc(g.key);
     const rowsHtml = g.items.map(({x,key})=>{
+      const canEdit = rowEditable(x.r);
       const dr = getDraft(x.r);
       const rowScreens = (state.screens||{})[skey(x.r)] || [];
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
@@ -1201,11 +1366,12 @@ function render(){
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>💡 Рекомендации (их видит команда)</b><textarea id="ed${key}_reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки (одна в строке: «Название = URL»; сохраняются кнопкой «Сохранить»)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc(dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||""))}</textarea></div>
-        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${[0,1,2,3,4,5,6,7,8].map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}</option>`).join("")}</select></div>
+        <div class="f"><b>⭐ Оценка вручную</b><select id="ed${key}_score"><option value="">авто (по тексту)</option>${Array.from({length:MAX_SCORE+1},(_,n)=>n).map(n=>`<option ${((dr&&dr.score!==undefined?dr.score:(x.r.scoreM||""))===String(n))?"selected":""}>${n}</option>`).join("")}</select></div>
         <div class="f"><b>🏷 Вердикт вручную</b><select id="ed${key}_verdict"><option value="">авто (по тексту)</option>${["норма","замечание","критично"].map(v=>`<option ${((dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""))===v)?"selected":""}>${v}</option>`).join("")}</select></div>`;
-      const failInfo = state.failedSaves[key];
-      const failBar = AUTH.edit && failInfo ? `<div class="failbar">⚠ Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
-      const inner = AUTH.edit ? `${failBar}<div class="edit-grid">${editDet}</div>
+      const failInfo = state.failedSaves[rk(x.r)];
+      const failBar = canEdit && failInfo ? `<div class="failbar">⚠ Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
+      const roNote = (AUTH.edit && !canEdit && !viewAsActive()) ? `<div class="editlive">👁 только просмотр: неделя «${esc(x.r.week||"—")}» не открыта для правок${weekPinned()?" (на «все недели»/«месяц» правки отключены)":""} — выбери её в списке недель</div>` : "";
+      const inner = canEdit ? `${failBar}<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие проверки команды</button>
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
@@ -1218,20 +1384,19 @@ function render(){
         <button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">📌 поручить продюсеру</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
         <div class="aibox" id="aibox${key}" style="display:none"></div>`
-        : `<div class="dgrid">${readDet}</div>` +
-          "";
+        : roNote + `<div class="dgrid">${readDet}</div>`;
       const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(clabel(x.r.city))}${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
-      const draftMark = AUTH.edit && dr ? ' <span class="draftmark">черновик</span>' : "";
+      const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
-        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/8</span><div class="sbar"><div class="sfill ${x.s.score>=6?"sf-g":x.s.score>=3?"sf-y":"sf-r"}" style="width:${(x.s.score*100/8).toFixed(1)}%"></div></div></div>`
+        ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/${MAX_SCORE}</span><div class="sbar"><div class="sfill ${scoreFill(x.s.score)}" style="width:${(x.s.score*100/MAX_SCORE).toFixed(1)}%"></div></div></div>`
         : '<span style="color:var(--faint)">–</span>';
-      const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.reco?`<span class="markc" title="есть рекомендации">💡</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/8">⭐</span>`:"") + `</span>`;
+      const marks = `<span class="marks">` + CATS.map((n,j)=>{ const t=(x.r.cats[j]||"").trim(); if(!t) return ""; return `<span class="mark ${x.s.st[j]==="ok"?"markok":"markbad"}" title="${esc(n)}: ${esc(t)}"></span>`; }).join("") + ((x.r.obs||"").trim()?`<span class="markc" title="${esc(x.r.obs)}">💬</span>`:"") + (x.r.reco?`<span class="markc" title="есть рекомендации">💡</span>`:"") + (x.r.scoreM?`<span class="markc" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/${MAX_SCORE}">⭐</span>`:"") + `</span>`;
       const updCell = (()=>{ const u = dueInfo(x.r); if (!u) return '<span style="color:var(--faint);font-size:11.5px">—</span>';
         const nx = String(u.nextDay).padStart(2,"0")+"."+String(u.nextMonth).padStart(2,"0");
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
         return `<div style="white-space:nowrap;font-size:12px"><b style="font-weight:600">${esc((x.r.updated||"").slice(0,11))}</b><div style="font-size:11px;color:var(--dim)">${lab} · след. ${nx}</div></div>`;
       })();
-      return `<tr class="r${state.failedSaves[key]?" savefail":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${AUTH.edit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${AUTH.edit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns"><span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
+      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${canEdit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns"><span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
       <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?9:8}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}" style="border-left:4px solid ${esc(state.colors[g.producer]||"#566070")}">
@@ -1241,12 +1406,12 @@ function render(){
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
         ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(clabel(g.city))}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
-        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" title="добавить мониторинг этому продюсеру" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":""}>＋ мониторинг</button><button class="gbtn delbtn" data-del="${gkeyEsc}" title="удалить команду" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":""}>🗑 удалить</button>`:""}
+        ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":"title=\"добавить мониторинг этому продюсеру (неделя "+esc(openWeekName())+")\""}>＋ мониторинг</button><button class="gbtn delbtn" data-del="${gkeyEsc}" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":"title=\"удалить команду (неделя "+esc(openWeekName())+")\""}>🗑 удалить</button>`:""}
       </div>
       <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Компания</th>":""}<th>Ссылки</th><th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
   }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "")
-    : `<div class="empty">Нет данных по фильтру</div>`;
+    : `<div class="empty">${esc(emptyReason())}</div>`;
 
   document.querySelectorAll(".phead").forEach(h=>h.onclick=()=>{
     state.grpOpen[h.dataset.g] = !state.grpOpen[h.dataset.g];
@@ -1296,10 +1461,10 @@ function render(){
     if (!cur) next = L[0];
     else { const i = L.indexOf(cur); next = (i>=0 && i < L.length-1) ? L[i+1] : (i===-1 ? L[0] : ""); }
     try {
-      const res = await wp({ action:"save", sheet:x.r._sheet, row:String(x.r._row), f1:"status", v1:next });
+      const res = await wp(Object.assign({ action:"save", f1:"status", v1:next }, rowKeyParams(x.r)));
       if (res.error) throw new Error(res.error);
       x.r.status = next;
-      x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")";
+      if (res.stamp) x.r.updated = res.stamp;
       toast(next ? "Статус: "+next : "Статус сброшен");
       render();
     } catch(e){ toast("Ошибка: "+e.message, true); }
@@ -1321,7 +1486,7 @@ function render(){
         cout.style.display = ""; cout.textContent = "🤖 ИИ думает… (подсказка по кадру, не оценка)";
         try {
           const full = im.getAttribute("data-full") || "";
-          const res = await aiAsk("framedraft", { id: (full.split("id=")[1] || full), ckey: "frame|" + (full.split("id=")[1] || full) });
+          const res = await aiAsk("framedraft", { id: driveId(full), ckey: "frame|" + driveId(full) });
           if (res.error) throw new Error(res.error);
           cout.innerHTML = res.issues.map(i2=>"• "+esc(i2)).join("<br>");
         } catch(e){ cout.textContent = "🤖 " + e.message; }
@@ -1330,7 +1495,7 @@ function render(){
       document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
       const full = im.getAttribute("data-full") || "";
-      wp({ action:"thumb", id: (full.split("id=")[1] || full) }).then(res=>{
+      wp({ action:"thumb", id: driveId(full) }).then(res=>{
         if (res.error || !res.d) return;
         document.getElementById("cam-img").src = "data:image/jpeg;base64," + res.d;
       }).catch(()=>{});
@@ -1362,7 +1527,8 @@ function render(){
     ev.stopPropagation();
     const x = state.lastView[b.dataset.rop]; if (!x) return;
     const ov = document.getElementById("opmodal");
-    ov.dataset.key = b.dataset.rop;
+    // D8: модалка держит САМУ строку и её ключ на момент открытия (а не индекс на экране)
+    opTarget = { r: x.r, keys: rowKeyParams(x.r), rk: rk(x.r) };
     document.getElementById("o-who").textContent = (x.r.opName||x.r.opNick||"—")+" · "+clabel(x.r.city)+(x.r.week?" · "+x.r.week:"");
     document.getElementById("o-nick").value = x.r.opNick||"";
     document.getElementById("o-opname").value = x.r.opName||"";
@@ -1373,9 +1539,10 @@ function render(){
   document.querySelectorAll(".rbtn-del").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
     const x = state.lastView[b.dataset.rdel]; if (!x) return;
-    if (!confirm("Удалить мониторинг "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+x.r._sheet+", строка "+x.r._row+")? Действие необратимо.")) return;
+    if (!rowEditable(x.r)){ toast("Удалять можно только в открытой неделе", true); return; }
+    if (!confirm("Удалить мониторинг "+(x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—")+" ("+clabel(x.r.city)+", неделя "+(x.r.week||"—")+", строка "+x.r._row+")? Действие необратимо.")) return;
     try {
-      const res = await wp({ action:"delrow", sheet: x.r._sheet, row: String(x.r._row) });
+      const res = await wp(Object.assign({ action:"delrow" }, rowKeyParams(x.r)));
       if (res.error) throw new Error(res.error);
       toast("✔ Мониторинг удалён");
       setTimeout(load, 600);
@@ -1394,7 +1561,8 @@ function render(){
       const dr = x0 ? getDraft(x0.r) : null;
       if (dr && dr.ts && !dr.__asked){
         dr.__asked = 1;
-        if (confirm("Есть черновик этой проверки от " + draftTime(dr) + " — восстановить его?")){
+        const legacyNote = dr.__legacy ? "\n\nВнимание: черновик сохранён до обновления сайта и привязан только к номеру строки — проверь, что он про ЭТУ команду (" + (x0.r.opName||x0.r.opNick||"—") + " / " + (x0.r.model||"—") + ")." : "";
+        if (confirm("Есть черновик этой проверки от " + draftTime(dr) + " — восстановить его?" + legacyNote)){
           setDraft(x0.r, dr); // оставляем
         } else {
           clearDraft(x0.r); // сбрасываем поля на значения из таблицы
@@ -1426,8 +1594,8 @@ function render(){
     ta.dispatchEvent(new Event("input"));
   });
 
-  document.querySelectorAll(".detail textarea, .detail input").forEach(el=>{
-    el.oninput = function(){
+  document.querySelectorAll(".detail textarea, .detail input, .detail select").forEach(el=>{
+    el.oninput = el.onchange = function(){
       const det = this.closest("tr.detail");
       if (!det) return;
       const x = state.lastView[det.dataset.d]; if (!x) return;
@@ -1447,153 +1615,164 @@ function render(){
       setDraft(x.r, d);
     };
   });
-  view.forEach((x,key)=>{
+  view.forEach((x)=>{
+    const key = x.id;
+    if (!rowEditable(x.r)) return; // строки только для просмотра — без кнопок правки
     const btn = document.getElementById("sv"+key);
     if (btn) btn.onclick = ()=>saveRow(x, key);
     const rt = document.getElementById("retry"+key);
     if (rt) rt.onclick = (ev)=>{
       ev.stopPropagation();
-      const f = state.failedSaves[key]; if (!f) return;
-      delete state.failedSaves[key];
-      const x2 = state.lastView[key]; if (!x2) return;
+      const f = state.failedSaves[rk(x.r)]; if (!f) return;
+      delete state.failedSaves[rk(x.r)];
       toast("Повторяю отправку…");
-      queueRowSave(x2, key, Object.entries(f.fields));
+      queueRowSave(x, key, Object.entries(f.fields));
     };
+    // U1: ИИ-ответ рисуется через aiShow(key, …): после await элементы ищутся ЗАНОВО по стабильному key,
+    // а сам блок переживает перерисовку (state.aiBox). Ничего не сохраняется без «принять»/«заменить».
+    const edVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
     const aiv = document.getElementById("aiv"+key);
     if (aiv) aiv.onclick = async ()=>{
-      const box = document.getElementById("aibox"+key);
-      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        let text = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = el ? el.value.trim() : ""; return v ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 6000);
-        const com = document.getElementById("ed"+key+"_comment"); if (com && com.value.trim()) text += "; доп: " + com.value.trim().slice(0,500);
+        let text = CATS.map((n,j)=>{ const v = edVal("ed"+key+"_"+j); return v ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 6000);
+        const comV = edVal("ed"+key+"_comment"); if (comV) text += "; доп: " + comV.slice(0,500);
         const res = await aiAsk("verdict", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
-        box.innerHTML = "🤖 <b>"+esc(res.verdict)+"</b> — "+esc(res.why)+" <button class=\"abtn2\" id=\"aiok"+key+"\">✅ принять</button> <button class=\"abtn2\" id=\"aino"+key+"\">✕</button>";
-        document.getElementById("aiok"+key).onclick = ()=>{
-          const sel = document.getElementById("ed"+key+"_verdict");
-          if (sel) sel.value = res.verdict; // красится только после «Сохранить»
-          box.innerHTML = "🤖 принято: " + esc(res.verdict) + " — не забудь «Сохранить в таблицу»";
-        };
-        document.getElementById("aino"+key).onclick = ()=>{ box.style.display = "none"; };
-      } catch(e){ box.textContent = "🤖 " + e.message; }
+        aiShow(key, box=>{
+          box.innerHTML = "🤖 <b>"+esc(res.verdict)+"</b> — "+esc(res.why)+" <button class=\"abtn2\" id=\"aiok"+key+"\">✅ принять</button> <button class=\"abtn2\" id=\"aino"+key+"\">✕</button>";
+          document.getElementById("aiok"+key).onclick = ()=>{
+            const sel = document.getElementById("ed"+key+"_verdict");
+            if (sel && ["норма","замечание","критично"].includes(res.verdict)){ sel.value = res.verdict; sel.dispatchEvent(new Event("change", {bubbles:true})); } // красится только после «Сохранить»
+            aiMsg(key, "🤖 принято: " + res.verdict + " — не забудь «Сохранить в таблицу»");
+          };
+          document.getElementById("aino"+key).onclick = ()=>aiHide(key);
+        });
+      } catch(e){ aiMsg(key, "🤖 " + e.message); }
     };
     const aich = document.getElementById("aich"+key);
     if (aich) aich.onclick = async ()=>{
-      const box = document.getElementById("aibox"+key);
-      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        const crit = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = el ? el.value.trim() : ""; return (v && catState(v)==="bad") ? n+": "+v : ""; }).filter(Boolean).join("; ");
-        if (!crit){ box.textContent = "🤖 критичных пунктов в этой проверке нет"; return; }
+        const crit = CATS.map((n,j)=>{ const v = edVal("ed"+key+"_"+j); return (v && catState(v)==="bad") ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 6000);
+        if (!crit){ aiMsg(key, "🤖 критичных пунктов в этой проверке нет"); return; }
         const res = await aiAsk("chekdraft", { text: crit, ckey: skey(x.r) + "|" + strHash(crit) });
         if (res.error) throw new Error(res.error);
         // подтверждение перед записью: показываем, ЧТО будет заменено (старый план не затирается молча)
         const ckey = x.r.city+"|"+(x.r.producer||"");
-        const curPlan = (state.checks||{})[ckey] || "";
-        box.innerHTML = "<div style=\"white-space:pre-wrap\">" + esc(res.text) + "</div>"
-          + "<div style=\"margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;white-space:pre-wrap;font-size:12px;color:var(--dim)\"><b style=\"color:var(--warn)\">Будет заменён текущий «Чек»</b> команды «"+esc(x.r.city+" | "+(x.r.producer||"—"))+"»: " + (curPlan ? esc(curPlan) : "<i>сейчас пусто — просто запишется</i>") + "</div>"
-          + "<div style=\"margin-top:8px\"><button class=\"abtn2\" id=\"aisv"+key+"\">💾 заменить на черновик</button> <button class=\"abtn2\" id=\"aicn"+key+"\">отмена — оставить старый</button></div>";
-        document.getElementById("aisv"+key).onclick = async ()=>{
-          try {
-            const sp = await wp({ action:"setplan", sheet:"Чек", bkey: ckey, plan: res.text });
-            if (sp.error) throw new Error(sp.error);
-            state.checks[ckey] = res.text;
-            box.innerHTML = "✔ Черновик записан в «Чек»";
-            toast("✔ Черновик ИИ записан в «Чек»");
-          } catch(e){ toast("Ошибка: "+e.message, true); }
-        };
-        document.getElementById("aicn"+key).onclick = ()=>{ box.innerHTML = "Отменено — старый «Чек» не тронут"; };
-      } catch(e){ box.textContent = "🤖 " + e.message; }
+        aiShow(key, box=>{
+          const curPlan = (state.checks||{})[ckey] || "";
+          box.innerHTML = "<div style=\"white-space:pre-wrap\">" + esc(res.text) + "</div>"
+            + "<div style=\"margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;white-space:pre-wrap;font-size:12px;color:var(--dim)\"><b style=\"color:var(--warn)\">Будет заменён текущий «Чек»</b> команды «"+esc(clabel(x.r.city)+" | "+(x.r.producer||"—"))+"»: " + (curPlan ? esc(curPlan) : "<i>сейчас пусто — просто запишется</i>") + "</div>"
+            + "<div style=\"margin-top:8px\"><button class=\"abtn2\" id=\"aisv"+key+"\">💾 заменить на черновик</button> <button class=\"abtn2\" id=\"aicn"+key+"\">отмена — оставить старый</button></div>";
+          document.getElementById("aisv"+key).onclick = async (ev)=>{
+            ev.target.disabled = true;
+            try {
+              const sp = await wp({ action:"setplan", sheet:"Чек", bkey: ckey, plan: res.text });
+              if (sp.error) throw new Error(sp.error);
+              state.checks[ckey] = res.text;
+              aiMsg(key, "✔ Черновик записан в «Чек»");
+              toast("✔ Черновик ИИ записан в «Чек»");
+            } catch(e){ ev.target.disabled = false; toast("Ошибка: "+e.message, true); }
+          };
+          document.getElementById("aicn"+key).onclick = ()=>aiMsg(key, "Отменено — старый «Чек» не тронут");
+        });
+      } catch(e){ aiMsg(key, "🤖 " + e.message); }
     };
     // — 🤖 полный разбор (п.13) —
     const aifull = document.getElementById("aifull"+key);
     if (aifull) aifull.onclick = async ()=>{
-      const box = document.getElementById("aibox"+key);
-      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
         const parts = [];
-        CATS.forEach((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = el ? el.value.trim() : ""; if (v) parts.push(n+": "+v); });
-        const com = document.getElementById("ed"+key+"_comment");
-        const oldCom = com ? com.value.trim() : "";
+        CATS.forEach((n,j)=>{ const v = edVal("ed"+key+"_"+j); if (v) parts.push(n+": "+v); });
+        const oldCom = edVal("ed"+key+"_comment");
         if (oldCom) parts.push("Общий комментарий: " + oldCom);
-        const rec = document.getElementById("ed"+key+"_reco"); if (rec && rec.value.trim()) parts.push("Рекомендации: " + rec.value.trim());
+        const recV = edVal("ed"+key+"_reco"); if (recV) parts.push("Рекомендации: " + recV);
         const text = parts.join("\n").slice(0, 8000);
         const res = await aiAsk("fullaudit", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
-        const list = (res.errors||[]).map(e2=>`<div class="drow"><b>❌ ${esc(e2.category||"—")}</b><span>«${esc(e2.quote||"")}» — ${esc(e2.why||"")}<br><span style="color:var(--ok)">исправить: ${esc(e2.fix||"")}</span></span></div>`).join("") || '<div class="empty">Ошибок не нашёл</div>';
-        const newCom = res.general_comment || "";
-        const newComHtml = "<div class=\"drow\"><b>✍️ переписанный комментарий</b><span style=\"white-space:pre-wrap\">" + esc(newCom || "(менять нечего)") + "</span></div>";
-        const oldHtml = "<div class=\"drow\"><b>текущий комментарий</b><span style=\"white-space:pre-wrap;color:var(--dim)\">" + esc(oldCom || "(пусто)") + "</span></div>";
-        box.innerHTML = "<b>🤖 нашёл ошибок: " + (res.errors||[]).length + "</b>" + list + oldHtml + newComHtml +
-          (newCom ? '<button class=\"abtn2\" id=\"aiokc'+key+'\">✅ принять в комментарий</button> <button class=\"abtn2\" id=\"ainoc'+key+'\">отмена</button>' : '');
-        const okc = document.getElementById("aiokc"+key);
-        if (okc) okc.onclick = ()=>{ if (com){ com.value = newCom; com.dispatchEvent(new Event("input", {bubbles:true})); } box.innerHTML = "🤖 принято — не забудь «Сохранить в таблицу»"; };
-        const noc = document.getElementById("ainoc"+key);
-        if (noc) noc.onclick = ()=>{ box.innerHTML = "Отменено — комментарий не тронут"; };
-      } catch(e){ box.textContent = "🤖 " + e.message; }
+        aiShow(key, box=>{
+          const list = (res.errors||[]).map(e2=>`<div class="drow"><b>❌ ${esc(e2.category||"—")}</b><span>«${esc(e2.quote||"")}» — ${esc(e2.why||"")}<br><span style="color:var(--ok)">исправить: ${esc(e2.fix||"")}</span></span></div>`).join("") || '<div class="empty">Ошибок не нашёл</div>';
+          const newCom = res.general_comment || "";
+          const newComHtml = "<div class=\"drow\"><b>✍️ переписанный комментарий</b><span style=\"white-space:pre-wrap\">" + esc(newCom || "(менять нечего)") + "</span></div>";
+          const oldHtml = "<div class=\"drow\"><b>текущий комментарий</b><span style=\"white-space:pre-wrap;color:var(--dim)\">" + esc(oldCom || "(пусто)") + "</span></div>";
+          box.innerHTML = "<b>🤖 нашёл ошибок: " + (res.errors||[]).length + "</b>" + list + oldHtml + newComHtml +
+            (newCom ? '<button class=\"abtn2\" id=\"aiokc'+key+'\">✅ принять в комментарий</button> <button class=\"abtn2\" id=\"ainoc'+key+'\">отмена</button>' : '');
+          const okc = document.getElementById("aiokc"+key);
+          if (okc) okc.onclick = ()=>{ const com = document.getElementById("ed"+key+"_comment"); if (com){ com.value = newCom; com.dispatchEvent(new Event("input", {bubbles:true})); } aiMsg(key, "🤖 принято — не забудь «Сохранить в таблицу»"); };
+          const noc = document.getElementById("ainoc"+key);
+          if (noc) noc.onclick = ()=>aiMsg(key, "Отменено — комментарий не тронут");
+        });
+      } catch(e){ aiMsg(key, "🤖 " + e.message); }
     };
     // — 🤖 сравнить с прошлой неделей (п.14) —
     const aicmp = document.getElementById("aicmp"+key);
     if (aicmp) aicmp.onclick = async ()=>{
-      const box = document.getElementById("aibox"+key);
-      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        if (!state.fullLoaded){ box.textContent = "грузим историю недель…"; await ensureFull(); }
+        if (!state.fullLoaded){ aiMsg(key, "грузим историю недель…"); await ensureFull(); }
         const cur = x.r;
-        const cand = state.rows.filter(r=>r.city===cur.city && (r.opNick||"")===(cur.opNick||"") && (r.model||"")===(cur.model||"") && r.week!==cur.week);
+        // C: «прошлая» — только неделя РАНЬШЕ текущей строки (не будущая)
+        const cand = state.rows.filter(r=>r.city===cur.city && (r.opNick||"")===(cur.opNick||"") && (r.model||"")===(cur.model||"") && r.week!==cur.week && weekKey(r) < weekKey(cur));
         const prev = cand.sort((a,b)=>weekKey(b)-weekKey(a))[0];
-        if (!prev){ box.innerHTML = '<div class="empty">прошлой недели у этой команды нет — сравнивать не с чем</div>'; return; }
+        if (!prev){ aiMsg(key, "прошлой недели у этой команды нет — сравнивать не с чем"); return; }
         const dump = r => CATS.map((n,j)=>{ const v=(r.cats[j]||"").trim(); return v ? n+": "+v : ""; }).filter(Boolean).join("; ") + (r.obs?" | комментарий: "+r.obs:"");
-        const text = ("ПРОШАЯ НЕДЕЛЯ (" + prev.week + "): " + dump(prev) + "\nЭТА НЕДЕЛЯ (" + cur.week + "): " + dump(cur)).slice(0, 8000);
+        const text = ("ПРОШЛАЯ НЕДЕЛЯ (" + prev.week + "): " + dump(prev) + "\nЭТА НЕДЕЛЯ (" + cur.week + "): " + dump(cur)).slice(0, 8000);
         const res = await aiAsk("teamdelta", { text: text, ckey: skey(cur) + "|" + prev.week + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
-        if (res.missing){ box.innerHTML = '<div class="empty">прошлой недели нет — сравнивать не с чем</div>'; return; }
+        if (res.missing){ aiMsg(key, "прошлой недели нет — сравнивать не с чем"); return; }
         const sec = (t, arr) => arr.length ? `<div class="drow"><b>${t}</b><span>${arr.map(z=>"• "+esc(z)).join("<br>")}</span></div>` : "";
-        box.innerHTML = "<b>🤖 " + esc(cur.week) + " против " + esc(prev.week) + "</b>" +
-          sec("🟢 стало лучше", res.better) + sec("🔴 стало хуже", res.worse) + sec("⚪ без изменений", res.same) +
-          '<div style="color:var(--faint);font-size:11px;margin-top:6px">только по данным, ничего не придумано</div>';
-      } catch(e){ box.textContent = "🤖 " + e.message; }
+        aiShow(key, box=>{
+          box.innerHTML = "<b>🤖 " + esc(cur.week) + " против " + esc(prev.week) + "</b>" +
+            sec("🟢 стало лучше", res.better) + sec("🔴 стало хуже", res.worse) + sec("⚪ без изменений", res.same) +
+            '<div style="color:var(--faint);font-size:11px;margin-top:6px">только по данным, ничего не придумано</div>';
+        });
+      } catch(e){ aiMsg(key, "🤖 " + e.message); }
     };
     // — 💬 совет оператору (п.15): показать + копировать, ничего не отправляет —
     const aiodv = document.getElementById("aiodv"+key);
     if (aiodv) aiodv.onclick = async ()=>{
-      const box = document.getElementById("aibox"+key);
-      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        const crit = CATS.map((n,j)=>{ const v = (x.r.cats[j]||"").trim(); return (v && catState(v)==="bad") ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 4000);
-        if (!crit){ box.textContent = "🤖 замечаний по категориям нет — совета не нужно"; return; }
+        // C: совет — по тому, что сейчас в редакторе (включая ещё не сохранённое)
+        const crit = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = String(el ? el.value : (x.r.cats[j]||"")).trim(); return (v && catState(v)==="bad") ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 4000);
+        if (!crit){ aiMsg(key, "🤖 замечаний по категориям нет — совета не нужно"); return; }
         const res = await aiAsk("opadvice", { text: crit, ckey: skey(x.r) + "|" + strHash(crit) });
         if (res.error) throw new Error(res.error);
-        box.innerHTML = "<b>💬 советы оператору</b><ol style=\"margin:6px 0 0 18px\">" + res.tips.map(t=>"<li>"+esc(t)+"</li>").join("") + "</ol>" +
-          '<button class=\"abtn2\" id=\"odvcp'+key+'\">📋 скопировать</button> <span style=\"color:var(--faint);font-size:11px\">ничего не отправляется</span>';
-        document.getElementById("odvcp"+key).onclick = ()=>{
-          const txt = res.tips.map((t,i)=>(i+1)+". "+t).join("\n");
-          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast("📋 Скопировано")).catch(()=>{});
-          else prompt("Скопируй:", txt);
-        };
-      } catch(e){ box.textContent = "🤖 " + e.message; }
+        aiShow(key, box=>{
+          box.innerHTML = "<b>💬 советы оператору</b><ol style=\"margin:6px 0 0 18px\">" + res.tips.map(t=>"<li>"+esc(t)+"</li>").join("") + "</ol>" +
+            '<button class=\"abtn2\" id=\"odvcp'+key+'\">📋 скопировать</button> <span style=\"color:var(--faint);font-size:11px\">ничего не отправляется</span>';
+          document.getElementById("odvcp"+key).onclick = ()=>{
+            const txt = res.tips.map((t,i)=>(i+1)+". "+t).join("\n");
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>toast("📋 Скопировано")).catch(()=>{});
+            else prompt("Скопируй:", txt);
+          };
+        });
+      } catch(e){ aiMsg(key, "🤖 " + e.message); }
     };
     // — 🧐 тон комментария (п.16) —
     const aitone = document.getElementById("aitone"+key);
     if (aitone) aitone.onclick = async ()=>{
-      const box = document.getElementById("aibox"+key);
-      const com = document.getElementById("ed"+key+"_comment");
-      const oldCom = com ? com.value.trim() : "";
-      if (!oldCom){ box.style.display = ""; box.textContent = "🧐 общий комментарий пуст — проверять тон нечего"; return; }
-      box.style.display = ""; box.textContent = "🤖 ИИ думает… (до минуты)";
+      const oldCom = edVal("ed"+key+"_comment");
+      if (!oldCom){ aiMsg(key, "🧐 общий комментарий пуст — проверять тон нечего"); return; }
+      aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        const catsTxt = CATS.map((n,j)=>{ const v=(x.r.cats[j]||"").trim(); return v ? n+" — "+v : ""; }).filter(Boolean).join("; ").slice(0,3000);
+        const catsTxt = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = String(el ? el.value : (x.r.cats[j]||"")).trim(); return v ? n+" — "+v : ""; }).filter(Boolean).join("; ").slice(0,3000);
         const text = ("КОММЕНТАРИЙ: " + oldCom + "\nКАТЕГОРИИ: " + catsTxt).slice(0, 8000);
         const res = await aiAsk("tonecheck", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
-        const list = (res.issues||[]).map(i2=>`<div class="drow"><b>⚠ ${esc(i2.quote||"")}</b><span>${esc(i2.why||"")}<br><span style="color:var(--ok)">вариант: ${esc(i2.suggestion||"")}</span></span></div>`).join("") || '<div class="empty">Тон в порядке — проблем не нашёл</div>';
-        const rw = res.rewritten || "";
-        box.innerHTML = "<b>🧐 тон комментария</b>" + list +
-          (rw ? '<div class="drow"><b>✍️ переписанный целиком</b><span style="white-space:pre-wrap">' + esc(rw) + '</span></div><button class="abtn2" id="toneok'+key+'">✅ принять в комментарий</button> <button class="abtn2" id="toneno'+key+'">отмена</button>' : '');
-        const tok = document.getElementById("toneok"+key);
-        if (tok) tok.onclick = ()=>{ if (com && rw){ com.value = rw; com.dispatchEvent(new Event("input", {bubbles:true})); } box.innerHTML = "🧐 принято — не забудь «Сохранить в таблицу»"; };
-        const tno = document.getElementById("toneno"+key);
-        if (tno) tno.onclick = ()=>{ box.innerHTML = "Отменено — комментарий не тронут"; };
-      } catch(e){ box.textContent = "🤖 " + e.message; }
+        aiShow(key, box=>{
+          const list = (res.issues||[]).map(i2=>`<div class="drow"><b>⚠ ${esc(i2.quote||"")}</b><span>${esc(i2.why||"")}<br><span style="color:var(--ok)">вариант: ${esc(i2.suggestion||"")}</span></span></div>`).join("") || '<div class="empty">Тон в порядке — проблем не нашёл</div>';
+          const rw = res.rewritten || "";
+          box.innerHTML = "<b>🧐 тон комментария</b>" + list +
+            (rw ? '<div class="drow"><b>✍️ переписанный целиком</b><span style="white-space:pre-wrap">' + esc(rw) + '</span></div><button class="abtn2" id="toneok'+key+'">✅ принять в комментарий</button> <button class="abtn2" id="toneno'+key+'">отмена</button>' : '');
+          const tok = document.getElementById("toneok"+key);
+          if (tok) tok.onclick = ()=>{ const com = document.getElementById("ed"+key+"_comment"); if (com && rw){ com.value = rw; com.dispatchEvent(new Event("input", {bubbles:true})); } aiMsg(key, "🧐 принято — не забудь «Сохранить в таблицу»"); };
+          const tno = document.getElementById("toneno"+key);
+          if (tno) tno.onclick = ()=>aiMsg(key, "Отменено — комментарий не тронут");
+        });
+      } catch(e){ aiMsg(key, "🤖 " + e.message); }
     };
     // — 📌 поручить продюсеру (п.11) —
     const tsk = document.getElementById("tsk"+key);
@@ -1605,11 +1784,11 @@ function render(){
       document.getElementById("tk-text").dataset.nick = x.r.opNick || "";
       document.getElementById("tk-text").dataset.model = x.r.model || "";
       document.getElementById("tk-text").dataset.producer = x.r.producer || "";
-      const lt = (state.tasks||[]).filter(t=>t.sheet===x.r._sheet && t.nick===x.r.opNick && t.model===x.r.model);
-      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")} · от ${esc(t.from||"—")}</b><span>${esc(t.text)}${t.status==="сделана"?" <button class=\"qbtn tk-reopen\" data-row=\""+t.row+"\" title=\"вернуть в работу\">вернуть в работу</button>":""}</span></div>`).join("") : "";
+      const lt = (state.tasks||[]).filter(t=>t.key===skey(x.r));
+      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")} · от ${esc(t.from||"—")}</b><span>${esc(t.text)}${t.status==="сделана"?" <button class=\"qbtn tk-reopen\" data-row=\""+t.row+"\" data-tkey=\""+esc(t.key)+"\" title=\"вернуть в работу\">вернуть в работу</button>":""}</span></div>`).join("") : "";
       document.querySelectorAll(".tk-reopen").forEach(b2=>b2.onclick=async (ev)=>{
         ev.stopPropagation();
-        try { const r2 = await wp({ action:"taskreopen", row: b2.dataset.row }); if (r2.error) throw new Error(r2.error); toast("↩ Вернул в работу"); setTimeout(load, 600); } catch(e2){ toast("Ошибка: "+e2.message, true); }
+        try { const r2 = await wp({ action:"taskreopen", row: b2.dataset.row, tkey: b2.dataset.tkey }); if (r2.error) throw new Error(r2.error); toast("↩ Вернул в работу"); setTimeout(load, 600); } catch(e2){ toast("Ошибка: "+e2.message, true); }
       });
       openModal("taskmodal");
     };
@@ -1618,9 +1797,9 @@ function render(){
     const tc = document.getElementById("tc"+key);
     if (tc) tc.onclick = async ()=>{
       try {
-        const res = await wp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
+        const res = await wp(Object.assign({ action:"touch" }, rowKeyParams(x.r)));
         if (res.error) throw new Error(res.error);
-        x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
+        x.r.updated = res.stamp || x.r.updated;
         toast("✔ Отмечено проверенной сегодня");
         render();
       } catch(e){ toast("Ошибка: " + e.message, true); }
@@ -1669,9 +1848,9 @@ function renderOperators(rows, st){
       ${ops.length ? `<table><thead><tr><th>Оператор</th><th>Ник CB</th><th>Проверок</th><th>Средняя оценка</th><th>Тренд</th><th>Критичных</th><th>Компании</th><th>Продюсеры</th></tr></thead><tbody>${
         ops.map((o,i)=>{
           const nick = o.rows.find(x=>x.r.opNick);
-          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?Math.round(o.avg*100/8)+"% ("+o.avg.toFixed(1)+"/8)":"–"}</td>
-          <td>${(()=>{ const pts=o.perWeek.map((v,i)=>{ if(v===null) return null; const x=8+i*(62/Math.max(1,o.perWeek.length-1||1)); const y=20-v*2.2; return x+","+y.toFixed(1); }).filter(Boolean); const arrow = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═"; const ac = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)"; return pts.length>1?`<svg class="spark" width="70" height="22"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg> <span style="color:${ac}">${arrow}</span>`:`<span style="color:var(--faint)">—</span>`; })()}</td>
-          <td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>c==="Новосибирск"?"НСК":c).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
+          return `<tr class="op" data-i="${i}"><td style="font-weight:600">${esc(o.name)} <button class="qbtn" data-opgo="${esc(o.name)}" title="показать все проверки оператора">🔎</button></td><td style="color:var(--faint)">${esc(nick?nick.r.opNick:"")}</td><td>${o.checks}</td><td class="${o.avg!==null?scoreCls(o.avg):""}">${o.avg!==null?pct(o.avg)+"% ("+o.avg.toFixed(1)+"/"+MAX_SCORE+")":"–"}</td>
+          <td>${(()=>{ const pts=o.perWeek.map((v,i)=>{ if(v===null) return null; const x=8+i*(62/Math.max(1,o.perWeek.length-1||1)); const y=20-v*(18/MAX_SCORE); return x+","+y.toFixed(1); }).filter(Boolean); const arrow = o.trend>0.2?"▲":o.trend<-0.2?"▼":"═"; const ac = o.trend>0.2?"var(--ok)":o.trend<-0.2?"var(--bad)":"var(--faint)"; return pts.length>1?`<svg class="spark" width="70" height="22"><polyline points="${pts.join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"></polyline></svg> <span style="color:${ac}">${arrow}</span>`:`<span style="color:var(--faint)">—</span>`; })()}</td>
+          <td>${o.crit>0?`<span style="color:var(--bad);font-weight:700">${o.crit}</span>`:"0"}</td><td style="color:var(--dim)">${o.cities.map(c=>esc(clabel(c))).join(", ")}</td><td style="color:var(--dim)">${o.prods.map(esc).join(", ")}</td></tr>
           <tr class="opdet" data-o="${i}" style="display:none"><td colspan="8"><div style="padding:10px 6px">${
             o.rows.map(x=>`<div class="drow"><b${x.s.score!==null?(x.s.score===o.best?' style="color:var(--ok)"':(x.s.score===o.worst&&o.best!==o.worst?' style="color:var(--bad)"':"")):""}>${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")} · ${esc(x.r.city)} · ${x.s.verdict?(VLBL[x.s.verdict]||x.s.verdict):"не проверено"}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
           }</div></td></tr>`;
@@ -1708,7 +1887,7 @@ function renderSchedule(){
   const map = {};
   state.rows.forEach(function(r){
     if (!(r.opName||r.opNick||r.model)) return;
-    const key = r.city+"|"+(r.opName||r.opNick||"").toLowerCase()+"|"+(r.model||"").toLowerCase();
+    const key = teamKey(r);
     const prev = map[key];
     if (!prev){ map[key] = r; return; }
     const a = parseUpd(r.updated), b = parseUpd(prev.updated);
@@ -1787,8 +1966,8 @@ function renderSchedule(){
     let ok=0;
     for (const x of list){
       try {
-        const res = await wp({ action:"touch", sheet: x.r._sheet, row: String(x.r._row) });
-        if (!res.error){ ok++; x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; }
+        const res = await wp(Object.assign({ action:"touch" }, rowKeyParams(x.r)));
+        if (!res.error){ ok++; if (res.stamp) x.r.updated = res.stamp; }
       } catch(e){}
     }
     toast(ok===list.length ? "✔ Отмечено: "+ok+" команд" : "Отмечено "+ok+" из "+list.length, ok!==list.length);
@@ -1800,7 +1979,11 @@ function renderSchedule(){
     if (!confirm("Отметить проверенными сегодня все команды продюсера ("+rows.length+" шт)?")) return;
     let ok=0;
     for (const r of rows){
-      try{ const res=await wp({action:"touch", sheet:r[0], row:r[1]}); if(!res.error){ ok++; const rr=state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if(rr) rr.updated = new Date().toLocaleDateString("ru-RU").slice(0,5)+" "+new Date().toLocaleTimeString("ru-RU").slice(0,5)+" ("+(AUTH.name||AUTH.user)+")"; } }catch(e){}
+      try{
+        const rr = state.rows.find(x=>x._sheet===r[0]&&String(x._row)===r[1]); if (!rr) continue;
+        const res = await wp(Object.assign({ action:"touch" }, rowKeyParams(rr)));
+        if (!res.error){ ok++; if (res.stamp) rr.updated = res.stamp; }
+      }catch(e){}
     }
     toast(ok===rows.length?"✔ Отмечено: "+ok:"Отмечено "+ok+" из "+rows.length, ok!==rows.length);
     renderSchedule();
@@ -1813,10 +1996,11 @@ function renderSchedule(){
     ev.stopPropagation();
     const parts = b.dataset.schTouch.split("|");
     try {
-      const res = await wp({ action:"touch", sheet: parts[0], row: parts[1] });
-      if (res.error) throw new Error(res.error);
       const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
-      if (r) r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
+      if (!r) throw new Error("строка не найдена — обнови данные");
+      const res = await wp(Object.assign({ action:"touch" }, rowKeyParams(r)));
+      if (res.error) throw new Error(res.error);
+      if (res.stamp) r.updated = res.stamp;
       toast("✔ Отмечено проверенной сегодня — следующая перепроверка через 7 дней");
       renderSchedule();
     } catch(e){ toast("Ошибка: " + e.message, true); }
@@ -1872,8 +2056,9 @@ function gotoRow(goto){
   // прыжок к строке: ждём завершения рендера (может занять больше 60мс)
   let jumpTries = 0;
   (function jump(){
-    const idx = state.lastView.findIndex(x=>x.r._sheet===r._sheet && String(x.r._row)===String(r._row));
-    if (idx < 0){ if (++jumpTries < 20) setTimeout(jump, 60); return; }
+    const hit = (state.lastViewList||[]).find(x=>x.r._sheet===r._sheet && String(x.r._row)===String(r._row));
+    if (!hit){ if (++jumpTries < 20) setTimeout(jump, 60); return; }
+    const idx = hit.id;
     const det = document.querySelector(`tr.detail[data-d="${idx}"]`);
     const rowTr = document.querySelector(`tr.r[data-i="${idx}"]`);
     if (det) det.classList.add("open");
@@ -1905,7 +2090,7 @@ function renderSummary(rows, st){
   const mx = Math.max(1,...topCats.map(x=>x.c));
   const gm = {};
   allR.forEach((r,i)=>{
-    const k = r.city+"|"+((r.opName||r.opNick||"")+"|"+(r.model||"")).toLowerCase(); // команда, а не строка недели
+    const k = teamKey(r); // команда, а не строка недели
     if (!gm[k]) gm[k] = {city:r.city, producer:r.producer||"—", tot:0, none:0};
     gm[k].tot++; if (allS[i].score===null) gm[k].none++;
   });
@@ -1918,7 +2103,7 @@ function renderSummary(rows, st){
         const valid = pts.filter(x=>x.avg!==null);
         if (!valid.length) return '<div class="empty">Нет проверенных команд</div>';
         const xs = i => valid.length>1 ? P + i*((W-2*P)/(valid.length-1)) : W/2;
-        const ys = v => (H-20-v*11).toFixed(1);
+        const ys = v => (H-20-v*((H-34)/MAX_SCORE)).toFixed(1);
         const pl = valid.map((p,i)=>xs(i).toFixed(1)+","+ys(p.avg)).join(" ");
         return '<svg width="'+W+'" height="'+H+'" style="max-width:100%">' +
           '<polyline points="'+pl+'" fill="none" stroke="var(--accent)" stroke-width="2"/>' +
@@ -1926,7 +2111,7 @@ function renderSummary(rows, st){
           '</svg>';
       })()}</div>
       <div class="card" style="grid-column:1/-1"><h2>Динамика компаний по неделям</h2>
-        ${dyn.length?`<table><thead><tr><th>Неделя</th>${cities.map(c=>`<th>${c==="Новосибирск"?"НСК":c}</th>`).join("")}</tr></thead><tbody>${
+        ${dyn.length?`<table><thead><tr><th>Неделя</th>${cities.map(c=>`<th>${esc(clabel(c))}</th>`).join("")}</tr></thead><tbody>${
           dyn.map(d=>`<tr><td style="font-weight:600">${esc(d.w)}</td>${d.cells.map(x=>`<td ${x.tot?`data-cw="${esc(d.w)}" data-cc="${esc(x.c)}" style="cursor:pointer"`:""}>${x.tot?`<span style="color:var(--ok)">${x.ok}</span> / <span style="color:var(--warn)">${x.warn}</span> / <span style="color:var(--bad)">${x.bad}</span> <span style="color:var(--faint);font-size:11px">(${x.checked}/${x.tot} пров.)</span>`:'<span style="color:var(--faint)">—</span>'}</td>`).join("")}</tr>`).join("")
         }</tbody></table>
         <div style="color:var(--faint);font-size:11.5px;margin-top:8px">формат ячейки: нормально / есть замечания / критично (проверено/всего)</div>`
@@ -1946,8 +2131,9 @@ function renderSummary(rows, st){
 function renderMyTasks(){
   document.getElementById("pbar").innerHTML = "";
   const list = (state.tasks||[]).slice();
-  const open = list.filter(t=>t.status!=="сделана");
-  const done = list.filter(t=>t.status==="сделана").sort((a,b)=>String(b.done).localeCompare(String(a.done)));
+  const tms = s => { const d = parseUpd(s); return d ? d.getTime() : 0; }; // C: сортировка по дате, а не по строке «дд.мм»
+  const open = list.filter(t=>t.status!=="сделана").sort((a,b)=>tms(b.when)-tms(a.when));
+  const done = list.filter(t=>t.status==="сделана").sort((a,b)=>tms(b.done)-tms(a.done));
   const rowHtml = t=>`<div class="card" style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
       <b>${esc(t.nick||"—")} / ${esc(t.model||"—")}</b>
@@ -1957,8 +2143,8 @@ function renderMyTasks(){
     <div style="white-space:pre-wrap;font-size:13px;margin:4px 0 8px">${esc(t.text)}</div>
     <div style="color:var(--faint);font-size:11.5px">от ${esc(t.from||"—")} · ${esc(t.when||"")}</div>
     <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-      ${t.status!=="сделана"?`<button class="abtn2 tk-done" data-row="${t.row}">✅ сделано</button>`:""}
-      ${AUTH.edit&&t.status==="сделана"?`<button class="abtn2 tk-re" data-row="${t.row}">↩ вернуть в работу</button>`:""}
+      ${t.status!=="сделана"?`<button class="abtn2 tk-done" data-row="${t.row}" data-tkey="${esc(t.key||"")}">✅ сделано</button>`:""}
+      ${AUTH.edit&&t.status==="сделана"?`<button class="abtn2 tk-re" data-row="${t.row}" data-tkey="${esc(t.key||"")}">↩ вернуть в работу</button>`:""}
     </div>
   </div>`;
   document.getElementById("content").innerHTML = `
@@ -1968,12 +2154,12 @@ function renderMyTasks(){
     ${done.length?`<div class="rsect" style="margin-top:14px">сделанные</div>` + done.map(rowHtml).join(""):""}`;
   document.querySelectorAll(".tk-done").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
-    try { const r = await wp({ action:"taskdone", row: b.dataset.row }); if (r.error) throw new Error(r.error); toast("✅ Отмечено сделанным"); setTimeout(load, 500); }
+    try { const r = await wp({ action:"taskdone", row: b.dataset.row, tkey: b.dataset.tkey }); if (r.error) throw new Error(r.error); toast("✅ Отмечено сделанным"); setTimeout(load, 500); }
     catch(e){ toast("Ошибка: "+e.message, true); }
   });
   document.querySelectorAll(".tk-re").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
-    try { const r = await wp({ action:"taskreopen", row: b.dataset.row }); if (r.error) throw new Error(r.error); toast("↩ Вернул в работу"); setTimeout(load, 500); }
+    try { const r = await wp({ action:"taskreopen", row: b.dataset.row, tkey: b.dataset.tkey }); if (r.error) throw new Error(r.error); toast("↩ Вернул в работу"); setTimeout(load, 500); }
     catch(e){ toast("Ошибка: "+e.message, true); }
   });
 }
@@ -2019,7 +2205,7 @@ function renderNotes(kind){
     return `<div class="card" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="cdot" style="background:${esc(col)}"></span><b>${esc(r.producer)}</b><span style="color:var(--faint);font-size:11.5px">${esc(clabel(r.city))}</span></div>
       ${AUTH.edit
-        ? `<textarea id="${nid}" style="width:100%;min-height:120px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="${kind==="check"?"план повышения чека для команды…":"общие рекомендации для команды…"}">${esc(val)}</textarea>
+        ? `<textarea id="${nid}" data-orig="${esc(val)}" style="width:100%;min-height:120px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="${kind==="check"?"план повышения чека для команды…":"общие рекомендации для команды…"}">${esc(val)}</textarea>
            <button class="abtn2 notebtn" data-nid="${nid}" data-sheet="${sheetName}" data-key="${esc(key)}" data-kind="${kind}" style="margin-top:6px">💾 Сохранить</button>`
         : (val ? `<div style="white-space:pre-wrap;font-size:13px;margin-top:8px">${esc(val)}</div>` : `<div class="empty">Пока пусто</div>`)}
     </div>`;
@@ -2033,6 +2219,7 @@ function renderNotes(kind){
       const res = await wp({ action:"setplan", sheet: b.dataset.sheet, bkey: b.dataset.key, plan: ta.value });
       if (res.error) throw new Error(res.error);
       store[b.dataset.key] = ta.value;
+      ta.dataset.orig = ta.value; // больше не «несохранённое»: обновление данных его не перетрёт и не спросит при уходе
       toast("✔ Сохранено: " + b.dataset.key.split("|")[1]);
     } catch(e){ toast("Ошибка: "+e.message, true); }
     b.disabled = false;
@@ -2047,7 +2234,7 @@ function renderCompare(rows, st){
   const b = state.cmpB || weeks[weeks.length-1];
   const teamsOf = w=>{ // уникальные команды недели, а не строки-копии
     const seen = {};
-    rows.forEach(r=>{ if (r.week!==w) return; const k=(r.opName||r.opNick||"")+"|"+(r.model||"").toLowerCase(); seen[k]=r; });
+    rows.forEach(r=>{ if (r.week!==w) return; const k=teamKey(r); seen[k]=r; }); // D: с городом — одноимённые команды разных компаний не склеиваются
     return Object.values(seen);
   };
   const agg = w=>{
@@ -2084,8 +2271,8 @@ function renderCompare(rows, st){
         const good = (d===null || d===0 || !m[3]) ? null : (m[3]>0 ? d>0 : d<0);
         const dc = good===null ? "var(--faint)" : (good ? "var(--ok)" : "var(--bad)");
         const ar = d===null ? "" : (d>0?"▲":d<0?"▼":"—");
-        const disp = v => m[6]==="pct" ? (v===null?"–":Math.round(v*100/8)+"%") : fmt(v);
-        const show = d===null ? "–" : (m[6]==="pct" ? ar+Math.abs(Math.round(d*100/8))+"%" : ar+Math.abs(d));
+        const disp = v => m[6]==="pct" ? (v===null?"–":pct(v)+"%") : fmt(v);
+        const show = d===null ? "–" : (m[6]==="pct" ? ar+Math.abs(pct(d))+"%" : ar+Math.abs(d));
         return `<tr><td>${m[0]}</td><td>${disp(m[1])}${m[4]?miniBar(m[4]):""}</td><td>${disp(m[2])}${m[5]?miniBar(m[5]):""}</td><td style="color:${dc};font-weight:600">${show}</td></tr>`;
       }).join("")}
       </tbody></table>
@@ -2099,67 +2286,34 @@ function renderCompare(rows, st){
 }
 
 async function dupRow(x, key){
+  if (!rowEditable(x.r)){ toast("Копировать можно только в открытой неделе", true); return; }
   const targets = state.rows.filter(r=>r._sheet===x.r._sheet && r.producer===x.r.producer && r.model===x.r.model && r._row!==x.r._row
     && (x.r.opNick ? r.opNick===x.r.opNick : (r.opNick===x.r.opNick && r.opName===x.r.opName))); // та же модель; пустой ник не захватывает блок
   if (!targets.length){ toast("У этой команды нет других проверок на неделе", true); return; }
+  // B: копируем то, что СЕЙЧАС в редакторе (включая ещё не сохранённое), а не старое значение из таблицы
+  const vals = [];
+  for (let j=0;j<9;j++){ const el = document.getElementById("ed"+key+"_"+j); vals.push(String(el ? el.value : (x.r.cats[j]||"")).trim()); }
+  if (!vals.some(Boolean)){ toast("В этой проверке нет замечаний для копирования", true); return; }
   if (!confirm("Скопировать замечания на " + targets.length + " других проверок команды?")) return;
-  let done = 0, fb = 0;
+  let done = 0; const errs = [];
   for (const t of targets){
-    const params = { action:"save", sheet:t._sheet, row:String(t._row) };
+    const params = Object.assign({ action:"save" }, rowKeyParams(t));
     let n = 1;
     for (let j=0;j<9;j++){
-      const v = (x.r.cats[j]||"").trim();
-      if (!v) continue;
-      params["f"+n] = FIELDCODES[j]; params["v"+n] = v; n++;
+      if (!vals[j]) continue;
+      params["f"+n] = FIELDCODES[j]; params["v"+n] = vals[j]; n++;
     }
     try {
-      let res = null;
-      try { res = await wp(params); if (res.error) throw new Error(res.error); }
-      catch(e1){
-        if (String(e1.message).indexOf("прав") >= 0) throw e1;
-        await writePOST(Object.assign({ action:"save" }, params));
-        fb++;
-      }
+      const res = await wp(params);
+      if (res.error) throw new Error(res.error);
+      for (let j=0;j<9;j++) if (vals[j]) t.cats[j] = vals[j];
+      if (res.stamp) t.updated = res.stamp;
       done++;
-    } catch(e){}
+    } catch(e){ errs.push(e.message); }
   }
-  toast("✔ Скопировано в " + done + " проверок" + (fb ? " (резервный канал — без подтверждения)" : ""));
+  toast("✔ Скопировано в " + done + " из " + targets.length + " проверок" + (errs.length ? " · ошибки: " + errs[0] : ""), !!errs.length);
+  softRender();
   setTimeout(load, 800);
-}
-
-function jsonp(params, _retry, timeoutMs){
-  return new Promise((resolve,reject)=>{
-    // авторизация — только токен сессии: пароль в адресе запроса не ходит никогда
-    params = Object.assign({}, params);
-    if (AUTH.token) params.token = AUTH.token;
-    const cb="__dashcb_"+Math.random().toString(36).slice(2);
-    let done=false, s=null;
-    window[cb]=d=>{ if(done) return; done=true; resolve(d); cleanup(); };
-    const q = new URLSearchParams(params);
-    q.set("callback", cb);
-    s=document.createElement("script");
-    s.src=CONFIG.API_URL+"?"+q.toString();
-    s.onerror=()=>{ if(done) return; done=true; cleanup(); retryOrReject("JSONP_FAIL"); };
-    const to=setTimeout(()=>{ if(done) return; done=true; cleanup(); retryOrReject("таймаут"); }, timeoutMs || 20000);
-    function cleanup(){ clearTimeout(to); delete window[cb]; if (s) s.remove(); }
-    // Apps Script иногда отвечает дольше 10с на холодном старте — один автоповтор
-    function retryOrReject(kind){
-      // add и delrow НЕ ретраятся: повтор после таймаута может создать дубль
-      // или удалить уже другую строку (строки ниже сдвигаются после удаления)
-      const a = String(params.action || "");
-      const noRetry = (a === "add" || a === "delrow");
-      if (!_retry && !noRetry){ wp(params, true, timeoutMs).then(resolve, reject); return; }
-      reject(new Error(kind==="JSONP_FAIL" ? "JSONP_FAIL" : noRetry ? "нет ответа от таблицы — операция могла выполниться" : "нет ответа от таблицы (таймаут)"));
-    }
-    document.head.appendChild(s);
-  });
-}
-async function writePOST(params){
-  const j = await fetch(CONFIG.API_URL, { method:"POST",
-    headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ token:AUTH.token }, params)) }).then(r=>r.json());
-  if (j && j.error) throw new Error(j.error);
-  return j;
 }
 
 function normLinks(text){
@@ -2189,24 +2343,28 @@ function normLinks(text){
 }
 // «Обновлено» хранится как «dd.MM HH:mm (кто)» — на экране показываем только дату и время
 // конец недели «дд-дд.мм» / «дд.мм-дд.мм» → дата (для сортировки и «месяца»)
+// год можно указать явно: «28.12-03.01.27»; без года — ближайший, не дальше 45 дней в будущее
 function weekEndDate(w){
-  const m = String(w||"").match(/(\d{1,2})(?:\.(\d{1,2}))?-(\d{1,2})\.(\d{1,2})/);
+  const m = String(w||"").match(/(\d{1,2})(?:\.(\d{1,2}))?-(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?/);
   if (!m) return null;
+  if (m[5]){ let y = +m[5]; if (y < 100) y += 2000; return new Date(y, +m[4]-1, +m[3]); }
   const d = new Date(new Date().getFullYear(), +m[4]-1, +m[3]);
-  if (d - new Date() > 200*864e5) d.setFullYear(d.getFullYear()-1); // декабрь → январь
+  if (d - new Date() > 45*864e5) d.setFullYear(d.getFullYear()-1); // декабрь → январь; «прошлая» неделя не уезжает в будущее
   return d;
 }
-function weekKey(w){ const d = weekEndDate(w); return d ? d.getTime() : 0; }
+function weekKey(w){ if (w && typeof w === "object") w = w.week; const d = weekEndDate(w); return d ? d.getTime() : 0; }
 function weekInCurrentMonth(w){
   const d = weekEndDate(w);
   if (!d) return true;
   const now = new Date();
   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 }
-function fmtUpd(s){ return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim(); }
+function fmtUpd(s){ // без «(кто)»; год текущего года не показываем
+  return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim()
+    .replace(/^(\d{1,2}\.\d{1,2})\.(\d{4})/, (m0,a,y)=> +y === new Date().getFullYear() ? a : a + "." + y.slice(2));
+}
 const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-// ЕДИНАЯ POST-очередь для ВСЕГО: токен в теле (не в адресе), ответ забирается одноразовым опросом aipoll.
-// jsonp остался только для authpoll/aipoll — там нет токена.
+// Все запросы — POST с токеном в теле (никогда в адресе).
 // Apps Script/Google echo иногда отдаёт сырые переводы строк ВНУТРИ JSON-строк
 // (многострочный текст в ячейках) — строгий JSON.parse падает. Чиним перед разбором:
 // выход JSON.stringify компактный, поэтому ЛЮБОЙ сырой перевод строки — внутри строки.
@@ -2216,57 +2374,108 @@ function safeJsonParse(t){
     .replace(/\n/g, "\\n")
     .replace(/\t/g, "\\t"));
 }
-// v36: ЕДИНЫЙ транспорт — обычный POST с читаемым ответом (диагностика показала,
-// что прямой POST работает всегда; no-cors+poll из-за него убраны)
-function wp(params, timeoutMs){
+// ЕДИНЫЙ транспорт: обычный POST, ответ читается как текст и разбирается здесь.
+// U11: вместо JSON пришла HTML-страница (сбой/вход Google) — понятная русская ошибка, а не «Unexpected token <».
+function parseServerText(t){
+  const s = String(t == null ? "" : t).trim();
+  if (!s) throw new Error("сервер вернул пустой ответ — попробуй ещё раз");
+  if (s[0] === "<"){
+    if (/accounts\.google|ServiceLogin|signin/i.test(s)) throw new Error("сервер Google просит вход — скрипт опубликован не для всех (сообщи администратору)");
+    throw new Error("сервер вернул страницу вместо данных (сбой Google Apps Script) — подожди минуту и обнови страницу");
+  }
+  try { return JSON.parse(s); }
+  catch(e){ try { return safeJsonParse(s); } catch(e2){ throw new Error("ответ сервера не читается — обнови страницу (Ctrl+F5)"); } }
+}
+// сетевые сбои и таймауты — по-русски (C: «Failed to fetch» / AbortError больше не показываются как есть)
+function netErr(e, timeoutMs){
+  const m = String(e && e.message || e || "");
+  if (e && e.name === "AbortError") return new Error("сервер не ответил за " + Math.round((timeoutMs || 30000) / 1000) + " с — операция могла выполниться, проверь через минуту");
+  if (/Failed to fetch|NetworkError|Load failed|network error|ERR_/i.test(m)) return new Error("нет связи с сервером — проверь интернет и попробуй ещё раз");
+  return (e instanceof Error) ? e : new Error(m);
+}
+function postJSON(body, timeoutMs){
+  const ms = timeoutMs || 30000;
   const ctl = ("AbortController" in window) ? new AbortController() : null;
-  const to = ctl ? setTimeout(()=>ctl.abort(), timeoutMs || 30000) : null;
-  const req = "w" + Date.now().toString(36) + Math.random().toString(36).slice(2);
-  const pp = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); // одноразовый ключ ответа
+  const to = ctl ? setTimeout(()=>ctl.abort(), ms) : null;
   return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({}, params, { req: req, pp: pp, token: AUTH.token })),
-      signal: ctl ? ctl.signal : undefined })
+      body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
     .then(r => r.text())
-    .then(t => safeJsonParse(t))
-    .then(j => { if (j && j.error) throw new Error(j.error); return j; })
+    .then(parseServerText)
+    .catch(e => { throw netErr(e, ms); })
     .finally(() => { if (to) clearTimeout(to); });
+}
+// действия, меняющие таблицу: в режиме «глазами» они запрещены (там чужие права и отфильтрованные данные)
+const WRITE_ACTIONS_FE = ["upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen"];
+let sessionGone = false;
+function sessionExpired(){ // C: сессия истекла/погашена — сразу окно входа (черновики остаются в браузере)
+  if (sessionGone) return; sessionGone = true;
+  const keepUser = AUTH.user;
+  AUTH.clear();
+  try{ sessionStorage.removeItem("dash_cache"); }catch(e){}
+  showGate();
+  try { document.getElementById("l-user").value = keepUser || ""; document.getElementById("l-msg").textContent = "Сессия истекла — войди снова (несохранённые черновики остались в этом браузере)"; } catch(e){}
+  setTimeout(()=>{ sessionGone = false; }, 3000);
+}
+function wp(params, timeoutMs){
+  const a = String(params && params.action || "");
+  if (viewAsActive() && WRITE_ACTIONS_FE.indexOf(a) >= 0) return Promise.reject(new Error("в режиме «глазами …» изменения отключены — выйди из режима"));
+  return postJSON(Object.assign({}, params, { token: AUTH.token }), timeoutMs)
+    .then(j => {
+      if (j && j.error){
+        if (/требуется вход/.test(j.error) && a !== "logout") sessionExpired();
+        throw new Error(j.error);
+      }
+      return j;
+    });
 }
 
 function aiErrText(m){
   m = String(m || "");
-  if (m.indexOf("JSONP_FAIL") >= 0) return "нет связи с сервером — проверь сеть и попробуй ещё раз";
   if (/429/.test(m)) return "лимит Gemini — попробуй через пару минут";
   if (/503|500|перегру/.test(m)) return "Gemini перегружен — попробуй ещё раз через минуту";
   return m;
 }
 function aiAsk(task, extra){
-  const ctl = ("AbortController" in window) ? new AbortController() : null;
-  const to = ctl ? setTimeout(()=>ctl.abort(), 90000) : null;
-  return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action:"aiq", task: task, token: AUTH.token }, extra || {})),
-      signal: ctl ? ctl.signal : undefined })
-    .then(r => r.text())
-    .then(t => safeJsonParse(t))
-    .then(j => { if (j && j.error) throw new Error(aiErrText(j.error)); return j; })
-    .catch(e => { throw new Error(aiErrText(String(e && e.message || e))); })
-    .finally(() => { if (to) clearTimeout(to); });
+  return postJSON(Object.assign({ action:"aiq", task: task, token: AUTH.token }, extra || {}), 90000)
+    .then(j => {
+      if (j && j.error){ if (/требуется вход/.test(j.error)) sessionExpired(); throw new Error(aiErrText(j.error)); }
+      return j;
+    })
+    .catch(e => { throw new Error(aiErrText(String(e && e.message || e))); });
 }
 
 function strHash(s){ let h = 7; const t = String(s||""); for (let i=0;i<t.length;i++) h = (h*31 + t.charCodeAt(i))|0; return Math.abs(h).toString(36); }
 function skey(r){ return r._sheet+"|"+String(r.opNick||"").trim()+"|"+String(r.model||"").trim(); } // стабильный ключ команды
+// D: один ключ «команды» для дублей, просрочек, расписания и сравнения недель (город + опер + модель, без регистра)
+function teamKey(r){ return r.city+"|"+String(r.opName||r.opNick||"").trim().toLowerCase()+"|"+String(r.model||"").trim().toLowerCase(); }
+function driveId(lk){ const m = String(lk||"").match(/[?&]id=([\w-]+)/); return m ? m[1] : String(lk||""); }
+const thumbBusy = {}; // id → идёт запрос
 function ensureThumbs(){ // миниатюры через сервер: приватные файлы, доступ только своим
+  // D: одна пачка до 30 миниатюр на запрос вместо запроса на каждую картинку
+  const need = {};
   document.querySelectorAll("img[data-tk]").forEach(im=>{
     const lk = im.getAttribute("data-tk"); if (!lk) return;
     if (state.thumbData && state.thumbData[lk]){ if (im.src !== state.thumbData[lk]) im.src = state.thumbData[lk]; return; }
-    if (im.dataset.loading) return;
-    im.dataset.loading = "1";
-    wp({ action:"thumb", id: (lk.split("id=")[1] || lk) }).then(res=>{
-      if (res.error || !res.d) { delete im.dataset.loading; return; }
-      state.thumbData = state.thumbData || {};
-      state.thumbData[lk] = "data:image/jpeg;base64," + res.d;
-      document.querySelectorAll('img[data-tk="'+lk+'"]').forEach(x=>{ x.src = state.thumbData[lk]; });
-    }).catch(()=>{ delete im.dataset.loading; });
+    const id = driveId(lk);
+    if (!/^[\w-]{10,100}$/.test(id) || thumbBusy[id]) return;
+    need[id] = lk;
   });
+  const ids = Object.keys(need);
+  for (let i = 0; i < ids.length; i += 30){
+    const part = ids.slice(i, i + 30);
+    part.forEach(id=>{ thumbBusy[id] = 1; });
+    wp({ action:"thumbs", ids: part }, 60000).then(res=>{
+      const d = (res && res.d) || {};
+      state.thumbData = state.thumbData || {};
+      part.forEach(id=>{
+        delete thumbBusy[id];
+        if (!d[id]) return; // нет доступа/не влезло — попробуем при следующей отрисовке
+        const lk = need[id];
+        state.thumbData[lk] = "data:image/jpeg;base64," + d[id];
+        document.querySelectorAll("img[data-tk]").forEach(x=>{ if (x.getAttribute("data-tk") === lk) x.src = state.thumbData[lk]; });
+      });
+    }).catch(()=>{ part.forEach(id=>{ delete thumbBusy[id]; }); });
+  }
 }
 // Drive-ссылки: uc?export=view блокируется браузером (ORB) — показываем через thumbnail
 function driveThumb(u, w){
@@ -2278,41 +2487,62 @@ function linksArrFromText(key, text){
 }
 // ---------- оптимистичное сохранение: «Сохранено» сразу, отправка в фоне пачкой ----------
 // правки подряд (1,5 с) склеиваются в один запрос; при ошибке строка краснеет, правка остаётся, есть «повторить»
-function rowQKey(x){ return x.r._sheet + "#" + x.r._row; }
+// D10/B-ретрай: ключ очереди — rk (команда+строка). Черновик удаляется и «✔ Сохранено» показывается
+// ТОЛЬКО после ответа сервера; повтор упавшей отправки не перетирает более новые правки того же поля.
+let saveSeq = 0, inflightSaves = 0;
 const saveQueue = {};
+function rowByRk(k){ return state.rows.find(r=>rk(r)===k) || (realData ? realData.rows.find(r=>rk(r)===k) : null); }
 function queueRowSave(x, key, changes){
-  const qk = rowQKey(x);
-  const q = saveQueue[qk] = saveQueue[qk] || { x: x, key: key, fields: {}, timer: null };
-  q.x = x; q.key = key;
+  const qk = rk(x.r);
+  const q = saveQueue[qk] = saveQueue[qk] || { r: x.r, fields: {}, timer: null, queuedAt: 0 };
+  q.r = x.r; q.queuedAt = Date.now();
   changes.forEach(c => { q.fields[c[0]] = c[1]; });
-  state.optimistic[qk] = { key: key, fields: Object.assign({}, q.fields) };
+  const opt = state.optimistic[qk] = state.optimistic[qk] || { fields: {} };
+  Object.assign(opt.fields, q.fields);
   if (q.timer) clearTimeout(q.timer);
   q.timer = setTimeout(()=>flushRowSave(qk), 1500);
 }
+function flushAllSaves(){ Object.keys(saveQueue).forEach(qk=>{ const q = saveQueue[qk]; if (q.timer) clearTimeout(q.timer); flushRowSave(qk); }); }
 async function flushRowSave(qk){
   const q = saveQueue[qk]; if (!q) return;
   delete saveQueue[qk];
   const entries = Object.entries(q.fields);
-  if (!entries.length){ delete state.optimistic[qk]; return; }
-  const params = { action:"save", sheet: q.x.r._sheet, row: String(q.x.r._row) };
+  if (!entries.length) return;
+  const seq = ++saveSeq;
+  const fos = state.fieldOkSeq[qk] = state.fieldOkSeq[qk] || {};
+  entries.forEach(c=>{ fos[c[0]] = seq; }); // последняя отправка каждого поля
+  const isLatest = f => fos[f] === seq && !(saveQueue[qk] && f in saveQueue[qk].fields);
+  const params = Object.assign({ action:"save" }, rowKeyParams(q.r));
   entries.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
+  inflightSaves++;
   try {
     const res = await wp(params);
     if (res.error) throw new Error(res.error);
-    delete state.optimistic[qk];
-    delete state.failedSaves[q.key];
-    toast("✔ Сохранено в таблицу (" + entries.length + " полей)");
-    render();
+    const opt = state.optimistic[qk];
+    if (opt){ entries.forEach(c=>{ if (isLatest(c[0])) delete opt.fields[c[0]]; }); if (!Object.keys(opt.fields).length) delete state.optimistic[qk]; }
+    const fs = state.failedSaves[qk];
+    if (fs){ entries.forEach(c=>{ delete fs.fields[c[0]]; }); if (!Object.keys(fs.fields).length) delete state.failedSaves[qk]; }
+    const cur = rowByRk(qk) || q.r;
+    if (res.stamp) cur.updated = res.stamp;
+    const d = getDraft(cur);
+    if (d && !(d.ts > q.queuedAt) && !saveQueue[qk]) clearDraft(cur); // правки после «Сохранить» остаются в черновике
+    toast("✔ Сохранено в таблицу (" + entries.length + " " + (entries.length===1?"поле":"полей") + ")");
+    softRender();
   } catch(e){
-    state.failedSaves[q.key] = { fields: Object.assign({}, q.fields), msg: e.message };
-    delete state.optimistic[qk];
-    toast("Не сохранилось: " + e.message + " — правка осталась, нажми «повторить»", true);
-    render();
-  }
+    const keep = {};
+    entries.forEach(c=>{ if (isLatest(c[0])) keep[c[0]] = c[1]; });
+    const opt = state.optimistic[qk];
+    if (opt){ Object.keys(keep).forEach(f=>{ delete opt.fields[f]; }); if (!Object.keys(opt.fields).length) delete state.optimistic[qk]; }
+    if (Object.keys(keep).length){
+      const prev = state.failedSaves[qk];
+      state.failedSaves[qk] = { fields: Object.assign({}, prev ? prev.fields : {}, keep), msg: e.message };
+    }
+    toast("Не сохранилось: " + e.message + " — правка осталась (черновик), нажми «повторить»", true);
+    softRender();
+  } finally { inflightSaves--; }
 }
 function applyOptimistic_(qk, fields){ // после обновления данных возвращаем несохранённые правки на место
-  const parts = String(qk).split("#");
-  const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
+  const r = state.rows.find(x=>rk(x)===qk);
   if (!r) return;
   Object.entries(fields||{}).forEach(([f,v])=>{
     const j = FIELDCODES.indexOf(f);
@@ -2326,6 +2556,7 @@ function applyOptimistic_(qk, fields){ // после обновления дан
 }
 async function saveRow(x, key){
   if (!AUTH.edit){ toast("Править может только редактор", true); return; }
+  if (!rowEditable(x.r)){ toast("Эта неделя открыта только для просмотра — выбери её в списке недель", true); return; }
   const btn = document.getElementById("sv"+key);
   const changes = [];
   for (let j=0;j<9;j++){
@@ -2357,10 +2588,10 @@ async function saveRow(x, key){
     else if (c[0] === "recs") x.r.reco = c[1];
     else if (c[0] === "links") x.r.linksTxt = c[1];
   });
-  x.r.updated = new Date().toLocaleDateString("ru-RU").slice(0,5) + " " + new Date().toLocaleTimeString("ru-RU").slice(0,5) + " (" + (AUTH.name||AUTH.user) + ")";
-  clearDraft(x.r);
-  delete state.failedSaves[key];
-  toast("✔ Сохранено — отправляю в таблицу");
+  // черновик НЕ удаляем — он удалится после подтверждения сервера (flushRowSave)
+  const fs = state.failedSaves[rk(x.r)];
+  if (fs){ changes.forEach(c=>{ delete fs.fields[c[0]]; }); if (!Object.keys(fs.fields).length) delete state.failedSaves[rk(x.r)]; }
+  toast("⏳ Отправляю в таблицу…");
   queueRowSave(x, key, changes);
   render();
 }
@@ -2404,8 +2635,19 @@ document.getElementById("tk-save").onclick = async ()=>{
   if (!text){ msg.textContent = "Напиши, что исправить"; return; }
   msg.textContent = "Ставлю…";
   try {
-    const r = await wp({ action:"taskadd", sheet: ta.dataset.sheet, nick: ta.dataset.nick, model: ta.dataset.model, producer: ta.dataset.producer, text: text });
+    const base = { action:"taskadd", sheet: ta.dataset.sheet, nick: ta.dataset.nick, model: ta.dataset.model, producer: ta.dataset.producer, text: text };
+    let r = await wp(base);
     if (r.error) throw new Error(r.error);
+    if (r.conflict){ // B: открытая задача не перетирается молча
+      const ex = r.existing || {};
+      const head = "У этой команды уже есть открытая задача" + (ex.from ? " от " + ex.from : "") + (ex.when ? " (" + ex.when + ")" : "") + ":\n«" + String(ex.text||"").slice(0, 300) + "»\n\n";
+      let mode = "";
+      if (confirm(head + "ОК — ДОПИСАТЬ новый текст к ней.\nОтмена — выбрать другое.")) mode = "append";
+      else if (confirm(head + "ОК — ЗАМЕНИТЬ её текст новым.\nОтмена — ничего не менять.")) mode = "replace";
+      if (!mode){ msg.textContent = "Отменено — задача не изменена"; return; }
+      r = await wp(Object.assign({ mode: mode }, base));
+      if (r.error) throw new Error(r.error);
+    }
     msg.textContent = "✔ Задача поставлена — продюсер увидит во вкладке «Мои задачи»";
     ta.value = "";
     setTimeout(load, 500);
@@ -2418,52 +2660,50 @@ document.getElementById("pl-save").onclick = async ()=>{
   msg.textContent = "Сохраняю…";
   const params = { action:"setplan", bkey: key, plan: document.getElementById("pl-text").value }; // bkey: «key» занят секретным ключом
   try {
-    let res = null;
-    try { res = await wp(params); if (res.error) throw new Error(res.error); }
-    catch(e1){
-      if (String(e1.message).indexOf("прав") >= 0) throw e1;
-      await writePOST(params);
-    }
+    const res = await wp(params);
+    if (res.error) throw new Error(res.error);
     state.plans[key] = document.getElementById("pl-text").value;
     closeModal("planmodal");
     toast("✔ План сохранён");
     render();
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
-document.querySelectorAll(".cdot").forEach(d=>d.onclick=(ev)=>{
-  ev.stopPropagation();
-  if (!AUTH.edit){ toast("Цвет может поменять только редактор", true); return; }
+// U5: точки цвета рисуются при каждой перерисовке — обработчик делегирован (раньше вешался один раз при загрузке скрипта,
+// когда точек ещё не было, и выбор цвета не открывался)
+document.addEventListener("click", function(ev){
+  const d = ev.target && ev.target.closest ? ev.target.closest(".cdot[data-prod]") : null;
+  if (!d) return;
+  ev.stopPropagation(); ev.preventDefault();
+  if (!AUTH.edit || viewAsActive()){ toast("Цвет может поменять только редактор", true); return; }
   if (!d.dataset.prod) return;
   const cp = document.getElementById("colorpick");
   cp.dataset.prod = d.dataset.prod;
-  cp.value = state.colors[d.dataset.prod] || "#5b9dff";
+  cp.value = /^#[0-9a-f]{6}$/i.test(state.colors[d.dataset.prod]||"") ? state.colors[d.dataset.prod] : "#5b9dff";
   cp.click();
-});
+}, true);
 document.getElementById("colorpick").onchange = async function(){
   if (!this.dataset.prod) return;
   try {
-    try { const res = await wp({ action:"setcolor", producer: this.dataset.prod, color: this.value }); if (res.error) throw new Error(res.error); }
-    catch(e1){
-      if (String(e1.message).indexOf("прав") >= 0) throw e1;
-      await writePOST({ action:"setcolor", producer: this.dataset.prod, color: this.value });
-    }
+    const res = await wp({ action:"setcolor", producer: this.dataset.prod, color: this.value });
+    if (res.error) throw new Error(res.error);
+    state.colors[this.dataset.prod] = this.value; // сразу видно, без ожидания перезагрузки
+    if (realData && realData.colors) realData.colors[this.dataset.prod] = this.value;
     toast("✔ Цвет команды «" + this.dataset.prod + "» сохранён");
-    setTimeout(load, 500);
+    softRender();
   } catch(e){ toast("Ошибка: " + e.message, true); }
 };
 function nextWeekLabel(label){
-  const m = String(label||"").match(/(\d{1,2})-(\d{1,2})\.(\d{1,2})/);
-  if (!m) return "";
-  const y = new Date().getFullYear();
-  const dS = parseInt(m[1],10), dE = parseInt(m[2],10), endM = parseInt(m[3],10);
-  const startM = dS > dE ? (endM === 1 ? 12 : endM - 1) : endM;
-  const d1 = new Date(y, startM-1, dS); d1.setDate(d1.getDate()+7);
-  const d2 = new Date(y, endM-1, dE);   d2.setDate(d2.getDate()+7);
+  // «21-27.09» и «28.09-04.10» (раньше второй формат разбирался как «09-04.10» → неверная дата)
+  const end = weekEndDate(label);
+  if (!end) return "";
+  const d2 = new Date(end.getTime()); d2.setDate(d2.getDate()+7);
+  const d1 = new Date(d2.getTime()); d1.setDate(d1.getDate()-6);
   const f1 = d1.getDate(), m1 = d1.getMonth()+1, f2 = d2.getDate(), m2 = d2.getMonth()+1;
-  return m1===m2 ? f1+"-"+f2+"."+m2 : f1+"."+m1+"-"+f2+"."+m2;
+  const p2 = n => (n < 10 ? "0" : "") + n; // формат листов: «дд-дд.мм» (как «21-27.09»)
+  return m1===m2 ? p2(f1)+"-"+p2(f2)+"."+p2(m2) : p2(f1)+"."+p2(m1)+"-"+p2(f2)+"."+p2(m2);
 }
 document.getElementById("weekbtn").onclick = ()=>{
-  const weeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
+  const weeks = [...new Set(realRows().map(r=>r.week).concat(state.knownWeeks||[]).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
   const sel = document.getElementById("w-base");
   sel.innerHTML = weeks.map(w=>`<option>${esc(w)}</option>`).join("") || "<option>— нет недель —</option>";
   const del = document.getElementById("w-del");
@@ -2484,7 +2724,7 @@ async function doDelTeam(all){
   const msg = document.getElementById("d-msg");
   const any = state.rows.find(r=>r.city===city && r.producer===prod && weekOpen_(r)); // открытая неделя
   if (!any){ msg.textContent = "Команда не найдена"; return; }
-  if (!confirm(all ? "Удалить команду «"+prod+"» со ВСЕХ недель компании "+clabel(city)+"? Действие необратимо." : "Удалить команду «"+prod+"» с листа "+any._sheet+"? Действие необратимо.")) return;
+  if (!confirm(all ? "Удалить команду «"+prod+"» со ВСЕХ недель компании "+clabel(city)+"? Действие необратимо." : "Удалить команду «"+prod+"» с недели "+(any.week||"—")+" компании "+clabel(city)+"? Действие необратимо.")) return;
   msg.textContent = "Удаляю…";
   try {
     const res = await wp({ action:"delteam", sheet: any._sheet, producer: prod, all: all?"1":"0" });
@@ -2538,7 +2778,7 @@ document.getElementById("rs-send").onclick = async ()=>{
     document.getElementById("rs-step1").style.display = "none";
     document.getElementById("rs-step2").style.display = "";
     document.getElementById("rs-login2").value = login;
-    msg.textContent = res.pending ? "Такая заявка уже висит — жди кода." : "Заявка отправлена. Жди кода от смотрящего.";
+    msg.textContent = res.msg || "Если такой логин есть, заявка отправлена смотрящему — жди код";
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
 document.getElementById("rs-do").onclick = async ()=>{
@@ -2548,12 +2788,12 @@ document.getElementById("rs-do").onclick = async ()=>{
   const msg = document.getElementById("rs-msg");
   if (!login || !code){ msg.textContent = "Введи логин и код"; return; }
   if (p1 !== p2){ msg.textContent = "Пароли не совпадают"; return; }
-  if (p1.length < 6){ msg.textContent = "Пароль слишком короткий (минимум 6 символов)"; return; }
+  if (p1.length < 8){ msg.textContent = "Пароль слишком короткий (минимум 8 символов)"; return; }
   msg.textContent = "Меняю…";
   try {
     const res = await wp({ action:"resetdo", login: login, code: code, newpass: p1 });
     if (res.error) throw new Error(res.error);
-    msg.textContent = "✔ Пароль изменён — теперь войди с новым паролем";
+    msg.textContent = "✔ Пароль изменён — все прежние входы с этим логином закрыты, войди с новым паролем";
     try { sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); } catch(e){}
     setTimeout(()=>closeModal("resetmodal"), 1800);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
@@ -2575,21 +2815,23 @@ document.getElementById("resetbell").onclick = async ()=>{
       wp({ action:"suggestlist" }).catch(()=>({list:[]}))
     ]);
     const rq = parts[0].list || [], sg = parts[1].list || [];
+    const sgMeta = {}; sg.forEach(r=>{ sgMeta[r.row] = { who: r.who, when: r.when }; }); // сервер сверяет автора+время строки
+    updateResetBell(rq.length); // предложения теперь прочитаны — на колокольчике остаются только заявки
     if (!rq.length && !sg.length){ list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>'; return; }
     let html = "";
     if (rq.length){
       html += '<div style="color:var(--faint);font-size:12px;margin:4px 0">заявки на смену пароля</div>';
-      html += rq.map(r=>`<div class="drow" style="align-items:center"><b>${esc(r.login)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.created)}</span><span><button class="abtn2 rsq-ok" data-row="${r.row}">✅ Разрешить</button> <button class="abtn2 rsq-no" data-row="${r.row}" title="отклонить">✕</button></span></div>`).join("");
+      html += rq.map(r=>`<div class="drow" style="align-items:center"><b>${esc(r.login)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.created)}</span><span><button class="abtn2 rsq-ok" data-row="${r.row}" data-login="${esc(r.login)}">✅ Разрешить</button> <button class="abtn2 rsq-no" data-row="${r.row}" data-login="${esc(r.login)}" title="отклонить">✕</button></span></div>`).join("");
     }
     if (sg.length){
       html += '<div style="color:var(--faint);font-size:12px;margin:10px 0 4px">предложения (пометку баг/идея и заголовок можно поменять вручную)</div>';
-      html += sg.map(r=>`<div class="drow" style="align-items:flex-start"><b>${esc(r.who)}</b><span style="white-space:pre-wrap"><button class="qbtn sg-kind" data-row="${r.row}" data-kind="${esc(r.kind||"")}" title="поменять пометку баг/идея">[${esc(r.kind||"—")}]</button> ${r.title ? "<b>"+esc(r.title)+"</b> — " : ""}${esc(r.when)}: ${esc(r.text)} <button class="qbtn sg-title" data-row="${r.row}" data-kind="${esc(r.kind||"")}" data-title="${esc(r.title||"")}" title="поменять заголовок">✏️</button></span><span><button class="abtn2 sg-del" data-row="${r.row}" title="убрать из списка">✕</button></span></div>`).join("");
+      html += sg.map(r=>`<div class="drow" style="align-items:flex-start"><b>${r.unread?"🆕 ":""}${esc(r.who)}</b><span style="white-space:pre-wrap"><button class="qbtn sg-kind" data-row="${r.row}" data-kind="${esc(r.kind||"")}" title="поменять пометку баг/идея">[${esc(r.kind||"—")}]</button> ${r.title ? "<b>"+esc(r.title)+"</b> — " : ""}${esc(r.when)}: ${esc(r.text)} <button class="qbtn sg-title" data-row="${r.row}" data-kind="${esc(r.kind||"")}" data-title="${esc(r.title||"")}" title="поменять заголовок">✏️</button></span><span><button class="abtn2 sg-del" data-row="${r.row}" title="убрать из списка">✕</button></span></div>`).join("");
     }
     list.innerHTML = html;
     list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await wp({ action:"resetok", row: b.dataset.row });
+        const res = await wp({ action:"resetok", row: b.dataset.row, login: b.dataset.login });
         if (res.error) throw new Error(res.error);
         const code = res.code || "";
         const rowEl = b.closest(".drow");
@@ -2600,7 +2842,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".rsq-no").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await wp({ action:"resetno", row: b.dataset.row });
+        const res = await wp({ action:"resetno", row: b.dataset.row, login: b.dataset.login });
         if (res.error) throw new Error(res.error);
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
       } catch(e){ toast("Ошибка: "+e.message, true); }
@@ -2609,7 +2851,7 @@ document.getElementById("resetbell").onclick = async ()=>{
       ev.stopPropagation();
       const nk = b.dataset.kind === "баг" ? "идея" : (b.dataset.kind === "идея" ? "баг" : "баг");
       try {
-        const res = await wp({ action:"suggestset", row: b.dataset.row, kind: nk });
+        const res = await wp(Object.assign({ action:"suggestset", row: b.dataset.row, kind: nk }, sgMeta[b.dataset.row]));
         if (res.error) throw new Error(res.error);
         b.textContent = "[" + nk + "]"; b.dataset.kind = nk;
       } catch(e){ toast("Ошибка: "+e.message, true); }
@@ -2619,7 +2861,7 @@ document.getElementById("resetbell").onclick = async ()=>{
       const t = prompt("Заголовок предложения:", b.dataset.title || "");
       if (t === null) return;
       try {
-        const res = await wp({ action:"suggestset", row: b.dataset.row, kind: b.dataset.kind, title: t.trim() });
+        const res = await wp(Object.assign({ action:"suggestset", row: b.dataset.row, kind: b.dataset.kind, title: t.trim() }, sgMeta[b.dataset.row]));
         if (res.error) throw new Error(res.error);
         b.dataset.title = t.trim();
         b.previousSibling.textContent = t.trim() ? t.trim() + " — " : "";
@@ -2629,9 +2871,15 @@ document.getElementById("resetbell").onclick = async ()=>{
     list.querySelectorAll(".sg-del").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
-        const res = await wp({ action:"suggestdel", row: b.dataset.row });
+        const delRow = +b.dataset.row;
+        const res = await wp(Object.assign({ action:"suggestdel", row: b.dataset.row }, sgMeta[b.dataset.row]));
         if (res.error) throw new Error(res.error);
         const rowEl = b.closest(".drow"); if (rowEl) rowEl.remove();
+        // строки ниже удалённой сдвинулись на одну вверх — сдвигаем номера у оставшихся кнопок
+        const meta2 = {};
+        Object.keys(sgMeta).forEach(k=>{ const n = +k; if (n !== delRow) meta2[n > delRow ? n - 1 : n] = sgMeta[k]; });
+        Object.keys(sgMeta).forEach(k=>delete sgMeta[k]); Object.assign(sgMeta, meta2);
+        list.querySelectorAll(".sg-kind,.sg-title,.sg-del").forEach(x=>{ const n = +x.dataset.row; if (n > delRow) x.dataset.row = String(n - 1); });
         if (!list.querySelectorAll(".drow").length) list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>';
       } catch(e){ toast("Ошибка: "+e.message, true); }
     });
@@ -2652,8 +2900,8 @@ document.getElementById("sg-send").onclick = async ()=>{
   try {
     let kind = "", title = "";
     try {
-      const c = await wp({ action:"ai", task:"classify", text: text });
-      if (!c.error){ kind = c.kind || ""; title = c.title || ""; }
+      const c = await aiAsk("classify", { text: text.slice(0, 2000) }); // U: через aiq (старый action=ai сервер не знает)
+      if (c && !c.error){ kind = c.kind || ""; title = c.title || ""; }
     } catch(e2){} // ИИ недоступен — отправим без пометки
     const res = await wp({ action:"suggest", text: text, kind: kind, title: title });
     if (res.error) throw new Error(res.error);
@@ -2661,9 +2909,9 @@ document.getElementById("sg-send").onclick = async ()=>{
     setTimeout(()=>closeModal("sugmodal"), 1200);
   } catch(e){ msg.textContent = "Ошибка: " + e.message; }
 };
+let opTarget = null; // D8: строка, для которой открыта модалка «сменить оператора»
 document.getElementById("o-save").onclick = async ()=>{
-  const ov = document.getElementById("opmodal");
-  const x = state.lastView[ov.dataset.key]; if (!x) return;
+  const t = opTarget; if (!t) return;
   const msg = document.getElementById("o-msg");
   const nick = document.getElementById("o-nick").value.trim();
   const opname = document.getElementById("o-opname").value.trim();
@@ -2671,9 +2919,22 @@ document.getElementById("o-save").onclick = async ()=>{
   if (!nick && !opname && !model){ msg.textContent = "Заполни хотя бы одно поле"; return; }
   msg.textContent = "Сохраняю…";
   try {
-    const res = await wp({ action:"setoper", sheet: x.r._sheet, row: String(x.r._row), nick: nick, opname: opname, model: model });
+    const res = await wp(Object.assign({ action:"setoper", nick: nick, opname: opname, model: model }, t.keys));
     if (res.error) throw new Error(res.error);
-    x.r.opNick = nick; x.r.opName = opname; x.r.model = model;
+    // сервер вернул то, что реально записал (пустое поле = осталось прежним)
+    const r = rowByRk(t.rk) || t.r;
+    const oldRk = rk(r), oldSk = skey(r);
+    r.opNick = res.nick !== undefined ? res.nick : (nick || r.opNick);
+    r.opName = res.opname !== undefined ? res.opname : (opname || r.opName);
+    r.model = res.model !== undefined ? res.model : (model || r.model);
+    if (res.stamp) r.updated = res.stamp;
+    const newSk = skey(r);
+    renameRowKey(oldRk, rk(r));
+    if (oldSk !== newSk){ // скрины и задачи команды переехали на новый ключ (сервер сделал то же в таблице)
+      if (state.screens && state.screens[oldSk] && !state.screens[newSk]){ state.screens[newSk] = state.screens[oldSk]; delete state.screens[oldSk]; }
+      (state.tasks||[]).forEach(tk=>{ if (tk.key === oldSk) tk.key = newSk; });
+    }
+    opTarget = null;
     closeModal("opmodal");
     toast("✔ Оператор/модель обновлены");
     render();
@@ -2684,22 +2945,23 @@ document.getElementById("w-go").onclick = async ()=>{
   const base = document.getElementById("w-base").value;
   const name = document.getElementById("w-name").value.trim();
   if (!name || !base){ msg.textContent = "Укажи название недели"; return; }
+  // D6: существующую неделю не пересоздаём (сервер тоже откажет и ничего не очистит)
+  if (name === base){ msg.textContent = "Новая неделя совпадает с базовой — укажи другое название"; return; }
+  if (!/^\d{1,2}(\.\d{1,2})?-\d{1,2}\.\d{1,2}(\.\d{2,4})?$/.test(name)){ msg.textContent = "Формат названия: ДД.ММ-ДД.ММ или ДД-ДД.ММ (например 05-11.10)"; return; }
+  if ((state.knownWeeks||[]).includes(name) || realRows().some(r=>r.week===name)){ msg.textContent = "Неделя «" + name + "» уже есть — ничего не создано"; return; }
   msg.textContent = "Создаю… (до минуты)";
+  const btn = document.getElementById("w-go"); btn.disabled = true;
   try {
-    let res = null, viaFallback = false;
-    try { res = await wp({ action:"copyweek", base: base, name: name }, 60000); if (res.error) throw new Error(res.error); }
-    catch(e1){
-      if (String(e1.message).indexOf("прав") >= 0 || String(e1.message).indexOf("Укажи") >= 0) throw e1;
-      await writePOST({ action:"copyweek", base: base, name: name });
-      viaFallback = true;
-    }
+    const res = await wp({ action:"copyweek", base: base, name: name }, 90000);
+    if (res.error) throw new Error(res.error);
     closeModal("weekmodal");
-    toast("✔ Неделя " + name + " создана (" + (viaFallback ? "смотри вкладки" : res.created + " листов") + ")");
-    setTimeout(load, 1000);
+    toast("✔ Неделя " + name + " создана (" + res.created + " листов)");
+    state.week = "latest";
+    setTimeout(load, 800);
   } catch(e){
-    msg.textContent = "Ошибка: " + e.message + " — неделя могла всё же создаться, проверь список";
+    msg.textContent = "Ошибка: " + e.message + (/время|сеть|связ/i.test(e.message) ? " — неделя могла всё же создаться, обновляю список" : "");
     setTimeout(load, 500);
-  }
+  } finally { btn.disabled = false; }
 };
 document.getElementById("w-del-go").onclick = async ()=>{
   const week = document.getElementById("w-del").value;
@@ -2713,13 +2975,18 @@ document.getElementById("w-del-go").onclick = async ()=>{
   try {
     const res = await wp({ action:"delweek", week: week }, 60000);
     if (res.error) throw new Error(res.error);
-    if (state.week === week) state.week = "";
+    state.week = "latest";
+    state.knownWeeks = (state.knownWeeks||[]).filter(w=>w!==week);
+    try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){}
+    state.rows = state.rows.filter(r=>r.week!==week);
+    if (state.serverLatest === week) state.serverLatest = "";
+    state.dataFp = "";
     closeModal("weekmodal");
     toast("✔ Удалено листов: " + (res.removed||0));
     setTimeout(load, 800);
   } catch(e){
     msg.textContent = "Ошибка: " + e.message + " — неделя могла быть уже удалена, обновляю данные";
-    state.week = "";
+    state.week = "latest"; state.dataFp = "";
     setTimeout(load, 500);
   }
 };
@@ -2734,27 +3001,31 @@ document.getElementById("a-save").onclick = async ()=>{
   const opname = document.getElementById("a-opname").value.trim();
   const model = document.getElementById("a-model").value.trim();
   if (!prod){ msg.textContent = "Укажи продюсера"; return; }
+  if (!nick && !opname){ msg.textContent = "Укажи ник или имя оператора"; return; }
+  if (weekPinned()){ msg.textContent = "Выбери конкретную неделю (на «все недели»/«месяц» добавлять нельзя)"; return; }
   const any = state.rows.find(r=>r.city===city && weekOpen_(r)); // открытая неделя
   if (!any){ msg.textContent = "На листе " + clabel(city) + " пока нет строк — создай блок продюсера в таблице"; return; }
   msg.textContent = "Добавляю… (до минуты)";
+  // один и тот же rid для повторного нажатия после таймаута: сервер не добавит строку второй раз
+  const sig = [any._sheet, prod, nick, opname, model].join("|");
+  const btn = document.getElementById("a-save");
+  if (!addReq || addReq.sig !== sig) addReq = { sig: sig, rid: "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) };
+  btn.disabled = true;
   try {
-    let res = null, viaFallback = false;
-    try { res = await wp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model }, 60000); if (res.error) throw new Error(res.error); }
-    catch(e1){
-      if (String(e1.message).indexOf("прав") >= 0) throw e1;
-      await writePOST({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model });
-      viaFallback = true;
-    }
+    const res = await wp({ action:"add", sheet: any._sheet, producer: prod, nick: nick, opname: opname, model: model, rid: addReq.rid }, 60000);
+    if (res.error) throw new Error(res.error);
+    addReq = null;
     closeModal("addmodal");
     try{ localStorage.setItem("dash_addlast", JSON.stringify({city:city, prod:prod})); }catch(e){}
-    toast("✔ Мониторинг добавлен в " + clabel(city) + (viaFallback ? " (резервный канал — без подтверждения)" : " (строка " + res.row + ")"));
+    toast("✔ Мониторинг добавлен в " + clabel(city) + (res.dup ? " (уже был добавлен этим запросом)" : " (строка " + res.row + ")"));
     ["a-nick","a-opname","a-model","a-prod-new"].forEach(id=>document.getElementById(id).value="");
     setTimeout(load, 800);
   } catch(e){
-    msg.textContent = "Ошибка: " + e.message + " — мониторинг мог добавиться, обновляю данные";
+    msg.textContent = "Ошибка: " + e.message + (/не ответил|нет связи/.test(e.message) ? " — мониторинг мог добавиться; повторное «Добавить» дубль не создаст" : "");
     setTimeout(load, 500);
-  }
+  } finally { btn.disabled = false; }
 };
+let addReq = null;
 
 // ---------- вход ----------
 function showGate(){
@@ -2766,17 +3037,29 @@ function showGate(){
   setTimeout(()=>document.getElementById("l-user").focus(), 100);
 }
 function hideGate(){ document.getElementById("gate").classList.add("hide"); }
+// D: явный выход — с устройства убираются черновики, кэш данных, список недель, фильтры и последний логин
+// (при истечении сессии НЕ вызывается: черновики нужны после повторного входа)
+function clearLocalData(){
+  try {
+    const rm = [];
+    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (/^draft2?:/.test(k)) rm.push(k); }
+    rm.concat(["dash_weeks","dash_filters","dash_addlast","dash_last_user"]).forEach(k=>localStorage.removeItem(k));
+    sessionStorage.removeItem("dash_cache");
+  } catch(e){}
+  state.rows = []; state.plans = {}; state.checks = {}; state.recs = {}; state.screens = {}; state.tasks = []; state.thumbData = {};
+  state.dataFp = ""; state.knownWeeks = []; state.failedSaves = {}; state.fullLoaded = false;
+  try { Object.keys(saveQueue).forEach(k=>delete saveQueue[k]); } catch(e){}
+}
 document.getElementById("loginbtn").onclick = ()=>{
   if (viewAsActive()){ startViewAs(""); return; } // в режиме «глазами» кнопка сначала выводит из режима
-  if (AUTH.ok() && anyDirty() && !confirm("Есть несохранённые правки (черновик сохранён). Сменить вход?")) return;
+  if (AUTH.ok() && (anyDirty() || pendingWrites()) && !confirm("Есть несохранённые правки. При выходе черновики будут удалены с этого устройства. Выйти?")) return;
   if (AUTH.ok()){ wp({ action:"logout" }).catch(()=>{}); } // гасим токен сессии на сервере
-  AUTH.clear(); showGate();
+  AUTH.clear(); clearLocalData(); showGate();
 };
 document.getElementById("l-go").onclick = doLogin;
 document.getElementById("l-pass").onkeydown = e=>{ if (e.key==="Enter") doLogin(); };
 document.getElementById("l-eye").onclick = ()=>{ const p = document.getElementById("l-pass"); p.type = p.type === "password" ? "text" : "password"; };
-// вход: пароль уходит ОДНИМ no-cors POST-ом (не в адресе запроса), сервер выдаёт токен сессии,
-// токен забираем маленьким JSONP-опросом по одноразовому nonce
+// вход: пароль уходит в теле POST (не в адресе запроса), сервер сразу отвечает токеном сессии
 async function doLogin(){
   const u = document.getElementById("l-user").value.trim();
   const p = document.getElementById("l-pass").value;
@@ -2784,9 +3067,7 @@ async function doLogin(){
   if (!u || !p){ msgEl.textContent = "Введи логин и пароль"; return; }
   msgEl.textContent = "Проверяю…";
   try {
-    const res = await fetch(CONFIG.API_URL, { method:"POST",
-      headers:{ "Content-Type":"text/plain;charset=utf-8" },
-      body: JSON.stringify({ action:"auth", user:u, pass:p }) }).then(r=>r.text()).then(t=>safeJsonParse(t));
+    const res = await postJSON({ action:"auth", user:u, pass:p }, 45000);
     if (res.error || !res.token){
       msgEl.textContent = res.error || "Неверный логин или пароль";
       return;
@@ -2810,7 +3091,7 @@ async function doLogin(){
     load();
   } catch(e){
     const m = String(e && e.message || e);
-    if (m.indexOf("таймаут")>=0 || m.indexOf("JSONP_FAIL")>=0){
+    if (/не ответил|нет связи|страницу вместо данных/.test(m)){
       msgEl.innerHTML = 'Таблица не ответила. Если недавно сайт чинили — браузер мог держать старую версию: <button class="gbtn" id="hardref" style="margin-left:6px">⟳ обновить принудительно</button>';
       const hr = document.getElementById("hardref");
       if (hr) hr.onclick = ()=>{
@@ -2829,7 +3110,7 @@ function liveEval(vals){
   const evalN = st.filter(x=>x!==null).length;
   if (!evalN) return "заполни категории — оценка посчитается сама";
   const verdict = bad===0 ? "норма" : bad<=2 ? "замечание" : "критично";
-  return "оценка сейчас: " + ok + "/8 · " + (VLBL[verdict]||verdict);
+  return "оценка сейчас: " + ok + "/" + MAX_SCORE + " · " + (VLBL[verdict]||verdict);
 }
 function getPhrases(code){ try{ return (JSON.parse(localStorage.getItem("dash_phrases")||"{}")[code]) || []; }catch(e){ return []; } }
 function addPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); const L=all[code]||[]; if(v && !L.includes(v)){ L.push(v); all[code]=L; localStorage.setItem("dash_phrases",JSON.stringify(all)); } }catch(e){} }
@@ -2839,17 +3120,25 @@ function miniBar(g){ const t=(g.ok+g.warn+g.bad)||1; return '<div class="mini-ga
 function historyClean(){ try { const q2 = new URLSearchParams(location.search); q2.delete("u"); q2.delete("p"); history.replaceState(null, "", location.pathname + "?" + q2.toString()); } catch(e){} }
 
 function isFresh(r){
-  if (!r.updated) return false;
-  const today = new Date().toLocaleDateString("ru-RU").slice(0,5);
-  return r.updated.slice(0,5) === today;
+  const d = parseUpd(r && r.updated);
+  return !!d && d.toDateString() === new Date().toDateString();
+}
+// B: штамп «дд.мм[.гггг] [чч:мм] (кто)» — год, если есть, берём из штампа; время — в поясе сервера (state.serverTz)
+function tzOffsetMin(){
+  const m = String(state.serverTz||"").match(/^([+-])(\d{2})(\d{2})$/);
+  return m ? (m[1]==="-" ? -1 : 1) * (+m[2]*60 + +m[3]) : -new Date().getTimezoneOffset();
 }
 function parseUpd(s){
   if (!s) return null;
-  const m = String(s).match(/^(\d{2})\.(\d{2})/);
+  const m = String(s).match(/^\s*(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?(?:\s+(\d{1,2}):(\d{2}))?/);
   if (!m) return null;
   const now = new Date();
-  let d = new Date(now.getFullYear(), +m[2]-1, +m[1]);
-  if (d - now > 30*864e5) d = new Date(now.getFullYear()-1, +m[2]-1, +m[1]); // правка в декабре, сейчас январь
+  const hh = m[4] ? +m[4] : 12, mi = m[5] ? +m[5] : 0; // без времени — полдень (дата не уезжает из-за пояса)
+  const off = tzOffsetMin();
+  const mk = y => new Date(Date.UTC(y, +m[2]-1, +m[1], hh, mi) - off*60000);
+  if (m[3]){ const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return mk(y); }
+  let d = mk(now.getFullYear());
+  if (d - now > 30*864e5) d = mk(now.getFullYear()-1); // старый штамп без года: правка в декабре, сейчас январь
   return d;
 }
 // сколько дней прошло с последней проверки/правки; перепроверка = +7 дней
@@ -2868,7 +3157,7 @@ function dedupeRows(rows){
   const map = {}, out = [];
   rows.forEach(function(r){
     if (!(r.opName||r.opNick||r.model)){ out.push(r); return; }
-    const key = r.city+"|"+(r.opName||r.opNick||"").toLowerCase()+"|"+(r.model||"").toLowerCase();
+    const key = teamKey(r);
     const prev = map[key];
     if (!prev){ map[key] = r; out.push(r); return; }
     const a = parseUpd(r.updated), b = parseUpd(prev.updated);
@@ -2885,7 +3174,7 @@ function overdueCount(city){
   state.rows.forEach(function(r){
     if (city && r.city !== city) return;
     if (!(r.opName||r.opNick||r.model)) return;
-    const key = r.city+"|"+(r.opName||r.opNick||"").toLowerCase()+"|"+(r.model||"").toLowerCase();
+    const key = teamKey(r);
     const prev = map[key];
     if (!prev){ map[key] = r; return; }
     const a = parseUpd(r.updated), b = parseUpd(prev.updated);
@@ -2915,6 +3204,9 @@ document.addEventListener("paste", function(e){
 
 async function uploadScreen(blob, x, catIdx){
   try {
+    if (!rowEditable(x.r)){ toast("Скрины добавляются только в открытой неделе", true); return; }
+    if (blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return; }
+    if (blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка", true); return; }
     toast("📸 Скрин"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":"")+": сжимаю…");
     const img = await createImageBitmap(blob);
     const scale = Math.min(1, 1600/Math.max(img.width, img.height));
@@ -2923,50 +3215,51 @@ async function uploadScreen(blob, x, catIdx){
     const ctx = cv.getContext("2d");
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
-    const data = cv.toDataURL("image/jpeg", 0.85).split(",")[1];
+    let data = cv.toDataURL("image/jpeg", 0.85).split(",")[1];
+    // D: сервер принимает до 6 МБ — если не влезло, жмём сильнее
+    if (data.length * 3 / 4 > 6*1024*1024) data = cv.toDataURL("image/jpeg", 0.6).split(",")[1];
+    if (data.length * 3 / 4 > 6*1024*1024){ toast("Скрин слишком большой даже после сжатия", true); return; }
     const scale2 = Math.min(1, 480/Math.max(img.width, img.height));
     const cv2 = document.createElement("canvas");
     cv2.width = Math.round(img.width*scale2); cv2.height = Math.round(img.height*scale2);
-    cv2.getContext("2d").drawImage(img, 0, 0, cv2.width, cv2.height);
+    const ctx2 = cv2.getContext("2d");
+    ctx2.fillStyle = "#fff"; ctx2.fillRect(0, 0, cv2.width, cv2.height);
+    ctx2.drawImage(img, 0, 0, cv2.width, cv2.height);
     const small = cv2.toDataURL("image/jpeg", 0.8).split(",")[1];
     toast("📸 Скрин: загружаю на диск…");
-    await fetch(CONFIG.API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action:"upload", token: AUTH.token,
-        sheet: x.r._sheet, row: x.r._row, data: data, small: small,
-        cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" })
-    }).then(r=>r.text()).then(t=>safeJsonParse(t)).then(j=>{ if (j && j.error) throw new Error(j.error); });
-    toast("📸 Скрин загружаю…"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":""));
-    // no-cors не даёт прочитать ответ сервера — подтверждаем ФАКТОМ: опрашиваем лёгкий action=screens
-    const k0 = skey(x.r);
-    const beforeLinks = new Set(((state.screens||{})[k0]||[]).map(s=>s.link));
-    let tries = 0;
-    const poll = async ()=>{
-      tries++;
-      try{
-        const j = await wp({ action:"screens" }, 20000);
-        const now = (j && j.screens ? j.screens : {})[k0] || [];
-        const fresh = now.filter(s=>s.link && !beforeLinks.has(s.link));
-        if (fresh.length){
-          state.screens = state.screens || {};
-          state.screens[k0] = (state.screens[k0]||[]).concat(fresh);
-          toast("📸 Скрин загружен ✓");
-          render(); load();
-          return;
-        }
-      }catch(e){}
-      if (tries < 8) setTimeout(poll, 2500);
-      else toast("Скрин НЕ сохранился — сервер отклонил загрузку (проверь права Apps Script на Диск)", true);
-    };
-    setTimeout(poll, 2000);
-  } catch(err){ toast("Скрин не удался: " + err.message, true); }
+    // ответ сервера читаем напрямую — он и есть подтверждение (без опроса action=screens и без полной перезагрузки)
+    const j = await wp(Object.assign({ action:"upload", data: data, small: small,
+        cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" }, rowKeyParams(x.r)), 90000);
+    if (!j || !j.link) throw new Error("сервер не подтвердил загрузку");
+    const k0 = j.key || skey(x.r);
+    state.screens = state.screens || {};
+    const arr = state.screens[k0] = state.screens[k0] || [];
+    if (!arr.some(s=>s.link===j.link)) arr.push({ cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" });
+    if (realData && realData.screens && realData.screens !== state.screens){ const ra = realData.screens[k0] = realData.screens[k0] || []; if (!ra.some(s=>s.link===j.link)) ra.push({ cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" }); }
+    if (j.stamp){ const cur = rowByRk(rk(x.r)); if (cur) cur.updated = j.stamp; }
+    toast("📸 Скрин загружен ✓");
+    softRender(); // U11: вставка скрина не перерисовывает экран посреди набора текста и не перезагружает данные
+  } catch(err){ toast("Скрин не загрузился: " + err.message, true); }
 }
 
-function applyData(j, isHistory){
-  state.rows=(j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
+function applyData(j, isHistory, mergeWeek){
+  let rows = (j.rows||[]).filter(r=>r.opName||r.model||r.cats.some(c=>(c||"").trim()));
   // нормализуем ручную оценку/вердикт сразу: строка и число читаются одинаково
-  state.rows.forEach(r=>{ r.scoreM = String(r.scoreM == null ? "" : r.scoreM).trim(); r.verdictM = String(r.verdictM == null ? "" : r.verdictM).trim(); });
+  rows.forEach(r=>{ r.scoreM = String(r.scoreM == null ? "" : r.scoreM).trim(); r.verdictM = String(r.verdictM == null ? "" : r.verdictM).trim(); });
+  // A7: автообновление одной недели при загруженной истории — заменяем только эту неделю, история остаётся
+  let screens = j.screens || {};
+  if (mergeWeek){
+    const base = realRows();
+    const weekSheets = new Set(base.filter(r=>r.week===mergeWeek).map(r=>r._sheet).concat(rows.map(r=>r._sheet)));
+    rows = base.filter(r=>r.week!==mergeWeek).concat(rows);
+    const baseScr = (viewAsActive() && realData ? realData.screens : state.screens) || {};
+    const merged = {};
+    Object.keys(baseScr).forEach(k=>{ if (!weekSheets.has(String(k).split("|")[0])) merged[k] = baseScr[k]; });
+    screens = Object.assign(merged, screens);
+  }
+  state.rows = rows;
+  if (Array.isArray(j.weeks)){ state.knownWeeks = j.weeks.slice(); try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){} }
+  if (j.latest !== undefined) state.serverLatest = j.latest || "";
   // несохранённые правки (фон-отправка не подтвердилась) возвращаем на место после обновления данных
   Object.keys(state.optimistic||{}).forEach(k=>applyOptimistic_(k, (state.optimistic[k]||{}).fields));
   Object.keys(state.failedSaves||{}).forEach(k=>applyOptimistic_(k, (state.failedSaves[k]||{}).fields));
@@ -2975,10 +3268,11 @@ function applyData(j, isHistory){
   state.checks = j.checks || {};
   state.recs = j.recs || {};
   state.links = j.links || []; // legacy, больше не приходит от сервера
-  state.screens = j.screens || {};
+  state.screens = screens;
+  if (j.tz) state.serverTz = j.tz;
   state.itog = j.itog || []; // итоги дня по сверкам (лист «Итог», только чтение)
   state.tasks = j.tasks || []; // «Мои задачи» (лист «Задачи»; прод видит только свои — фильтр на сервере)
-  if (viewAsActive()) realData = { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, links: state.links.slice(), screens: state.screens };
+  if (viewAsActive()){ realData = snapData(); realData.colors = state.colors; }
   filterViewData(); // если включён режим «глазами» — маскируем данные сразу после загрузки
   const dot=document.getElementById("livedot"),txt=document.getElementById("livetext");
   dot.className="dot-live";
@@ -2993,50 +3287,20 @@ function applyData(j, isHistory){
 }
 // ---------- 🐞 диагностика транспорта (вызывается с экрана загрузки) ----------
 function runDiag(out){
+  // D: диагностика без токена в адресе и без старого GET-опроса — два обычных POST
   out.innerHTML = "запускаю…";
   const lines = [];
-  const put = t => { lines.push(t); out.innerHTML = lines.map(l=>"<div>· " + l + "</div>").join(""); };
+  const put = t => { lines.push(t); out.innerHTML = lines.map(l=>"<div>· " + esc(l) + "</div>").join(""); };
   const t0 = Date.now();
-  // Шаг 1: ОБЫЧНЫЙ fetch POST (читаемый ответ) — если работает, опросы не нужны
-  fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify({ action:"check", token: AUTH.token }) })
-    .then(r => r.text())
-    .then(t => {
-      put("1) обычный POST: ✓ за " + ((Date.now()-t0)/1000) + "с — ответ: " + t.slice(0, 60));
+  postJSON({ action:"check", token: AUTH.token }, 30000)
+    .then(r1 => {
+      put("1) связь с сервером: ✓ за " + ((Date.now()-t0)/1000).toFixed(1) + " с — " + (r1 && r1.error ? "ответ: " + r1.error : "вход действителен"));
       const t2 = Date.now();
-      return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify({ action:"read", week:"latest", token: AUTH.token }) })
-        .then(r => r.text())
-        .then(t3 => {
-          let rows = "?"; try { rows = String(JSON.parse(t3).rows.length); } catch(e){}
-          put("2) POST read: ✓ за " + ((Date.now()-t2)/1000) + "с, строк: " + rows);
-          put("ВЫВОД: прямой POST работает — сообщи мне этот текст, починю за один шаг");
-        });
+      return postJSON({ action:"read", week:"latest", token: AUTH.token }, 120000).then(r2 => {
+        put("2) чтение данных: " + (r2 && r2.error ? "✗ " + r2.error : "✓ за " + ((Date.now()-t2)/1000).toFixed(1) + " с, строк: " + ((r2 && r2.rows) ? r2.rows.length : "?")));
+      });
     })
-    .catch(e => {
-      put("1) обычный POST: ✗ — " + String(e).slice(0, 80));
-      put("2) пробую резервный путь: no-cors POST + опрос…");
-      const req = "diag" + Date.now().toString(36), pp = Math.random().toString(36).slice(2);
-      const t3 = Date.now();
-      fetch(CONFIG.API_URL, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify({ action:"read", week:"latest", req: req, pp: pp, token: AUTH.token }) })
-        .then(() => put("3) no-cors POST отправлен"))
-        .catch(e2 => put("3) no-cors POST не ушёл: " + String(e2).slice(0, 60)));
-      let tries = 0;
-      const poll = () => {
-        tries++;
-        jsonp({ action:"aipoll", req: req, pp: pp }, null, 9000)
-          .then(r => {
-            if (r && r.pending && tries < 15){ setTimeout(poll, 2000); return; }
-            const dt = ((Date.now()-t3)/1000).toFixed(0);
-            if (r && r.rows) put("4) опрос: ✓ за " + dt + "с, строк: " + r.rows.length + " — очередь работает");
-            else if (r && r.error) put("4) опрос: сервер ответил ошибкой — " + r.error);
-            else put("4) опрос: ✗ за " + dt + "с — результат так и не пришёл (сообщи мне этот текст)");
-          })
-          .catch(e3 => { if (tries < 15) { setTimeout(poll, 2000); return; } put("4) опрос: ✗ " + String(e3).slice(0, 60)); });
-      };
-      setTimeout(poll, 2000);
-    });
+    .catch(e => put("✗ " + String(e && e.message || e).slice(0, 160)));
 }
 
 let loadingNow = false;
@@ -3089,16 +3353,17 @@ async function load(){
       }
     }
     if (!j) throw lastErr;
-    // автообновление не перерисовывает экран, если данные не изменились (штампы/статусы/оценки/скрины)
-    const fp = JSON.stringify([j.rows.map(r=>[r._sheet,r._row,r.updated,r.status,r.scoreM,r.verdictM,String(r.obs||"").slice(0,40)]), Object.keys(j.screens||{}).length, j.resetPending, j.suggestions]);
+    // автообновление не перерисовывает экран, если данные не изменились (отпечаток ВСЕГО ответа)
+    const fp = weekReq + ":" + strHash(JSON.stringify(j));
     if (fp === state.dataFp){
       dot.className = "dot-live";
       txt.textContent = "";
     } else {
-      applyData(j);
+      const merge = (state.fullLoaded && weekReq !== "all" && j.week && j.week !== "all") ? j.week : "";
+      applyData(j, false, merge);
       if (weekReq === "all") state.fullLoaded = true; // вся история уже здесь
       state.dataFp = fp;
-      try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, week:state.week, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans, itog:j.itog||[] })); }catch(e){}
+      try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, week:state.week, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans, itog:j.itog||[] })); }catch(e){ try{ sessionStorage.removeItem("dash_cache"); }catch(e2){} } // C: не влезло — старый кэш не оставляем
     }
     // проверка ролей не чаще раза в 5 минут (после логина уже была)
     if (Date.now()-(state.lastCheck||0) > 5*60*1000 && !viewAsActive()){ // в режиме «глазами» не переобновляем права
@@ -3115,7 +3380,10 @@ async function load(){
     }
   }catch(e){
     dot.className="dot-off";
-    txt.textContent="Ошибка загрузки: "+e.message+(String(e.message)==="JSONP_FAIL"?" — нет связи с Apps Script, проверь сеть.":". Если повторяется — проверь сеть и обнови страницу.");
+    txt.textContent="Ошибка загрузки: "+e.message+". Если повторяется — проверь сеть и обнови страницу.";
+    if (/^недели «/.test(String(e.message)) && state.week !== "latest"){ // неделю удалили/переименовали — вернуться к последней
+      state.week = "latest"; state.dataFp = ""; toast(e.message, true); setTimeout(load, 200);
+    }
   }
   const sp = document.getElementById("splash");
   if (sp && !sp.classList.contains("hide")) sp.classList.add("hide");
@@ -3123,7 +3391,9 @@ async function load(){
   } catch(e2){ loadingNow = false; throw e2; }
 }
 window.addEventListener("beforeunload", e=>{
-  if (anyDirty()){ e.preventDefault(); e.returnValue = ""; }
+  // D10: предупреждаем и пока отправка не подтверждена сервером (очередь/в пути/упавшие)
+  if (pendingWrites()) flushAllSaves();
+  if (anyDirty() || pendingWrites() || Object.keys(state.failedSaves||{}).length){ e.preventDefault(); e.returnValue = ""; }
 });
 // сторожевой таймер: заставка не может висеть вечно (мягко, без красной паники)
 setTimeout(function(){
