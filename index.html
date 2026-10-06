@@ -285,6 +285,20 @@
   .shbadge.new{background:var(--ok);color:#fff}
   .shbadge.st{background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
   .shhit{background:rgba(255,200,0,.18)}
+  .shbadge.orphan{background:#c9a227;color:#1a1a1a}
+  .shbadge.off{background:var(--bad);color:#fff}
+  .shpart{margin:10px 0 6px;font-size:12.5px;color:var(--dim);font-weight:600}
+  .shweek{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px}
+  .shweekcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;font-size:12.5px}
+  .shweekcard:hover,.shweekcard.on{border-color:var(--accent)}
+  .shweekcard.today{outline:2px solid var(--accent)}
+  .shfilt.on{color:var(--ink);border-color:var(--accent)}
+  .shmenu{position:fixed;z-index:80;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:200px;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+  .shmenu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--ink);padding:7px 10px;border-radius:6px;cursor:pointer;font:inherit;font-size:12.5px}
+  .shmenu button:hover{background:var(--panel2)}
+  .shpanel{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0;font-size:12.5px}
+  .shname{cursor:pointer}
+  .shname:hover{color:var(--accent)}
   @media (max-width:700px){
     .shtable thead{display:none}
     .shtable tr{display:block;border-bottom:1px solid var(--line);padding:4px 0}
@@ -2203,8 +2217,7 @@ function renderMyTasks(){
   });
 }
 
-// ---------- задача 5: «Расписание» — смены моделей из таблиц расписаний (сервер читает их только на чтение) ----------
-// одна нормализация фамилии и для расписания, и для «Модели» дашборда: регистр, ё=е, без NEW, без номера смены N и N/N
+// ---------- задача 5/3: «Расписание» — смены моделей (сервер только читает таблицы) ----------
 function schedNorm(s){
   return String(s||"").toLowerCase().replace(/ё/g,"е")
     .replace(/(^|[^a-z])new(?=[^a-z]|$)/g, "$1")
@@ -2214,7 +2227,7 @@ function schedNorm(s){
 function ymdLocal(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
 function ymdShift(ymd, n){ const p = ymd.split("-").map(Number); return ymdLocal(new Date(p[0], p[1]-1, p[2] + n)); }
 const WD_RU = ["вс","пн","вт","ср","чт","пт","сб"];
-function shiftTeamsIndex(company){ // фамилия → команды последней недели ЭТОЙ компании (однофамильцы других компаний не склеиваются)
+function shiftTeamsIndex(company){
   const lw = latestWeekName(), idx = {};
   realRows().forEach(r=>{
     if (r.city !== company || (lw && r.week !== lw)) return;
@@ -2223,6 +2236,17 @@ function shiftTeamsIndex(company){ // фамилия → команды посл
   });
   return idx;
 }
+// день/ночь: из part сервера, иначе эвристика по часу начала (онлайн)
+function shiftPartOf(s){
+  if (s.part === "DAY" || s.part === "NIGHT") return s.part;
+  const m = String(s.time||"").match(/(\d{1,2})[:.](\d{2})/);
+  if (!m) return "";
+  const h = +m[1];
+  return (h >= 5 && h < 17) ? "DAY" : "NIGHT";
+}
+function shiftMatched(s, idx){ return (s.names||[]).some(n => (idx[schedNorm(n)]||[]).length); }
+function shiftOrphan(s, idx){ return !shiftMatched(s, idx); }
+function teamCheckedThisWeek(r){ return !!parseUpd(r && r.updated); } // строка уже из последней недели
 async function loadShifts(force){
   const sh = state.shift;
   const key = sh.company + "|" + sh.date + "|" + sh.days;
@@ -2237,11 +2261,76 @@ async function loadShifts(force){
   } catch(e){ state.schedCache[key] = { error: e.message }; }
   if (state.tab === "Смены") renderShifts();
 }
+function closeShMenu(){ const m = document.getElementById("sh-menu"); if (m) m.remove(); }
+function openShMenu(ev, payload){
+  closeShMenu();
+  const m = document.createElement("div");
+  m.id = "sh-menu"; m.className = "shmenu";
+  const { name, shift: s, teams, company } = payload;
+  let html = `<div style="padding:4px 10px 6px;color:var(--dim);font-size:11.5px">${esc(name)}${s.struck?' · <span style="color:var(--bad)">зачёркнута</span>':""}${s.reason?" · "+esc(s.reason):""}</div>`;
+  if (teams.length){
+    teams.forEach(r=>{
+      html += `<button data-act="goto" data-sheet="${esc(r._sheet)}" data-row="${r._row}">📝 открыть разбор · ${esc(r.producer||"—")} / ${esc(r.opName||r.opNick||"—")}</button>`;
+      html += `<button data-act="scr" data-key="${esc(skey(r))}">📷 скрины</button>`;
+      if (AUTH.edit) html += `<button data-act="task" data-sheet="${esc(r._sheet)}" data-nick="${esc(r.opNick||"")}" data-model="${esc(r.model||"")}" data-producer="${esc(r.producer||"")}" data-label="${esc((r.opName||r.opNick||"—")+" / "+(r.model||"—")+" · "+clabel(r.city))}">📌 задача продюсеру</button>`;
+    });
+  } else if (AUTH.edit){
+    html += `<button data-act="add" data-model="${esc(name)}" data-op="${esc(s.operator||"")}" data-city="${esc(company)}">＋ мониторинг (фамилия в форму)</button>`;
+  } else {
+    html += `<div style="padding:6px 10px;color:var(--faint)">нет команды на дашборде</div>`;
+  }
+  m.innerHTML = html;
+  document.body.appendChild(m);
+  const x = Math.min(ev.clientX, window.innerWidth - 220), y = Math.min(ev.clientY, window.innerHeight - 160);
+  m.style.left = x + "px"; m.style.top = y + "px";
+  m.onclick = async (e)=>{
+    const b = e.target.closest("button[data-act]"); if (!b) return;
+    closeShMenu();
+    const act = b.dataset.act;
+    if (act === "goto") gotoRow(b.dataset.sheet + "|" + b.dataset.row);
+    else if (act === "scr") openShiftScreens(b.dataset.key, name);
+    else if (act === "task"){
+      document.getElementById("tk-team").textContent = b.dataset.label;
+      document.getElementById("tk-text").value = "";
+      document.getElementById("tk-msg").textContent = "";
+      const ta = document.getElementById("tk-text");
+      ta.dataset.sheet = b.dataset.sheet; ta.dataset.nick = b.dataset.nick;
+      ta.dataset.model = b.dataset.model; ta.dataset.producer = b.dataset.producer;
+      const lt = (state.tasks||[]).filter(t=>t.key === b.dataset.sheet+"|"+b.dataset.nick+"|"+b.dataset.model);
+      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")}</b><span class="utext">${esc(t.text)}</span></div>`).join("") : '<div class="empty">Открытых задач нет</div>';
+      openModal("taskmodal");
+    } else if (act === "add"){
+      if (weekPinned()){ toast("Сначала выбери конкретную неделю", true); return; }
+      document.getElementById("a-msg").textContent = "";
+      document.getElementById("a-city").value = b.dataset.city;
+      updateProdList();
+      document.getElementById("a-model").value = b.dataset.model || "";
+      document.getElementById("a-opname").value = b.dataset.op || "";
+      document.getElementById("a-nick").value = "";
+      openModal("addmodal");
+    }
+  };
+  setTimeout(()=>document.addEventListener("click", function once(ev){ if (!ev.target.closest("#sh-menu")){ closeShMenu(); document.removeEventListener("click", once); } }), 0);
+}
+function openShiftScreens(key, title){
+  const arr = (state.screens||{})[key] || [];
+  if (!arr.length){ toast("Скринов у этой команды нет", true); return; }
+  document.getElementById("cam-title").textContent = "📷 " + (title || "скрины");
+  document.getElementById("cam-ai").style.display = "none";
+  document.getElementById("cam-aiout").style.display = "none";
+  const first = arr[0];
+  document.getElementById("cam-img").src = (state.thumbData||{})[first.mini||first.link] || BLANK;
+  openModal("cammodal");
+  const id = (first.mini||first.link||"");
+  if (id) wp({ action:"thumb", id: driveId(id) }).then(res=>{ if (res && res.d) document.getElementById("cam-img").src = "data:image/jpeg;base64,"+res.d; }).catch(()=>{});
+  setTimeout(ensureThumbs, 30);
+}
 function renderShifts(){
   document.getElementById("pbar").innerHTML = "";
+  closeShMenu();
   const comps = CITY_ORDER.filter(c=>AUTH.cities.includes("all") || AUTH.cities.includes(c));
   const today = ymdLocal(new Date());
-  state.shift = state.shift || { company: comps[0] || "Онлайн", date: today, days: 1, q: "" };
+  state.shift = state.shift || { company: comps[0] || "Онлайн", date: today, days: 1, q: "", filter: "", expand: "", panel: "" };
   const sh = state.shift;
   if (!comps.includes(sh.company) && comps.length) sh.company = comps[0];
   const key = sh.company + "|" + sh.date + "|" + sh.days;
@@ -2249,40 +2338,123 @@ function renderShifts(){
   if (!ent){ setTimeout(()=>loadShifts(false), 0); }
   const idx = shiftTeamsIndex(sh.company);
   const q = schedNorm(sh.q);
-  const nameHtml = (nm, struck) => {
-    const k = schedNorm(nm);
-    const chips = (idx[k]||[]).map(r=>`<span class="shchip" title="команда на дашборде">${esc(r.producer||"—")} · ${esc(r.opName||r.opNick||"—")}</span>`).join("");
-    return `<span class="shname${struck?" struck":""}${q && k.includes(q)?" shhit":""}">${esc(nm)}</span> ${chips}`;
+  const filt = sh.filter || "";
+
+  const passFilt = s => {
+    if (filt === "struck" && !s.struck) return false;
+    if (filt === "orphan" && !shiftOrphan(s, idx)) return false;
+    if (filt === "new" && !s.isNew) return false;
+    if (q && !(s.names||[]).some(n=>schedNorm(n).includes(q)) && !schedNorm(s.operator).includes(q)) return false;
+    return true;
   };
+  const nameHtml = (nm, s) => {
+    const k = schedNorm(nm);
+    const teams = idx[k] || [];
+    const orphan = !teams.length;
+    return `<span class="shname${s.struck?" struck":""}${q && k.includes(q)?" shhit":""}" data-shn="${esc(nm)}" data-shr="${esc(s.raw||nm)}">${esc(nm)}</span>`
+      + (s.isNew?'<span class="shbadge new">NEW</span>':"")
+      + (s.struck?'<span class="shbadge off" title="'+esc(s.reason||"зачёркнута в таблице")+'">зачёркнута</span>':"")
+      + (orphan?'<span class="shbadge orphan">без мониторинга</span>':"")
+      + teams.map(r=>`<span class="shchip">${esc(r.producer||"—")} · ${esc(r.opName||r.opNick||"—")}</span>`).join("")
+      + (s.struck && s.reason ? `<div style="color:var(--dim);font-size:11.5px;margin-top:2px">💬 ${esc(s.reason)}</div>` : "");
+  };
+  const shiftsTable = (list) => {
+    if (!list.length) return '<div class="empty">Смен нет</div>';
+    const byPart = { DAY: [], NIGHT: [], "": [] };
+    list.forEach(s=>{ byPart[shiftPartOf(s) || ""].push(s); });
+    const parts = [];
+    if (byPart.DAY.length || byPart.NIGHT.length){
+      if (byPart.DAY.length) parts.push(["☀️ День", byPart.DAY]);
+      if (byPart.NIGHT.length) parts.push(["🌙 Ночь", byPart.NIGHT]);
+      if (byPart[""].length) parts.push(["Смены", byPart[""]]);
+    } else {
+      parts.push(["Смены", list]);
+    }
+    return parts.map(([title, rows]) => {
+      const act = rows.filter(s=>!s.struck), off = rows.filter(s=>s.struck);
+      const row = s => `<tr data-shraw="${esc(s.raw||"")}" data-shop="${esc(s.operator||"")}" data-shstruck="${s.struck?"1":""}" data-shreason="${esc(s.reason||"")}">
+        <td style="white-space:nowrap;color:var(--dim)">${esc(s.time||"—")}</td>
+        <td>${(s.names||[]).map(n=>nameHtml(n,s)).join(' <span style="color:var(--faint)">/</span> ')}</td>
+        <td style="color:var(--dim)">${s.shiftNo?"смена "+esc(s.shiftNo):""}</td>
+        <td style="color:var(--dim)">${esc(s.operator||"")}</td></tr>`;
+      return `<div class="shpart">${title} · ${act.length}${off.length?" · отписок "+off.length:""}</div>
+        <table class="shtable"><thead><tr><th>Время</th><th>Модель</th><th>Смена</th><th>Оператор</th></tr></thead>
+        <tbody>${act.map(row).join("")}${off.map(row).join("")}</tbody></table>`;
+    }).join("");
+  };
+  const dayStats = (shifts) => {
+    const act = shifts.filter(s=>!s.struck), off = shifts.filter(s=>s.struck);
+    const orphan = act.filter(s=>shiftOrphan(s, idx)).length;
+    return { act: act.length, off: off.length, orphan };
+  };
+  const dayBlock = (d, compact) => {
+    const p = d.date.split("-"); const dt = new Date(+p[0], +p[1]-1, +p[2]);
+    let shifts = (d.shifts||[]).filter(passFilt);
+    const st = dayStats(d.shifts||[]);
+    if (compact){
+      return `<div class="shweekcard${d.date===today?" today":""}${sh.expand===d.date?" on":""}" data-shexp="${esc(d.date)}">
+        <b>${WD_RU[dt.getDay()]} ${esc(p[2]+"."+p[1])}</b>
+        <div style="color:var(--faint);margin-top:4px">смен ${st.act}${st.off?" · отписок "+st.off:""}${st.orphan?" · без монитор. "+st.orphan:""}</div>
+        ${d.error?`<div style="color:var(--warn);font-size:11px">${esc(d.error)}</div>`:""}
+      </div>`;
+    }
+    return `<div class="card shday${d.date===today?" today":""}" data-shday="${esc(d.date)}">
+      <h2 style="margin:0 0 6px">${WD_RU[dt.getDay()]} ${esc(p[2]+"."+p[1])}${d.date===today?' <span class="ptag pt-ok">сегодня</span>':""}
+        <span style="color:var(--faint);font-size:11.5px;font-weight:400">смен: ${st.act}${st.off?" · отписок: "+st.off:""}${st.orphan?" · без монитор.: "+st.orphan:""}${d.sheet?" · «"+esc(d.sheet)+"»":""}</span></h2>
+      ${d.error?`<div class="empty" style="color:var(--warn)">${esc(d.error)}</div>`:""}
+      ${shiftsTable(shifts)}
+    </div>`;
+  };
+
+  // «Кого проверить сегодня»
+  const todayDay = ((ent && ent.data && ent.data.days)||[]).find(d=>d.date===today) || ((ent && ent.data && ent.data.days)||[]).find(d=>d.date===sh.date);
+  const toCheck = [];
+  if (todayDay){
+    (todayDay.shifts||[]).filter(s=>!s.struck).forEach(s=>{
+      (s.names||[]).forEach(nm=>{
+        (idx[schedNorm(nm)]||[]).forEach(r=>{
+          if (!teamCheckedThisWeek(r) && !toCheck.some(x=>x.r===r)) toCheck.push({ r, name: nm, time: s.time||"", operator: s.operator||"" });
+        });
+      });
+    });
+  }
+  // сравнение
+  const cmpDate = (sh.days===1 ? sh.date : (sh.expand || today));
+  const cmpDay = ((ent && ent.data && ent.data.days)||[]).find(d=>d.date===cmpDate);
+  const inSched = new Set(), onDash = new Set();
+  Object.keys(idx).forEach(k=>onDash.add(k));
+  const onlySched = [], onlyDash = [];
+  if (cmpDay){
+    (cmpDay.shifts||[]).filter(s=>!s.struck).forEach(s=>{
+      (s.names||[]).forEach(nm=>{
+        const k = schedNorm(nm); inSched.add(k);
+        if (!idx[k] || !idx[k].length) onlySched.push({ name: nm, operator: s.operator||"", time: s.time||"" });
+      });
+    });
+    Object.keys(idx).forEach(k=>{ if (!inSched.has(k)) idx[k].forEach(r=>onlyDash.push(r)); });
+  }
+
   let body = "";
   if (!ent || ent.loading) body = '<div class="empty">Загружаю расписание…</div>';
   else if (ent.error) body = `<div class="empty" style="color:var(--bad)">Не удалось прочитать расписание: ${esc(ent.error)}</div>`;
   else {
     const data = ent.data;
-    body = (data.days||[]).map(d=>{
-      const p = d.date.split("-"); const dt = new Date(+p[0], +p[1]-1, +p[2]);
-      let shifts = (d.shifts||[]);
-      if (q) shifts = shifts.filter(s=>(s.names||[]).some(n=>schedNorm(n).includes(q)) || schedNorm(s.operator).includes(q));
-      const act = shifts.filter(s=>!s.struck), off = shifts.filter(s=>s.struck);
-      const row = s => `<tr>
-          <td style="white-space:nowrap;color:var(--dim)">${s.part?`<b>${esc(s.part==="NIGHT"?"🌙 ночь":"☀️ день")}</b> `:""}${esc(s.time||"")}</td>
-          <td>${(s.names||[]).map(n=>nameHtml(n, s.struck)).join(' <span style="color:var(--faint)">/</span> ')}${s.isNew?'<span class="shbadge new">NEW</span>':""}${s.struck?'<span class="shbadge off">отписка</span>':""}</td>
-          <td style="color:var(--dim)">${s.shiftNo?"смена "+esc(s.shiftNo):""}</td>
-          <td style="color:var(--dim)">${esc(s.operator||"")}</td>
-          <td>${s.status?`<span class="shbadge st">${esc(s.status)}</span>`:""}</td></tr>`;
-      return `<div class="card shday${d.date===today?" today":""}">
-        <h2 style="margin:0 0 6px">${WD_RU[dt.getDay()]} ${esc(p[2]+"."+p[1])}${d.date===today?' <span class="ptag pt-ok">сегодня</span>':""}
-          <span style="color:var(--faint);font-size:11.5px;font-weight:400">смен: ${act.length}${off.length?" · отписок: "+off.length:""}${d.sheet?" · лист «"+esc(d.sheet)+"»":""}</span></h2>
-        ${d.error?`<div class="empty" style="color:var(--warn)">${esc(d.error)}</div>`:""}
-        ${act.length||off.length ? `<table class="shtable"><thead><tr><th>Время</th><th>Модель</th><th>Смена</th><th>Оператор</th><th>Статус</th></tr></thead><tbody>${act.map(row).join("")}${off.map(row).join("")}</tbody></table>` : (d.error?"":'<div class="empty">Смен нет' + (q?" по поиску":"") + '</div>')}
-      </div>`;
-    }).join("") + `<div style="color:var(--faint);font-size:11.5px">обновлено в ${esc(data.updated||"—")} (кэш до 5 мин) · таблица расписания только читается</div>`;
+    const days = data.days || [];
+    if (sh.days === 7){
+      body = `<div class="shweek">${days.map(d=>dayBlock(d, true)).join("")}</div>`;
+      if (sh.expand){ const d = days.find(x=>x.date===sh.expand); if (d) body += dayBlock(d, false); }
+    } else {
+      body = days.map(d=>dayBlock(d, false)).join("");
+    }
+    body += `<div style="color:var(--faint);font-size:11.5px;margin-top:8px">обновлено в ${esc(data.updated||"—")} (кэш до 5 мин) · таблица расписания только читается</div>`;
   }
+
+  const filtBtn = (id, lab) => `<button class="gbtn shfilt${filt===id?" on":""}" data-shf="${id}">${lab}</button>`;
   document.getElementById("content").innerHTML = `
     <div class="card" style="margin-bottom:14px">
       <h2 style="margin:0 0 8px">📅 Расписание смен</h2>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${comps.map(c=>`<button class="gbtn${c===sh.company?" on":""}" data-shc="${esc(c)}" style="${c===sh.company?"color:var(--ink);border-color:var(--accent)":""}">${esc(clabel(c))}</button>`).join("")}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <button class="gbtn" id="sh-prev" title="назад">◀</button>
         <button class="gbtn" id="sh-today">сегодня</button>
         <button class="gbtn" id="sh-next" title="вперёд">▶</button>
@@ -2291,18 +2463,63 @@ function renderShifts(){
         <input id="sh-q" placeholder="поиск по фамилии…" value="${esc(sh.q)}" style="flex:1;min-width:140px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 8px;font:inherit;font-size:12px">
         <button class="gbtn" id="sh-ref" title="перечитать таблицу (минуя кэш)">⟳ обновить</button>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        ${filtBtn("","все")} ${filtBtn("struck","только отписки")} ${filtBtn("orphan","только без мониторинга")} ${filtBtn("new","только NEW")}
+        <button class="gbtn${sh.panel==="check"?" on":""}" id="sh-check" style="margin-left:auto">👁 кого проверить сегодня${toCheck.length?" · "+toCheck.length:""}</button>
+        <button class="gbtn${sh.panel==="compare"?" on":""}" id="sh-cmp">⚖ сравнить</button>
+      </div>
     </div>
+    ${sh.panel==="check" ? `<div class="shpanel"><b>Кого проверить сегодня</b> — активные смены без отметки «Обновлено» на этой неделе
+      ${toCheck.length ? `<div style="margin-top:8px">${toCheck.map(x=>`<div style="margin:4px 0"><button class="gbtn" data-shgoto="${esc(x.r._sheet)}|${x.r._row}">${esc(x.name)}</button>
+        <span style="color:var(--faint)">${esc(x.time)} · ${esc(x.r.producer||"—")} / ${esc(x.r.opName||x.r.opNick||"—")}</span></div>`).join("")}</div>` : '<div class="empty">Все сегодняшние смены с мониторингом уже отмечены</div>'}
+    </div>` : ""}
+    ${sh.panel==="compare" ? `<div class="shpanel"><b>Сравнение · ${esc(cmpDate.split("-").reverse().slice(0,2).join("."))}</b>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+        <div><b style="color:var(--warn)">В расписании, нет на дашборде (${onlySched.length})</b>
+          ${onlySched.length?onlySched.map(x=>`<div style="margin:3px 0"><span class="shname" data-shadd="${esc(x.name)}" data-shop2="${esc(x.operator)}">${esc(x.name)}</span> <span style="color:var(--faint)">${esc(x.time)} ${esc(x.operator)}</span> <span class="shbadge orphan">без мониторинга</span></div>`).join(""):'<div class="empty">пусто</div>'}</div>
+        <div><b style="color:var(--dim)">На дашборде, сегодня нет в смене (${onlyDash.length})</b>
+          ${onlyDash.length?onlyDash.map(r=>`<div style="margin:3px 0"><button class="gbtn" data-shgoto="${esc(r._sheet)}|${r._row}">${esc(r.model)}</button> <span style="color:var(--faint)">${esc(r.producer||"—")} · ${esc(r.opName||r.opNick||"—")}</span></div>`).join(""):'<div class="empty">пусто</div>'}</div>
+      </div>
+    </div>` : ""}
     ${body}`;
-  const go = (date, days)=>{ sh.date = date; if (days) sh.days = days; renderShifts(); };
-  document.querySelectorAll("[data-shc]").forEach(b=>b.onclick=()=>{ sh.company = b.dataset.shc; renderShifts(); });
+
+  const go = (date, days)=>{ sh.date = date; if (days) sh.days = days; if (days===1) sh.expand = ""; renderShifts(); };
+  document.querySelectorAll("[data-shc]").forEach(b=>b.onclick=()=>{ sh.company = b.dataset.shc; sh.expand = ""; renderShifts(); });
   document.getElementById("sh-prev").onclick = ()=>go(ymdShift(sh.date, -sh.days));
   document.getElementById("sh-next").onclick = ()=>go(ymdShift(sh.date, sh.days));
   document.getElementById("sh-today").onclick = ()=>go(today);
   document.getElementById("sh-date").onchange = e=>{ if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) go(e.target.value); };
   document.getElementById("sh-mode").onclick = ()=>go(sh.date, sh.days===7 ? 1 : 7);
   document.getElementById("sh-ref").onclick = ()=>loadShifts(true);
+  document.querySelectorAll("[data-shf]").forEach(b=>b.onclick=()=>{ sh.filter = b.dataset.shf; renderShifts(); });
+  document.getElementById("sh-check").onclick = ()=>{ sh.panel = sh.panel==="check" ? "" : "check"; renderShifts(); };
+  document.getElementById("sh-cmp").onclick = ()=>{ sh.panel = sh.panel==="compare" ? "" : "compare"; renderShifts(); };
+  document.querySelectorAll("[data-shexp]").forEach(b=>b.onclick=()=>{ sh.expand = sh.expand===b.dataset.shexp ? "" : b.dataset.shexp; renderShifts(); });
+  document.querySelectorAll("[data-shgoto]").forEach(b=>b.onclick=()=>gotoRow(b.dataset.shgoto));
+  document.querySelectorAll("[data-shadd]").forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    if (!AUTH.edit) return;
+    if (weekPinned()){ toast("Сначала выбери конкретную неделю", true); return; }
+    document.getElementById("a-city").value = sh.company; updateProdList();
+    document.getElementById("a-model").value = b.dataset.shadd;
+    document.getElementById("a-opname").value = b.dataset.shop2 || "";
+    document.getElementById("a-nick").value = "";
+    openModal("addmodal");
+  });
   const qi = document.getElementById("sh-q");
   qi.oninput = ()=>{ sh.q = qi.value; const pos = qi.selectionStart; renderShifts(); const q2 = document.getElementById("sh-q"); if (q2){ q2.focus(); try { q2.setSelectionRange(pos, pos); } catch(e){} } };
+  // клик по фамилии → меню действий (в т.ч. внутри таблицы)
+  document.querySelectorAll(".shday .shname[data-shn], .shpanel .shname[data-shn]").forEach(el=>{
+    el.onclick = (ev)=>{
+      ev.stopPropagation();
+      const tr = el.closest("tr");
+      const raw = tr ? tr.dataset.shraw : el.dataset.shn;
+      const nm = el.dataset.shn;
+      const teams = idx[schedNorm(nm)] || [];
+      const fake = { raw: raw, operator: tr ? tr.dataset.shop : "", struck: tr ? tr.dataset.shstruck==="1" : false, reason: tr ? tr.dataset.shreason : "", names: [nm] };
+      openShMenu(ev, { name: nm, shift: fake, teams: teams, company: sh.company });
+    };
+  });
 }
 
 // ---------- 2b: «Разборы» продюсера — что смотрящий написал по его командам (только чтение) ----------
