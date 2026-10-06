@@ -75,6 +75,7 @@
   .drow{border-bottom:1px dashed var(--line);padding:6px 0;font-size:12.5px}
   .drow b{color:var(--dim);font-weight:600;display:block;font-size:11.5px;margin-bottom:2px}
   .drow span{color:var(--ink);line-height:1.5}
+  .utext{white-space:pre-wrap;word-break:break-word} /* задача 1: текст разбора — с переносами строк, как набран */
   .chip{border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;white-space:nowrap}
   .c-bad{background:var(--badbg);color:var(--bad)} .c-ok{background:var(--okbg);color:var(--ok)}
   .c-wip{background:rgba(91,157,255,.13);color:var(--accent)} .c-warn{background:var(--warnbg);color:var(--warn)}
@@ -271,6 +272,24 @@
   .failbar{background:var(--badbg);border:1px solid var(--bad);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12.5px;color:var(--ink);grid-column:1/-1}
   tr.r.savefail td{background:rgba(229,101,95,.10)!important}
   tr.r.savefail td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+  /* задача 5: «Расписание» (смены моделей) — компактно, на телефоне карточками */
+  .shtable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .shtable td,.shtable th{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  .shday{margin-bottom:14px}
+  .shday.today{outline:2px solid var(--accent);border-radius:10px}
+  .shname{font-weight:600}
+  .shname.struck{text-decoration:line-through;color:var(--faint)}
+  .shchip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 7px;font-size:11px;color:var(--dim);margin:1px 3px 1px 0}
+  .shbadge{display:inline-block;border-radius:8px;padding:0 6px;font-size:10.5px;font-weight:700;margin-left:4px}
+  .shbadge.off{background:var(--bad);color:#fff}
+  .shbadge.new{background:var(--ok);color:#fff}
+  .shbadge.st{background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
+  .shhit{background:rgba(255,200,0,.18)}
+  @media (max-width:700px){
+    .shtable thead{display:none}
+    .shtable tr{display:block;border-bottom:1px solid var(--line);padding:4px 0}
+    .shtable td{display:inline-block;border:0;padding:2px 6px}
+  }
 </style>
 </head>
 <body>
@@ -399,10 +418,14 @@
     <div class="modal" style="width:min(440px,94vw)">
       <button class="x" id="sg-x">✕</button>
       <h3>💡 Предложение</h3>
+      <div style="display:flex;gap:6px;margin-bottom:8px"><button class="gbtn on" id="sg-tab-new">✍️ Новое</button><button class="gbtn" id="sg-tab-mine">📬 Мои предложения</button></div>
+      <div id="sg-mine" style="display:none;max-height:60vh;overflow:auto"></div>
+      <div id="sg-new">
       <div style="color:var(--dim);font-size:12.5px;margin-bottom:8px">Идея, неудобство или ошибка — напиши, смотрящий это увидит.</div>
       <textarea id="sg-text" style="width:100%;min-height:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="что улучшить или что сломалось…"></textarea>
       <button class="abtn" id="sg-send" style="margin-top:8px">Отправить</button>
       <div id="sg-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
+      </div>
     </div>
   </div>
   <div class="modal-ov" id="uplmodal">
@@ -521,7 +544,7 @@ try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"
 try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
 
 // у продюсера вкладка называется ЕГО ИМЕНЕМ (а не городом), внутри — его команды
-function prodTabName(){ return AUTH.name || AUTH.user; }
+function prodTabName(){ return (state.viewAs && state.viewAs.type==="prod") ? state.viewAs.name : (AUTH.name || AUTH.user); } // 2b: в «глазами» — имя продюсера, а не смотрящего
 function tabs(){
   if (AUTH.prod) return [prodTabName(), "Мои задачи", "Рекомендации"];
   let cities = AUTH.cities.includes("all")
@@ -530,6 +553,7 @@ function tabs(){
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
   const tools = ["Операторы","Рекомендации"];
   if (AUTH.edit) tools.push("Мои задачи"); // свод задач продюсерам (ставит редактор)
+  if (AUTH.edit && !viewAsActive()) tools.push("Смены"); // задача 5: «Расписание» смен моделей — только смотрящему
   if (AUTH.edit || AUTH.cities.includes("all")) tools.push("Итог"); // итоги дня по сверкам — смотрящему/директору
   return ["Обзор"].concat(cities).concat(tools);
 }
@@ -891,7 +915,7 @@ function filterViewData(){
     AUTH.cities = cities.length ? cities : ["all"];
     const kf = m => { const o={}; Object.keys(m||{}).forEach(k=>{ if (String(k).split("|")[1]===name) o[k]=m[k]; }); return o; };
     state.plans = kf(state.plans); state.checks = kf(state.checks); state.recs = kf(state.recs);
-    state.tasks = state.tasks.filter(t=>t.producer===name); // видны только его задачи
+    state.tasks = state.tasks.filter(t=>t.producer===name && !t.orphan); // видны только его задачи (сироты продюсеру не видны — как на сервере)
     state.itog = [];
   } else if (state.viewAs.type==="city"){
     const c = state.viewAs.name;
@@ -1002,7 +1026,7 @@ function renderMain(){
   const wdOpen = !!document.getElementById("weekdrop"); // открытый список недель тоже переживает перерисовку
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week==="latest"?"latest":state.week})); }catch(e){}
   const wks = rememberWeeks(); // полный список недель — не только загруженная
-  const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
+  const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌","Смены":"📅"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
   // панель: секции + красная метка на вкладках с критичными сменами
   const tabBtn = c=>{
     const raw = rowsOf(c);
@@ -1011,18 +1035,21 @@ function renderMain(){
     const crit = rs.reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
     let badge = "";
     if (c==="Расписание"){ const od = overdueCount(); if (od) badge = `<span class="cnt due" title="просрочено перепроверок: ${od}">⏰${od}</span>`; }
+    else if (c==="Мои задачи"){ const nt = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan).length; if (nt) badge = `<span class="cnt due" title="открытых задач: ${nt}">📌${nt}</span>`; }
     else if (CITY_ORDER.includes(c)){ const od = overdueCount(c); if (od) badge = `<span class="cnt due" title="просрочено перепроверок в компании: ${od}">⏰${od}</span>`; }
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span>${badge}</button>`;
+    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":c==="Смены"?"Расписание":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span>${badge}</button>`;
   };
   const sect = t => `<div class="rsect">${t}</div>`;
+  const prodTabs = AUTH.prod ? [prodTabName()] : []; // 2b: закреплённая кнопка продюсера (раньше не рисовалась вовсе)
   const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
   const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
-  const toolTabs = tabs().filter(c=>["Операторы","Сравнение","Чек","Рекомендации","Итог","Мои задачи"].includes(c));
+  const toolTabs = tabs().filter(c=>["Операторы","Сравнение","Чек","Рекомендации","Итог","Мои задачи","Смены"].includes(c));
   const weekLabel = state.week==="latest" ? "последняя" : state.week==="all" ? "все" : state.week==="__month__" ? "месяц" : state.week;
   const weeksHtml = wks.length
     ? sect("недели") + `<button class="wtab" id="weekdrop-btn" title="выбрать неделю"><span>🗓</span><span>Неделя</span><span class="cnt">${esc(weekLabel)}</span></button>`
     : "";
   document.getElementById("tabs").innerHTML = `<button class="rtoggle" id="railtoggle" title="${state.railMini?"развернуть панель":"свернуть в иконки"}">${state.railMini?"⇥":"⇤"}</button>`
+    + (prodTabs.length ? sect("продюсер") + prodTabs.map(tabBtn).join("") : "")
     + mainTabs.map(tabBtn).join("")
     + (cityTabs.length?sect("компании")+cityTabs.map(tabBtn).join(""):"")
     + sect("инструменты")+toolTabs.map(tabBtn).join("")
@@ -1069,6 +1096,8 @@ function renderMain(){
   if (state.tab==="Рекомендации"){ renderNotes("recs"); return; }
   if (state.tab==="Итог"){ renderItog(); return; }
   if (state.tab==="Мои задачи"){ renderMyTasks(); return; }
+  if (state.tab==="Смены"){ renderShifts(); return; }
+  if (AUTH.prod && state.tab===prodTabName() && state.prodMode!=="table" && !state.search){ renderProdReviews(dedupeRows(rows)); return; }
   const checkedN = withScore.length;
   document.getElementById("pbar").innerHTML = rows.length ? `<div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(checkedN/rows.length*100)}%"></div></div>
     <div style="color:var(--faint);font-size:11.5px;margin-top:4px">прогресс проверки: ${checkedN} из ${rows.length} (${Math.round(checkedN/rows.length*100)}%)</div>` : "";
@@ -1110,7 +1139,7 @@ function renderMain(){
     </div>
     <div class="card">
       <h2>Команды <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
-      <div class="filters">${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
+      <div class="filters">${AUTH.prod && state.tab===prodTabName() ? '<button class="gbtn" id="pr-rev" title="разборы смотрящего карточками">📝 Разборы</button>' : ""}${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
         <button class="abtn2" id="aisearch" title="поиск по смыслу (ИИ)" style="${AUTH.edit?"":"display:none"}">🤖 смысл</button>
         <span class="count" id="f-count"></span>
       </div>
@@ -1253,6 +1282,8 @@ function renderMain(){
     } catch(e){ out.textContent = "🤖 " + e.message; }
   };
   
+  const prv = document.getElementById("pr-rev");
+  if (prv) prv.onclick = ()=>{ state.prodMode = "reviews"; render(); };
   const fs=document.getElementById("f-search");
   fs.oninput = e=>{
     state.search = e.target.value;
@@ -1354,11 +1385,11 @@ function renderMain(){
         const scr = rowScreens.filter(s=>String(s.cat)===n);
         if (!t && !scr.length) return "";
         const mark = x.s.st[j]==="ok" ? "✅" : x.s.st[j]==="bad" ? "❌" : "·";
-        return `<div class="drow"><b>${mark} ${n}</b><span>${hl(t)}</span>${scrThumbs(scr,n,false)}</div>`;
-      }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span>${hl(x.r.obs)}</span></div>` : "") +
-        (x.r.reco ? `<div class="drow"><b>💡 Рекомендации</b><span>${hl(x.r.reco)}</span></div>` : "") +
-        ((state.plans||{})[x.r.city+"|"+x.r.producer] ? `<div class="drow"><b>🗓 План работ</b><span>${esc(state.plans[x.r.city+"|"+x.r.producer])}</span></div>` : "") +
-        (x.r.updated ? `<div class="drow"><b>🕐 Последняя проверка/правка</b><span>${esc(fmtUpd(x.r.updated))}</span></div>` : "");
+        return `<div class="drow"><b>${mark} ${n}</b><span class="utext">${hl(t)}</span>${scrThumbs(scr,n,false)}</div>`;
+      }).join("") + (x.r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span class="utext">${hl(x.r.obs)}</span></div>` : "") +
+        (x.r.reco ? `<div class="drow"><b>💡 Рекомендации</b><span class="utext">${hl(x.r.reco)}</span></div>` : "") +
+        ((state.plans||{})[x.r.city+"|"+x.r.producer] ? `<div class="drow"><b>🗓 План работ</b><span class="utext">${esc(state.plans[x.r.city+"|"+x.r.producer])}</span></div>` : "") +
+        (x.r.updated ? `<div class="drow"><b>🕐 Последняя проверка/правка</b><span>${esc(fmtDay(x.r.updated))}</span></div>` : "");
       const lv0 = liveEval(CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"")));
       const editDet = `<div class="editlive" id="live${key}">${lv0}</div>` + CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
@@ -1394,7 +1425,7 @@ function renderMain(){
       const updCell = (()=>{ const u = dueInfo(x.r); if (!u) return '<span style="color:var(--faint);font-size:11.5px">—</span>';
         const nx = String(u.nextDay).padStart(2,"0")+"."+String(u.nextMonth).padStart(2,"0");
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
-        return `<div style="white-space:nowrap;font-size:12px"><b style="font-weight:600">${esc((x.r.updated||"").slice(0,11))}</b><div style="font-size:11px;color:var(--dim)">${lab} · след. ${nx}</div></div>`;
+        return `<div style="white-space:nowrap;font-size:12px"><b style="font-weight:600">${esc(fmtDay(x.r.updated))}</b><div style="font-size:11px;color:var(--dim)">${lab} · след. ${nx}</div></div>`;
       })();
       return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${canEdit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns"><span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
       <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?9:8}"><div class="detail-in">${inner}</div></td></tr>`;
@@ -1785,7 +1816,7 @@ function renderMain(){
       document.getElementById("tk-text").dataset.model = x.r.model || "";
       document.getElementById("tk-text").dataset.producer = x.r.producer || "";
       const lt = (state.tasks||[]).filter(t=>t.key===skey(x.r));
-      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")} · от ${esc(t.from||"—")}</b><span>${esc(t.text)}${t.status==="сделана"?" <button class=\"qbtn tk-reopen\" data-row=\""+t.row+"\" data-tkey=\""+esc(t.key)+"\" title=\"вернуть в работу\">вернуть в работу</button>":""}</span></div>`).join("") : "";
+      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")} · от ${esc(t.from||"—")}</b><span class="utext">${esc(t.text)}${t.status==="сделана"?" <button class=\"qbtn tk-reopen\" data-row=\""+t.row+"\" data-tkey=\""+esc(t.key)+"\" title=\"вернуть в работу\">вернуть в работу</button>":""}</span></div>`).join("") : "";
       document.querySelectorAll(".tk-reopen").forEach(b2=>b2.onclick=async (ev)=>{
         ev.stopPropagation();
         try { const r2 = await wp({ action:"taskreopen", row: b2.dataset.row, tkey: b2.dataset.tkey }); if (r2.error) throw new Error(r2.error); toast("↩ Вернул в работу"); setTimeout(load, 600); } catch(e2){ toast("Ошибка: "+e2.message, true); }
@@ -1874,7 +1905,7 @@ function schedChip(x){
   const lastTxt = u ? (u.days===0?"сегодня":u.days+" дн. назад") : "не проверялась";
   const oldCls = (u && u.days >= 14) ? " v-old" : "";
   const vd = x.s.verdict ? "v-"+(VMAP[x.s.verdict]||"none") : "v-none";
-  return `<div class="schip click ${oldCls} ${vd}" data-goto="${esc(r._sheet)}|${r._row}" title="последняя проверка/правка: ${esc(fmtUpd(r.updated)||"—")} — нажми, чтобы открыть правки">
+  return `<div class="schip click ${oldCls} ${vd}" data-goto="${esc(r._sheet)}|${r._row}" title="последняя проверка/правка: ${esc(fmtDay(r.updated)||"—")} — нажми, чтобы открыть правки">
     <div class="sc-top"><b>${esc(r.opName||r.opNick||"—")}</b> / ${esc(r.model||"—")}</div>
     <div class="sc-sub">${esc(r.producer||"—")} · ${esc(clabel(r.city))}</div>
     <div class="sc-sub">🕐 ${lastTxt}${x.s.verdict?" · "+(VLBL[x.s.verdict]||x.s.verdict):""}</div>
@@ -2142,8 +2173,10 @@ function renderMyTasks(){
     </div>
     <div style="white-space:pre-wrap;font-size:13px;margin:4px 0 8px">${esc(t.text)}</div>
     <div style="color:var(--faint);font-size:11.5px">от ${esc(t.from||"—")} · ${esc(t.when||"")}</div>
+    ${t.orphan?`<div style="color:var(--warn);font-size:12px;margin-top:6px" title="${esc(t.key||"")}">⚠ команда не найдена в таблице (удалена или переименована) — продюсер эту задачу не видит</div>`:""}
     <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-      ${t.status!=="сделана"?`<button class="abtn2 tk-done" data-row="${t.row}" data-tkey="${esc(t.key||"")}">✅ сделано</button>`:""}
+      ${t.status!=="сделана"&&!t.orphan?`<button class="abtn2 tk-done" data-row="${t.row}" data-tkey="${esc(t.key||"")}">✅ сделано</button>`:""}
+      ${AUTH.edit&&t.orphan?`<button class="abtn2 tk-del" data-row="${t.row}" data-tkey="${esc(t.key||"")}" data-txt="${esc(String(t.text||"").slice(0,60))}">🗑 удалить задачу</button>`:""}
       ${AUTH.edit&&t.status==="сделана"?`<button class="abtn2 tk-re" data-row="${t.row}" data-tkey="${esc(t.key||"")}">↩ вернуть в работу</button>`:""}
     </div>
   </div>`;
@@ -2157,11 +2190,160 @@ function renderMyTasks(){
     try { const r = await wp({ action:"taskdone", row: b.dataset.row, tkey: b.dataset.tkey }); if (r.error) throw new Error(r.error); toast("✅ Отмечено сделанным"); setTimeout(load, 500); }
     catch(e){ toast("Ошибка: "+e.message, true); }
   });
+  document.querySelectorAll(".tk-del").forEach(b=>b.onclick=async (ev)=>{
+    ev.stopPropagation();
+    if (!confirm("Удалить задачу «" + b.dataset.txt + "»? Строка будет удалена из листа «Задачи», отменить нельзя.")) return;
+    try { const r = await wp({ action:"taskdel", row: b.dataset.row, tkey: b.dataset.tkey }); if (r.error) throw new Error(r.error); toast("🗑 Задача удалена"); setTimeout(load, 500); }
+    catch(e){ toast("Ошибка: "+e.message, true); }
+  });
   document.querySelectorAll(".tk-re").forEach(b=>b.onclick=async (ev)=>{
     ev.stopPropagation();
     try { const r = await wp({ action:"taskreopen", row: b.dataset.row, tkey: b.dataset.tkey }); if (r.error) throw new Error(r.error); toast("↩ Вернул в работу"); setTimeout(load, 500); }
     catch(e){ toast("Ошибка: "+e.message, true); }
   });
+}
+
+// ---------- задача 5: «Расписание» — смены моделей из таблиц расписаний (сервер читает их только на чтение) ----------
+// одна нормализация фамилии и для расписания, и для «Модели» дашборда: регистр, ё=е, без NEW, без номера смены N и N/N
+function schedNorm(s){
+  return String(s||"").toLowerCase().replace(/ё/g,"е")
+    .replace(/(^|[^a-z])new(?=[^a-z]|$)/g, "$1")
+    .replace(/\d+(\/\d+)?/g, " ")
+    .replace(/[^a-zа-я\- ]/g, " ").replace(/\s+/g, " ").trim();
+}
+function ymdLocal(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function ymdShift(ymd, n){ const p = ymd.split("-").map(Number); return ymdLocal(new Date(p[0], p[1]-1, p[2] + n)); }
+const WD_RU = ["вс","пн","вт","ср","чт","пт","сб"];
+function shiftTeamsIndex(company){ // фамилия → команды последней недели ЭТОЙ компании (однофамильцы других компаний не склеиваются)
+  const lw = latestWeekName(), idx = {};
+  realRows().forEach(r=>{
+    if (r.city !== company || (lw && r.week !== lw)) return;
+    const k = schedNorm(r.model); if (!k) return;
+    (idx[k] = idx[k] || []).push(r);
+  });
+  return idx;
+}
+async function loadShifts(force){
+  const sh = state.shift;
+  const key = sh.company + "|" + sh.date + "|" + sh.days;
+  state.schedCache = state.schedCache || {};
+  if (!force && state.schedCache[key] && (state.schedCache[key].data || state.schedCache[key].loading)) return;
+  state.schedCache[key] = { loading: true };
+  if (state.tab === "Смены") renderShifts();
+  try {
+    const res = await wp({ action:"sched", company: sh.company, date: sh.date, days: sh.days, refresh: !!force }, 90000);
+    if (res.error) throw new Error(res.error);
+    state.schedCache[key] = { data: res };
+  } catch(e){ state.schedCache[key] = { error: e.message }; }
+  if (state.tab === "Смены") renderShifts();
+}
+function renderShifts(){
+  document.getElementById("pbar").innerHTML = "";
+  const comps = CITY_ORDER.filter(c=>AUTH.cities.includes("all") || AUTH.cities.includes(c));
+  const today = ymdLocal(new Date());
+  state.shift = state.shift || { company: comps[0] || "Онлайн", date: today, days: 1, q: "" };
+  const sh = state.shift;
+  if (!comps.includes(sh.company) && comps.length) sh.company = comps[0];
+  const key = sh.company + "|" + sh.date + "|" + sh.days;
+  const ent = (state.schedCache||{})[key];
+  if (!ent){ setTimeout(()=>loadShifts(false), 0); }
+  const idx = shiftTeamsIndex(sh.company);
+  const q = schedNorm(sh.q);
+  const nameHtml = (nm, struck) => {
+    const k = schedNorm(nm);
+    const chips = (idx[k]||[]).map(r=>`<span class="shchip" title="команда на дашборде">${esc(r.producer||"—")} · ${esc(r.opName||r.opNick||"—")}</span>`).join("");
+    return `<span class="shname${struck?" struck":""}${q && k.includes(q)?" shhit":""}">${esc(nm)}</span> ${chips}`;
+  };
+  let body = "";
+  if (!ent || ent.loading) body = '<div class="empty">Загружаю расписание…</div>';
+  else if (ent.error) body = `<div class="empty" style="color:var(--bad)">Не удалось прочитать расписание: ${esc(ent.error)}</div>`;
+  else {
+    const data = ent.data;
+    body = (data.days||[]).map(d=>{
+      const p = d.date.split("-"); const dt = new Date(+p[0], +p[1]-1, +p[2]);
+      let shifts = (d.shifts||[]);
+      if (q) shifts = shifts.filter(s=>(s.names||[]).some(n=>schedNorm(n).includes(q)) || schedNorm(s.operator).includes(q));
+      const act = shifts.filter(s=>!s.struck), off = shifts.filter(s=>s.struck);
+      const row = s => `<tr>
+          <td style="white-space:nowrap;color:var(--dim)">${s.part?`<b>${esc(s.part==="NIGHT"?"🌙 ночь":"☀️ день")}</b> `:""}${esc(s.time||"")}</td>
+          <td>${(s.names||[]).map(n=>nameHtml(n, s.struck)).join(' <span style="color:var(--faint)">/</span> ')}${s.isNew?'<span class="shbadge new">NEW</span>':""}${s.struck?'<span class="shbadge off">отписка</span>':""}</td>
+          <td style="color:var(--dim)">${s.shiftNo?"смена "+esc(s.shiftNo):""}</td>
+          <td style="color:var(--dim)">${esc(s.operator||"")}</td>
+          <td>${s.status?`<span class="shbadge st">${esc(s.status)}</span>`:""}</td></tr>`;
+      return `<div class="card shday${d.date===today?" today":""}">
+        <h2 style="margin:0 0 6px">${WD_RU[dt.getDay()]} ${esc(p[2]+"."+p[1])}${d.date===today?' <span class="ptag pt-ok">сегодня</span>':""}
+          <span style="color:var(--faint);font-size:11.5px;font-weight:400">смен: ${act.length}${off.length?" · отписок: "+off.length:""}${d.sheet?" · лист «"+esc(d.sheet)+"»":""}</span></h2>
+        ${d.error?`<div class="empty" style="color:var(--warn)">${esc(d.error)}</div>`:""}
+        ${act.length||off.length ? `<table class="shtable"><thead><tr><th>Время</th><th>Модель</th><th>Смена</th><th>Оператор</th><th>Статус</th></tr></thead><tbody>${act.map(row).join("")}${off.map(row).join("")}</tbody></table>` : (d.error?"":'<div class="empty">Смен нет' + (q?" по поиску":"") + '</div>')}
+      </div>`;
+    }).join("") + `<div style="color:var(--faint);font-size:11.5px">обновлено в ${esc(data.updated||"—")} (кэш до 5 мин) · таблица расписания только читается</div>`;
+  }
+  document.getElementById("content").innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <h2 style="margin:0 0 8px">📅 Расписание смен</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${comps.map(c=>`<button class="gbtn${c===sh.company?" on":""}" data-shc="${esc(c)}" style="${c===sh.company?"color:var(--ink);border-color:var(--accent)":""}">${esc(clabel(c))}</button>`).join("")}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="gbtn" id="sh-prev" title="назад">◀</button>
+        <button class="gbtn" id="sh-today">сегодня</button>
+        <button class="gbtn" id="sh-next" title="вперёд">▶</button>
+        <input type="date" id="sh-date" value="${esc(sh.date)}" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:3px 6px;font:inherit;font-size:12px">
+        <button class="gbtn" id="sh-mode">${sh.days===7?"📆 неделя":"📄 день"}</button>
+        <input id="sh-q" placeholder="поиск по фамилии…" value="${esc(sh.q)}" style="flex:1;min-width:140px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 8px;font:inherit;font-size:12px">
+        <button class="gbtn" id="sh-ref" title="перечитать таблицу (минуя кэш)">⟳ обновить</button>
+      </div>
+    </div>
+    ${body}`;
+  const go = (date, days)=>{ sh.date = date; if (days) sh.days = days; renderShifts(); };
+  document.querySelectorAll("[data-shc]").forEach(b=>b.onclick=()=>{ sh.company = b.dataset.shc; renderShifts(); });
+  document.getElementById("sh-prev").onclick = ()=>go(ymdShift(sh.date, -sh.days));
+  document.getElementById("sh-next").onclick = ()=>go(ymdShift(sh.date, sh.days));
+  document.getElementById("sh-today").onclick = ()=>go(today);
+  document.getElementById("sh-date").onchange = e=>{ if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) go(e.target.value); };
+  document.getElementById("sh-mode").onclick = ()=>go(sh.date, sh.days===7 ? 1 : 7);
+  document.getElementById("sh-ref").onclick = ()=>loadShifts(true);
+  const qi = document.getElementById("sh-q");
+  qi.oninput = ()=>{ sh.q = qi.value; const pos = qi.selectionStart; renderShifts(); const q2 = document.getElementById("sh-q"); if (q2){ q2.focus(); try { q2.setSelectionRange(pos, pos); } catch(e){} } };
+}
+
+// ---------- 2b: «Разборы» продюсера — что смотрящий написал по его командам (только чтение) ----------
+function renderProdReviews(rows){
+  document.getElementById("pbar").innerHTML = "";
+  const tms = r => { const d = parseUpd(r.updated); return d ? d.getTime() : 0; };
+  const list = rows.filter(r=>r.opName||r.opNick||r.model).slice().sort((a,b)=>tms(b)-tms(a));
+  const thumbs = r => {
+    const scr = (state.screens||{})[skey(r)] || [];
+    return scr.length ? `<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,320)))}" data-tk="${esc(s.mini||"")}" alt="скрин"></span>`).join("")}</div>` : "";
+  };
+  const card = r => {
+    const s = rowStats(r);
+    const vcls = s.verdict ? "pt-" + (VMAP[s.verdict]||"warn") : "";
+    const cats = CATS.map((n,j)=>{ const t = (r.cats[j]||"").trim(); if (!t) return "";
+      const mark = s.st[j]==="ok" ? "✅" : s.st[j]==="bad" ? "❌" : "·";
+      return `<div class="drow"><b>${mark} ${esc(n)}</b><span class="utext">${esc(t)}</span></div>`; }).join("");
+    const extra = (r.obs ? `<div class="drow"><b>💬 Доп. комментарий</b><span class="utext">${esc(r.obs)}</span></div>` : "")
+      + (r.reco ? `<div class="drow"><b>💡 Рекомендации</b><span class="utext">${esc(r.reco)}</span></div>` : "");
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <b>${esc(r.opName||r.opNick||"—")} / ${esc(r.model||"—")}</b>
+        <span style="color:var(--faint);font-size:11.5px">${esc(clabel(r.city))}${r.week?" · "+esc(r.week):""}</span>
+        ${s.verdict?`<span class="ptag ${vcls}">${esc(VLBL[s.verdict]||s.verdict)}</span>`:`<span class="ptag">не проверено</span>`}
+        ${s.score!==null?`<span style="font-size:12px;color:var(--dim)">${s.score}/${MAX_SCORE}</span>`:""}
+        <span style="margin-left:auto;color:var(--faint);font-size:11.5px">${r.updated?"проверено: "+esc(fmtDay(r.updated)):"ещё не проверялась"}</span>
+      </div>
+      ${cats || extra ? cats + extra : '<div class="empty">Разбора пока нет</div>'}
+      ${thumbs(r)}
+    </div>`;
+  };
+  document.getElementById("content").innerHTML = `
+    <div class="card" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">👤 ${esc(prodTabName())} — разборы смотрящего</h2>
+      <span style="color:var(--faint);font-size:12px">команд: ${list.length} · свежие сверху</span>
+      <span style="margin-left:auto"><button class="gbtn on" disabled>Разборы</button> <button class="gbtn" id="pr-table">Таблица</button></span>
+    </div>
+    ${list.length ? list.map(card).join("") : `<div class="empty">${esc(emptyReason())}</div>`}`;
+  const tb = document.getElementById("pr-table");
+  if (tb) tb.onclick = ()=>{ state.prodMode = "table"; render(); };
+  setTimeout(ensureThumbs, 30);
 }
 
 // ---------- «Итог» — последний итог дня по сверкам (лист «Итог», только чтение) ----------
@@ -2363,6 +2545,14 @@ function fmtUpd(s){ // без «(кто)»; год текущего года н�
   return String(s||"").replace(/\s*\([^)]*\)\s*$/, "").trim()
     .replace(/^(\d{1,2}\.\d{1,2})\.(\d{4})/, (m0,a,y)=> +y === new Date().getFullYear() ? a : a + "." + y.slice(2));
 }
+// задача 4: дата проверки без времени — берём дату прямо из штампа (без пересчёта пояса, иначе около полуночи день съедет)
+function fmtDay(s){
+  const m = String(s||"").match(/(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?/);
+  if (!m) return fmtUpd(s);
+  const dd = m[1].padStart(2,"0"), mm = m[2].padStart(2,"0");
+  const y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : new Date().getFullYear();
+  return y === new Date().getFullYear() ? dd + "." + mm : dd + "." + mm + "." + String(y).slice(2);
+}
 const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 // Все запросы — POST с токеном в теле (никогда в адресе).
 // Apps Script/Google echo иногда отдаёт сырые переводы строк ВНУТРИ JSON-строк
@@ -2405,7 +2595,7 @@ function postJSON(body, timeoutMs){
     .finally(() => { if (to) clearTimeout(to); });
 }
 // действия, меняющие таблицу: в режиме «глазами» они запрещены (там чужие права и отфильтрованные данные)
-const WRITE_ACTIONS_FE = ["upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen"];
+const WRITE_ACTIONS_FE = ["upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply"];
 let sessionGone = false;
 function sessionExpired(){ // C: сессия истекла/погашена — сразу окно входа (черновики остаются в браузере)
   if (sessionGone) return; sessionGone = true;
@@ -2825,7 +3015,7 @@ document.getElementById("resetbell").onclick = async ()=>{
     }
     if (sg.length){
       html += '<div style="color:var(--faint);font-size:12px;margin:10px 0 4px">предложения (пометку баг/идея и заголовок можно поменять вручную)</div>';
-      html += sg.map(r=>`<div class="drow" style="align-items:flex-start"><b>${r.unread?"🆕 ":""}${esc(r.who)}</b><span style="white-space:pre-wrap"><button class="qbtn sg-kind" data-row="${r.row}" data-kind="${esc(r.kind||"")}" title="поменять пометку баг/идея">[${esc(r.kind||"—")}]</button> ${r.title ? "<b>"+esc(r.title)+"</b> — " : ""}${esc(r.when)}: ${esc(r.text)} <button class="qbtn sg-title" data-row="${r.row}" data-kind="${esc(r.kind||"")}" data-title="${esc(r.title||"")}" title="поменять заголовок">✏️</button></span><span><button class="abtn2 sg-del" data-row="${r.row}" title="убрать из списка">✕</button></span></div>`).join("");
+      html += sg.map(r=>`<div class="drow" style="align-items:flex-start"><b>${r.unread?"🆕 ":""}${esc(r.who)}</b><span style="white-space:pre-wrap"><button class="qbtn sg-kind" data-row="${r.row}" data-kind="${esc(r.kind||"")}" title="поменять пометку баг/идея">[${esc(r.kind||"—")}]</button> ${r.title ? "<b>"+esc(r.title)+"</b> — " : ""}${esc(r.when)}: ${esc(r.text)} <button class="qbtn sg-title" data-row="${r.row}" data-kind="${esc(r.kind||"")}" data-title="${esc(r.title||"")}" title="поменять заголовок">✏️</button><div class="sg-ans" style="${r.answer?"":"display:none;"}margin-top:4px;padding:5px 8px;background:var(--panel2);border-radius:6px;font-size:12px"><span style="color:var(--dim)">↩ ${esc(r.answeredBy||"")}${r.answeredAt?" · "+esc(fmtDay(r.answeredAt)):""}:</span> <span class="utext sg-anstext">${esc(r.answer||"")}</span></div><button class="qbtn sg-reply" data-row="${r.row}" title="${r.hasLogin?"ответ увидит автор":"старое предложение без логина автора — ответ сохранится, но автор его не увидит"}">↩ ${r.answer?"изменить ответ":"ответить"}${r.hasLogin?"":" ⚠"}</button><div class="sg-rbox" style="display:none;margin-top:4px"><textarea class="sg-rtext" style="width:100%;min-height:60px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px;font:inherit;font-size:12.5px;box-sizing:border-box">${esc(r.answer||"")}</textarea><button class="abtn2 sg-rsend" data-row="${r.row}">Отправить ответ</button></div></span><span><button class="abtn2 sg-del" data-row="${r.row}" title="убрать из списка">✕</button></span></div>`).join("");
     }
     list.innerHTML = html;
     list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
@@ -2856,6 +3046,28 @@ document.getElementById("resetbell").onclick = async ()=>{
         b.textContent = "[" + nk + "]"; b.dataset.kind = nk;
       } catch(e){ toast("Ошибка: "+e.message, true); }
     });
+    list.querySelectorAll(".sg-reply").forEach(b=>b.onclick=(ev)=>{
+      ev.stopPropagation();
+      const box = b.parentNode.querySelector(".sg-rbox"); if (!box) return;
+      box.style.display = box.style.display === "none" ? "" : "none";
+      if (box.style.display === "") { const ta = box.querySelector("textarea"); if (ta) ta.focus(); }
+    });
+    list.querySelectorAll(".sg-rsend").forEach(b=>b.onclick=async (ev)=>{
+      ev.stopPropagation();
+      const wrap = b.parentNode, ta = wrap.querySelector(".sg-rtext");
+      const text = (ta && ta.value || "").trim();
+      if (!text){ toast("Напиши ответ", true); return; }
+      b.disabled = true;
+      try {
+        const res = await wp(Object.assign({ action:"suggestreply", row: b.dataset.row, text: text }, sgMeta[b.dataset.row]), 30000);
+        if (res.error) throw new Error(res.error);
+        const span = wrap.parentNode;
+        const ans = span.querySelector(".sg-ans"); if (ans){ ans.style.display = ""; const at = ans.querySelector(".sg-anstext"); if (at) at.textContent = text; }
+        wrap.style.display = "none";
+        toast(res.author === false ? "✔ Ответ сохранён (автор старого предложения его не увидит)" : "✔ Ответ отправлен автору");
+      } catch(e){ toast("Ошибка: "+e.message, true); }
+      finally { b.disabled = false; }
+    });
     list.querySelectorAll(".sg-title").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       const t = prompt("Заголовок предложения:", b.dataset.title || "");
@@ -2879,18 +3091,50 @@ document.getElementById("resetbell").onclick = async ()=>{
         const meta2 = {};
         Object.keys(sgMeta).forEach(k=>{ const n = +k; if (n !== delRow) meta2[n > delRow ? n - 1 : n] = sgMeta[k]; });
         Object.keys(sgMeta).forEach(k=>delete sgMeta[k]); Object.assign(sgMeta, meta2);
-        list.querySelectorAll(".sg-kind,.sg-title,.sg-del").forEach(x=>{ const n = +x.dataset.row; if (n > delRow) x.dataset.row = String(n - 1); });
+        list.querySelectorAll(".sg-kind,.sg-title,.sg-del,.sg-reply,.sg-rsend").forEach(x=>{ const n = +x.dataset.row; if (n > delRow) x.dataset.row = String(n - 1); });
         if (!list.querySelectorAll(".drow").length) list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>';
       } catch(e){ toast("Ошибка: "+e.message, true); }
     });
   } catch(e){ list.textContent = "Ошибка: " + e.message; }
 };
 // предложение от любого аккаунта
+function sugKind(text){ return /не работает|ошибк|сломал|не грузит|не открыва|не сохраня|баг|завис|пропал|глюч|вылета/i.test(String(text||"")) ? "баг" : "идея"; }
+function updateSugBadge(n){
+  const b = document.getElementById("sugbtn"); if (!b) return;
+  b.textContent = n > 0 ? "💡" + n : "💡";
+  b.title = n > 0 ? "есть ответы на твои предложения: " + n : "предложение или ошибка";
+  state.sugAnswers = n || 0;
+}
+function sugTab(mine){
+  document.getElementById("sg-new").style.display = mine ? "none" : "";
+  document.getElementById("sg-mine").style.display = mine ? "" : "none";
+  document.getElementById("sg-tab-new").classList.toggle("on", !mine);
+  document.getElementById("sg-tab-mine").classList.toggle("on", !!mine);
+}
+async function loadMySuggest(){
+  const box = document.getElementById("sg-mine");
+  box.textContent = "Загружаю…";
+  try {
+    const res = await wp({ action:"mysuggest" }, 30000);
+    if (res.error) throw new Error(res.error);
+    const list = res.list || [];
+    box.innerHTML = list.length ? list.map(s=>`<div class="drow">
+        <b>${s.unread?"🆕 ":""}${esc(s.when)}${s.kind?" · "+esc(s.kind):""}${s.title?" · "+esc(s.title):""}</b>
+        <span class="utext">${esc(s.text)}</span>
+        ${s.answer ? `<div style="margin-top:6px;padding:6px 8px;background:var(--panel2);border-radius:6px"><div style="color:var(--dim);font-size:11.5px">↩ ответ: ${esc(s.answeredBy||"смотрящий")}${s.answeredAt?" · "+esc(fmtDay(s.answeredAt)):""}</div><span class="utext">${esc(s.answer)}</span></div>` : '<div style="color:var(--faint);font-size:11.5px;margin-top:4px">ответа пока нет</div>'}
+      </div>`).join("") : '<div class="empty">Ты ещё не отправлял предложений (или они отправлены до появления ответов)</div>';
+    updateSugBadge(0); // просмотренные ответы сервер пометил прочитанными
+  } catch(e){ box.textContent = "Ошибка: " + e.message; }
+}
 document.getElementById("sugbtn").onclick = ()=>{
   document.getElementById("sg-text").value = "";
   document.getElementById("sg-msg").textContent = "";
+  sugTab(state.sugAnswers > 0);
   openModal("sugmodal");
+  if (state.sugAnswers > 0) loadMySuggest();
 };
+document.getElementById("sg-tab-new").onclick = ()=>sugTab(false);
+document.getElementById("sg-tab-mine").onclick = ()=>{ sugTab(true); loadMySuggest(); };
 document.getElementById("sg-x").onclick = ()=>closeModal("sugmodal");
 document.getElementById("sg-send").onclick = async ()=>{
   const text = document.getElementById("sg-text").value.trim();
@@ -2898,12 +3142,10 @@ document.getElementById("sg-send").onclick = async ()=>{
   if (!text){ msg.textContent = "Напиши предложение или опиши ошибку"; return; }
   msg.textContent = "Отправляю…";
   try {
-    let kind = "", title = "";
-    try {
-      const c = await aiAsk("classify", { text: text.slice(0, 2000) }); // U: через aiq (старый action=ai сервер не знает)
-      if (c && !c.error){ kind = c.kind || ""; title = c.title || ""; }
-    } catch(e2){} // ИИ недоступен — отправим без пометки
-    const res = await wp({ action:"suggest", text: text, kind: kind, title: title });
+    // задача 3: отправляем сразу — без ожидания ИИ (раньше до 55 с); тип — по словам, смотрящий поправит вручную
+    const kind = sugKind(text);
+    const title = text.split(/\s+/).slice(0,6).join(" ").slice(0,80);
+    const res = await wp({ action:"suggest", text: text, kind: kind, title: title }, 30000);
     if (res.error) throw new Error(res.error);
     msg.textContent = "✔ Отправлено — спасибо!";
     setTimeout(()=>closeModal("sugmodal"), 1200);
@@ -3280,7 +3522,7 @@ function applyData(j, isHistory, mergeWeek){
   txt.textContent = AUTH.prod ? "режим продюсера · видишь только свои команды" : "";
   updateLoginBtn();
   updateViewAs();
-  updateResetBell((j.resetPending || 0) + (j.suggestions || 0));
+  if (Date.now() - (state.lastPing||0) > 90000) updateResetBell((j.resetPending || 0) + (j.suggestions || 0)); // свежий ping точнее кэшированного чтения
   document.getElementById("sugbtn").style.display = AUTH.ok() ? "" : "none";
   render();
   if (document.getElementById("a-prod")) updateProdList();
@@ -3409,6 +3651,21 @@ setTimeout(function(){
 }, 15000);
 load();
 setInterval(()=>{ if (AUTH.ok() && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
+// задача 3: лёгкий опрос уведомлений раз в 60 с — работает и при черновиках (полное обновление при них пропускается)
+async function pingNotif(){
+  if (!AUTH.ok() || viewAsActive() || document.visibilityState !== "visible") return;
+  try {
+    const r = await wp({ action:"ping" }, 20000);
+    if (r && !r.error){
+      state.lastPing = Date.now();
+      updateResetBell((r.resetPending||0) + (r.suggestions||0));
+      updateSugBadge(r.myAnswers||0);
+    }
+  } catch(e){}
+}
+setInterval(pingNotif, 60000);
+setTimeout(pingNotif, 4000);
+document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState === "visible" && Date.now() - (state.lastPing||0) > 60000) pingNotif(); });
 </script>
 </body>
 </html>
