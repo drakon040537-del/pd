@@ -599,7 +599,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-08.61"
+  VER: "2026-10-08.62"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -3242,7 +3242,7 @@ function pmCardHtml(c, canEdit, isEd){
     const sc = scr.filter(s=>String(s.cat)===n);
     return `<div class="f" style="${bg}"><div class="pmcat-h"><span class="nm">${myS==="ok"?"✅ ":myS==="bad"?"❌ ":""}${esc(n)}${hint}</span>${canEdit?`<span class="btns"><button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="">✕</button></span>`:""}</div>
       ${ta("pm"+kid+"_"+j, v.cats[j]||"", "что увидел")}
-      ${pmThumbs(sc, it, canEdit)}</div>`;
+      ${pmThumbs(sc, it, canEdit)}${canEdit ? `<div style="margin-top:6px"><button class="qbtn" data-pmupl="${esc(k)}" data-pmc="${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div>` : ""}</div>`;
   }).join("");
   const note = it && it.status === "возврат" && it.note ? `<div class="failbar" style="margin:8px 0">↩ Смотрящий вернул: <span class="utext">${esc(it.note)}</span></div>` : "";
   const isAdded = it ? !it.base : !c.baseKey;
@@ -3265,10 +3265,7 @@ function pmCardHtml(c, canEdit, isEd){
     <div class="pmgrid">${cats}</div>
     <div class="f" style="margin-top:8px"><b>💬 Общий комментарий</b>${ta("pm"+kid+"_comment", v.comment, "", 54)}</div>
     ${pmThumbs(scr.filter(s=>!CATS.includes(String(s.cat))), it, canEdit)}
-    ${canEdit ? `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="pm${kid}_cat" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px">${CATS.map(n=>`<option>${esc(n)}</option>`).join("")}<option value="">без категории</option></select>
-      <button class="abtn2" data-pmfile="${esc(k)}">📎 файл</button><button class="abtn2" data-pmcam="${esc(k)}">📸 камера</button>
-      <span style="color:var(--faint);font-size:11.5px">или вставь скрин Ctrl+V в карточку</span></div>` : ""}
+    ${canEdit ? `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="abtn2" data-pmupl="${esc(k)}" data-pmc="G">📷 общее фото</button><span style="color:var(--faint);font-size:11.5px">или Ctrl+V прямо в поле категории — скрин встанет в неё</span></div>` : ""}
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${prodBtns}${edBtns}${unhide}</div>
     ${retBox}
   </div>`;
@@ -3420,27 +3417,26 @@ async function pmEnsureId(k){ // для скрина нужна запись —
   const r = await pmSave(k, false);
   return r && r.id;
 }
-async function pmUploadFiles(k, files){
-  const list = [...(files||[])].filter(f=>f && /^image\//.test(f.type||"image/"));
-  if (!list.length) return;
-  const sel = document.getElementById("pm"+strHash(k)+"_cat");
-  const cat = sel ? sel.value : "";
-  const id = await pmEnsureId(k); if (!id){ toast("Сначала сохрани мониторинг", true); return; }
-  let ok = 0;
-  for (const f of list){
-    try {
-      toast("📸 Скрин " + (ok+1) + "/" + list.length + ": сжимаю…");
-      const enc = await shotEncode(f);
-      toast("📸 Скрин " + (ok+1) + "/" + list.length + ": загружаю…");
-      const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, cat }, 90000);
-      const key = r.key || ("PM|" + id);
-      state.pm.screens = state.pm.screens || {};
-      (state.pm.screens[key] = state.pm.screens[key] || []).push({ cat: r.cat||"", link: r.link, mini: r.mini||"", ts: r.ts||"" });
-      ok++;
-    } catch(e){ toast("Скрин не загрузился: " + e.message, true); }
-  }
-  if (ok) toast("📸 Загружено: " + ok + " ✓");
-  softRender();
+// v6.2: скрины мониторинга идут через то же окно «📷 Фото», что и у смотрящего (Ctrl+V, перетаскивание пачкой, камера, разметка)
+function pmOpenUpload(k, catIdx){
+  uplTarget = { pm: k, catIdx: catIdx };
+  document.getElementById("u-title").textContent = "📷 Фото — " + (catIdx === undefined ? "общее фото" : CATS[catIdx]);
+  document.getElementById("u-msg").textContent = "";
+  openModal("uplmodal");
+}
+async function pmUploadOne(blob, k, catIdx){ // → true | текст ошибки (для общей очереди загрузки)
+  try {
+    if (blob && blob.type && !/^image\//.test(blob.type)) return "не картинка";
+    const id = await pmEnsureId(k); if (!id) return "сначала сохрани мониторинг";
+    const enc = await shotEncode(blob);
+    const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, cat: catIdx === undefined || catIdx === null ? "" : CATS[catIdx] }, 90000);
+    const key = r.key || ("PM|" + id);
+    state.pm.screens = state.pm.screens || {};
+    const arr = state.pm.screens[key] = state.pm.screens[key] || [];
+    if (!arr.some(x=>x.link===r.link)) arr.push({ cat: r.cat||"", link: r.link, mini: r.mini||"", ts: r.ts||"" });
+    softRender();
+    return true;
+  } catch(e){ toast("Скрин не загрузился: " + e.message, true); return e.message || "ошибка"; }
 }
 function pmBind(){
   const box = document.getElementById("content");
@@ -3469,8 +3465,12 @@ function pmBind(){
       const items = (ev.clipboardData && ev.clipboardData.items) ? [...ev.clipboardData.items] : [];
       const files = items.filter(i=>i.kind==="file" && /^image\//.test(i.type)).map(i=>i.getAsFile()).filter(Boolean);
       if (!files.length) return;
-      if (!card.querySelector("[data-pmfile]")){ toast("Скрины здесь добавлять нельзя (только просмотр)", true); return; }
-      ev.preventDefault(); pmUploadFiles(k, files);
+      if (!card.querySelector("[data-pmupl]")){ toast("Скрины здесь добавлять нельзя (только просмотр)", true); return; }
+      const m = String((ev.target && ev.target.id) || "").match(/_(\d)$/); // вставили в поле категории — скрин в эту категорию
+      ev.preventDefault(); ev.stopPropagation();
+      uplTarget = { pm: k, catIdx: m ? +m[1] : undefined };
+      doUpload(files);
+      toast("📸 Скрин → " + (m ? CATS[+m[1]] : "общее фото"));
     });
   });
   box.querySelectorAll(".pmq").forEach(b=>b.onclick=()=>{ const ta = document.getElementById(b.dataset.pmta); if (!ta) return; ta.value = b.dataset.v; ta.dispatchEvent(new Event("input", { bubbles: true })); softRender(); });
@@ -3494,12 +3494,7 @@ function pmBind(){
   box.querySelectorAll("[data-pmret]").forEach(b=>b.onclick=()=>{ const el = document.getElementById("pmret"+b.dataset.pmret); if (el) el.style.display = el.style.display === "none" ? "" : "none"; });
   box.querySelectorAll("[data-pmretgo]").forEach(b=>b.onclick=()=>{ const ta = document.getElementById("pmretta"+strHash(b.dataset.pmretgo)); pmStatus(b.dataset.pmretgo, "return", ta ? ta.value.trim() : ""); });
   box.querySelectorAll("[data-pmtake]").forEach(b=>b.onclick=()=>pmTake(b.dataset.pmtake));
-  box.querySelectorAll("[data-pmfile],[data-pmcam]").forEach(b=>b.onclick=()=>{
-    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = !b.dataset.pmcam;
-    if (b.dataset.pmcam) inp.setAttribute("capture", "environment");
-    inp.onchange = ()=>pmUploadFiles(b.dataset.pmfile || b.dataset.pmcam, inp.files);
-    inp.click();
-  });
+  box.querySelectorAll("[data-pmupl]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const c = b.dataset.pmc; pmOpenUpload(b.dataset.pmupl, c === "G" ? undefined : +c); /* ключ карточки сам содержит «|» */ });
   box.querySelectorAll("[data-pmdel]").forEach(x=>x.onclick=async (ev)=>{
     ev.stopPropagation();
     if (!confirm("Удалить этот скрин из мониторинга?")) return;
@@ -4456,7 +4451,7 @@ function uplQueueDraw(){
 }
 function uplEnqueue(files, opts){
   if (!uplTarget || !files.length) return;
-  const t = { x: uplTarget.x, catIdx: uplTarget.catIdx };
+  const t = { x: uplTarget.x, catIdx: uplTarget.catIdx, pm: uplTarget.pm }; // v6.2: pm — карточка мониторинга продюсера
   files.forEach((f,i)=>uplQueue.items.push({ blob: f, name: (f.name || ("скрин " + (uplQueue.items.length + 1))) + (opts && opts.tag ? " · " + opts.tag : ""), t: t, st: "wait" }));
   uplQueueDraw();
   uplRun();
@@ -4468,7 +4463,7 @@ async function uplRun(){
     for (;;){
       const q = uplQueue.items.find(z=>z.st==="wait"); if (!q) break;
       q.st = "run"; uplQueueDraw();
-      const ok = await uploadScreen(q.blob, q.t.x, q.t.catIdx, true);
+      const ok = q.t.pm ? await pmUploadOne(q.blob, q.t.pm, q.t.catIdx) : await uploadScreen(q.blob, q.t.x, q.t.catIdx, true);
       q.st = ok === true ? "ok" : "err"; if (ok !== true) q.err = String(ok || "ошибка").slice(0, 80);
       q.blob = null; // память
       uplQueueDraw();
@@ -5009,7 +5004,7 @@ function overdueCount(city){
 }
 
 document.addEventListener("paste", function(e){
-  if (!AUTH.edit) return;
+  if (!AUTH.edit && !(uplTarget && uplTarget.pm)) return; // v6.2: продюсер тоже вставляет в окно «📷 Фото» своего мониторинга
   const um = document.getElementById("uplmodal");
   if (um && um.classList.contains("show") && uplTarget){ // окно фото открыто — вставка идёт туда
     const items = e.clipboardData && e.clipboardData.items;
