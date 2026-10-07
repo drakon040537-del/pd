@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- v6 (исправление 6): CSP — страница может ходить только на сервер дашборда и брать картинки только с Google Диска.
+     Даже если в данных окажется вредный код, он не сможет отправить токен на чужой сайт. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://drive.google.com https://*.google.com https://*.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#191c21">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -570,7 +573,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-07.46"
+  VER: "2026-10-08.60"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -637,13 +640,14 @@ try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }
 // у продюсера вкладка называется ЕГО ИМЕНЕМ (а не городом), внутри — его команды
 function prodTabName(){ return (state.viewAs && state.viewAs.type==="prod") ? state.viewAs.name : (AUTH.name || AUTH.user); } // 2b: в «глазами» — имя продюсера, а не смотрящего
 function tabs(){
-  if (AUTH.prod) return [prodTabName(), "Мои задачи", "Рекомендации"];
+  if (AUTH.prod) return [prodTabName(), PM_TAB_PROD, "Мои задачи", "Рекомендации"]; // v6: «📋 Мой мониторинг»
   let cities = AUTH.cities.includes("all")
     ? ["Томск","Новосибирск","Онлайн"]
     : AUTH.cities.filter(c=>CITY_ORDER.includes(c));
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
   const tools = ["Операторы","Рекомендации"];
-  if (AUTH.edit) tools.push("Мои задачи"); // свод задач продюсерам (ставит редактор)
+  if (AUTH.edit) tools.push("Мои задачи");
+  if (AUTH.edit && !viewAsActive()) tools.push(PM_TAB_ED); // v6: мониторинг, который ведут продюсеры // свод задач продюсерам (ставит редактор)
   if (AUTH.edit && !viewAsActive()) tools.push("Лента"); // Обновление 6 (12): мобильная лента сегодняшних смен — только смотрящему
   if (AUTH.edit && !viewAsActive()) tools.push("Смены"); // задача 5: «Расписание» смен моделей — только смотрящему
   if (AUTH.edit || AUTH.cities.includes("all")) tools.push("Итог"); // итоги дня по сверкам — смотрящему/директору
@@ -688,7 +692,7 @@ function catState(t){
 // Обновление 6 (7): rowStats запоминается по «отпечатку» строки (тексты категорий + ручная оценка/вердикт);
 // правка в строке меняет отпечаток — пересчёт. Результат нельзя менять снаружи (только читать).
 const _rsMemo = (typeof WeakMap === "function") ? new WeakMap() : null;
-function rowFp(r){ return (r.cats||[]).join("\u0001") + "\u0002" + String(r.scoreM==null?"":r.scoreM) + "\u0002" + String(r.verdictM==null?"":r.verdictM); }
+function rowFp(r){ return (r._lite ? "L" : "") + (r.cats||[]).join("\u0001") + "\u0002" + String(r.scoreM==null?"":r.scoreM) + "\u0002" + String(r.verdictM==null?"":r.verdictM); }
 function rowStats(r){
   if (!_rsMemo || !r || typeof r !== "object") return rowStatsRaw(r);
   const fp = rowFp(r), m = _rsMemo.get(r);
@@ -697,7 +701,7 @@ function rowStats(r){
   return v;
 }
 function rowStatsRaw(r){
-  const st = r.cats.map(catState);
+  const st = (r._lite && Array.isArray(r._st) && r._st.length === 9) ? r._st.slice() : r.cats.map(catState); // v6: у облегчённой строки состояния посчитал сервер по полному тексту
   const ok = st.filter(x=>x==="ok").length;
   const bad = st.filter(x=>x==="bad").length;
   const evalN = st.filter(x=>x!==null).length;
@@ -734,7 +738,7 @@ function hl(t){
   const q = esc(state.search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   try { return s.replace(new RegExp(q, "gi"), m => "<mark>" + m + "</mark>"); } catch(e){ return s; }
 }
-function esc(s){ s = (s==null?"":String(s)); return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;"); }
+function esc(s){ s = (s==null?"":String(s)); return s.split("&").join("&amp;").split("<").join("&lt;").split(">").join("&gt;").split('"').join("&quot;").split("'").join("&#39;"); } // v6: и апостроф — безопасно в любых атрибутах
 // на «все недели» и «месяц» менять/добавлять/удалять нельзя — только просмотр (п.6)
 function weekPinned(){ return state.week === "all" || state.week === "__month__"; }
 // D3/D12: «последняя» = неделя с максимальной датой (сервер присылает её имя), даже если загружена вся история
@@ -750,7 +754,7 @@ function openWeekName(){
 }
 function weekOpen_(r){ const w = openWeekName(); return !!w && r.week === w; }
 // строку можно править: редактор, не режим «глазами», строка из открытой недели
-function rowEditable(r){ return AUTH.edit && !viewAsActive() && weekOpen_(r); }
+function rowEditable(r){ return AUTH.edit && !viewAsActive() && weekOpen_(r) && !r._lite; } // v6: облегчённую (урезанную) строку править нельзя — сначала полный текст
 // недели: «latest» (по умолчанию — сервер отдал только открытую), «all», «__month__» или точное название
 function rowsOf(tab){
   let rs;
@@ -772,7 +776,7 @@ function ensureFull(){
   }
   state.fullLoading = true;
   toast("Грузим все недели…");
-  return wp({ action:"read", week:"all" }, 90000).then(j=>{
+  return wp({ action:"read", week:"all", lite: 1 }, 90000).then(j=>{ // v6: прошлые недели — облегчённо (полный текст по раскрытию)
     if (j.error) throw new Error(j.error);
     applyData(j, true);
     state.fullLoaded = true;
@@ -1039,6 +1043,7 @@ function filterViewData(){
 }
 function snapData(){ return { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, screens: state.screens, tasks: (state.tasks||[]).slice(), itog: (state.itog||[]).slice() }; }
 function startViewAs(mode){ // "" — свой вид, "dir" — директор, "prod:Имя" — продюсер
+  state.pmOpen = {}; state.pmFilter = "all";
   state.prodMode = "overview"; // «глазами продюсера» тоже открывается на обзоре
   if (!AUTH.edit && !viewAsActive()) return; // из режима «глазами» выходить можно всегда
   if (!mode){
@@ -1137,10 +1142,10 @@ function renderMain(){
   // Обновление 6 (7): при вводе в поиск меню слева не перестраивается — только содержимое (state.railSkipOnce)
   const railSkip = !!state.railSkipOnce && !!document.getElementById("railtoggle"); state.railSkipOnce = false;
   if (!railSkip){
-  const icons = Object.assign({"Лента":"📱","Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌","Смены":"📅","Пользователи":"🔑","Состояние":"🩺","Карта":"🌡"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
+  const icons = Object.assign({"Лента":"📱","Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌","Смены":"📅","Пользователи":"🔑","Состояние":"🩺","Карта":"🌡","Мой мониторинг":"📋","Мониторинг продюсеров":"📋"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
   // панель: секции + красная метка на вкладках с критичными сменами
   // AUDIT4 P3-1: у вкладок-инструментов число команд не показываем (у «Мои задачи» — бейдж 📌 открытых задач)
-  const NO_TEAM_COUNT_TABS = ["Состояние","Пользователи","Карта","Лента","Мои задачи","Рекомендации","Итог","Смены","Расписание"];
+  const NO_TEAM_COUNT_TABS = ["Состояние","Пользователи","Карта","Лента","Мои задачи","Рекомендации","Итог","Смены","Расписание",PM_TAB_PROD,PM_TAB_ED];
   const tabBtn = c=>{
     const raw = rowsOf(c);
     const rs = (c==="Сравнение") ? raw : dedupeRows(raw); // счётчик вкладки всегда по КОМАНДАМ, не по строкам недель
@@ -1148,6 +1153,7 @@ function renderMain(){
     const crit = rs.reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
     let badge = "";
     if (c==="Расписание"){ const od = overdueCount(); if (od) badge = `<span class="cnt due" title="просрочено перепроверок: ${od}">⏰${od}</span>`; }
+    else if (pmIsTab(c)){ const nb = state.pmBadge || 0; if (nb) badge = `<span class="cnt due" title="${AUTH.prod ? "вернули на доработку" : "ждут проверки"}: ${nb}">${AUTH.prod ? "↩" : "📥"}${nb}</span>`; } // v6
     else if (c==="Мои задачи"){ const nt = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan).length; if (nt) badge = `<span class="cnt due" title="открытых задач: ${nt}">📌${nt}</span>`; }
     else if (CITY_ORDER.includes(c)){ const od = overdueCount(c); if (od) badge = `<span class="cnt due" title="просрочено перепроверок в компании: ${od}">⏰${od}</span>`; }
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":c==="Смены"?"Расписание":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${(NO_TEAM_COUNT_TABS.includes(c) ? "" : n) || ""}</span>${badge}</button>`;
@@ -1224,6 +1230,7 @@ function renderMain(){
   const withScore = st.filter(x=>x.score!==null);
   document.getElementById("weeklabel").textContent = [...new Set(rows.map(r=>r.week).filter(Boolean))].join(" · ") || "—";
 
+  if (pmIsTab(state.tab)){ renderPM(); return; } // v6: мониторинг продюсера
   if (state.tab==="Расписание"){ renderSchedule(); return; }
   if (state.tab==="Сводка"){ renderSummary(rows, st); return; }
   if (state.tab==="Операторы"){ renderOperators(rows, st); return; }
@@ -1599,7 +1606,8 @@ function renderMain(){
       const failInfo = state.failedSaves[rk(x.r)];
       const failBar = canEdit && failInfo ? `<div class="failbar">⚠ Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
       const roNote = (AUTH.edit && !canEdit && !viewAsActive()) ? `<div class="editlive">👁 только просмотр: неделя «${esc(x.r.week||"—")}» не открыта для правок${weekPinned()?" (на «все недели»/«месяц» правки отключены)":""} — выбери её в списке недель</div>` : "";
-      const inner = canEdit ? `${failBar}<div class="edit-grid">${editDet}</div>
+      const pmBlk = pmBlockFor(x.r); // v6: мониторинг продюсера по этой команде (статус, расхождения)
+      const inner = canEdit ? `${failBar}${pmBlk ? `<div class="dgrid" style="margin-bottom:8px">${pmBlk}</div>` : ""}<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие проверки команды</button>
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
@@ -1614,7 +1622,7 @@ function renderMain(){
         <button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">📌 поручить продюсеру</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
         <div class="aibox" id="aibox${key}" style="display:none"></div>`
-        : roNote + `<div class="dgrid">${readDet}</div>`;
+        : roNote + `<div class="dgrid">${readDet}${pmBlk}</div>`;
       const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(clabel(x.r.city))}${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
@@ -1783,6 +1791,8 @@ function renderMain(){
     if (d.classList.contains("open") && rowDirty(tr.dataset.i) && !confirm("Есть несохранённые правки (они сохранены в черновик и не пропадут). Закрыть?")) return;
     d.classList.toggle("open");
     if (d.classList.contains("open")) setTimeout(ensureThumbs, 60); // скрины карточки — по раскрытию
+    // v6: карточка прошлой недели пришла облегчённой — догружаем полный текст и перерисовываем
+    if (d.classList.contains("open")){ const xl = state.lastView[tr.dataset.i]; if (xl && xl.r && xl.r._lite){ ensureRowFull(xl.r).then(()=>softRender()).catch(e=>toast("Полный текст не загрузился: " + e.message, true)); } }
     if (d.classList.contains("open")){
       // п.12: черновик прошлого сеанса — спрашиваем, восстановить ли его
       const x0 = state.lastView[tr.dataset.i];
@@ -1949,6 +1959,7 @@ function renderMain(){
         const cand = state.rows.filter(r=>r.city===cur.city && (r.opNick||"")===(cur.opNick||"") && (r.model||"")===(cur.model||"") && r.week!==cur.week && weekKey(r) < weekKey(cur));
         const prev = cand.sort((a,b)=>weekKey(b)-weekKey(a))[0];
         if (!prev){ aiMsg(key, "прошлой недели у этой команды нет — сравнивать не с чем"); return; }
+        if (prev._lite) await ensureRowFull(prev); // v6: для сравнения нужен полный текст прошлой недели
         const dump = r => CATS.map((n,j)=>{ const v=(r.cats[j]||"").trim(); return v ? n+": "+v : ""; }).filter(Boolean).join("; ") + (r.obs?" | комментарий: "+r.obs:"");
         const text = ("ПРОШЛАЯ НЕДЕЛЯ (" + prev.week + "): " + dump(prev) + "\nЭТА НЕДЕЛЯ (" + cur.week + "): " + dump(cur)).slice(0, 8000);
         const res = await aiAsk("teamdelta", { text: text, ckey: skey(cur) + "|" + prev.week + "|" + strHash(text) });
@@ -2726,7 +2737,7 @@ function renderStatus(){
     ${!d ? '<div class="empty">загружаю…</div>' : `
     <div class="aidgrid">
       <div class="aidcol"><h3>Сегодня (приблизительно, кэш ≤ 6 ч)</h3><table class="shtable">
-        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}
+        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}${kv("автообновлений без изменений (v6)", d.counters.readsame||0)}
         ${kv("вызовов ИИ", d.counters.ai)}${kv("UrlFetch (ИИ + Drive)", d.counters.urlfetch + " из ~20 000/сутки")}${kv("провайдер ИИ", esc(d.aiProvider))}${kv("сессий", d.sessions)}
         ${kv("Script Properties", d.propsSizeKB + " КБ из " + d.propsLimitKB + " КБ")}${kv("USERS_JSON", d.usersSize + " симв. из ~9000" + (d.userChunks?" + кусков: "+d.userChunks:""))}</table></div>
       <div class="aidcol"><h3>Свойства скрипта (только наличие)</h3><table class="shtable">${Object.keys(d.props).map(k=>kv(k, yes(d.props[k]))).join("")}</table>
@@ -3048,6 +3059,458 @@ function renderProdReviews(rows){
   setTimeout(ensureThumbs, 30);
 }
 
+// ===================== v6: МОНИТОРИНГ ПРОДЮСЕРА =====================
+// Продюсер ведёт свой мониторинг своих команд («📋 Мой мониторинг»), смотрящий видит его во вкладке
+// «📋 Мониторинг продюсеров»: правит, принимает, возвращает с замечанием. Разборы смотрящего и листы недель не меняются.
+// Данные — сервер (pmread/pmsave/...), набранный текст живёт в state.pmEdits + localStorage, пока не сохранён.
+const PM_TAB_PROD = "Мой мониторинг", PM_TAB_ED = "Мониторинг продюсеров";
+const PM_ST_CLS = { "черновик":"", "отправлено":"pt-warn", "принято":"pt-ok", "возврат":"pt-bad", "скрыта":"" };
+const PM_ST_LBL = { "черновик":"📝 черновик", "отправлено":"📤 ждёт проверки", "принято":"✅ принято", "возврат":"↩ возврат", "скрыта":"🙈 скрыта" };
+function pmTabName(){ return AUTH.prod ? PM_TAB_PROD : PM_TAB_ED; }
+function pmIsTab(t){ return t === PM_TAB_PROD || t === PM_TAB_ED; }
+function pmCanUse(){ return AUTH.prod || AUTH.edit; }
+// чистая: ключ карточки — id записи или «b:<ключ команды недели>», пока записи ещё нет
+function pmCardKey(it, baseKey){ return it && it.id ? it.id : "b:" + baseKey; }
+// чистая: есть ли в записи хоть одна заполненная категория
+function pmChecked(it){ return !!(it && it.status !== "скрыта" && (it.cats||[]).some(c=>String(c||"").trim())); }
+// чистая: расхождения продюсера со смотрящим по 9 категориям (оба поставили оценку, и она разная)
+//   miss — продюсер «ок», смотрящий «замечание» (продюсер недосмотрел); strict — наоборот
+function pmDiff(pmCats, mineSt){
+  const out = { miss: [], strict: [] };
+  for (let j = 0; j < 9; j++){
+    const a = catState((pmCats||[])[j] || ""), b = (mineSt||[])[j] || null;
+    if (!a || !b || a === b) continue;
+    (a === "ok" ? out.miss : out.strict).push(j);
+  }
+  return out;
+}
+// чистая: покрытие недели — сколько команд продюсера проверено им самим
+//   base: [{key}] команды недели; items: записи мониторинга
+function pmCoverage(base, items){
+  const byBase = {}; (items||[]).forEach(it=>{ if (it.base) byBase[it.base] = it; });
+  let total = 0, done = 0;
+  (base||[]).forEach(b=>{ const it = byBase[b.key]; if (it && it.status === "скрыта") return; total++; if (pmChecked(it)) done++; });
+  (items||[]).forEach(it=>{ if (it.status === "скрыта") return; if (it.base && (base||[]).some(b=>b.key===it.base)) return; total++; if (pmChecked(it)) done++; });
+  return { done, total };
+}
+// команды недели по продюсерам (из основного чтения): [{key, r}]
+function pmBaseTeams(week, producer){
+  const src = (viewAsActive() && realData && !AUTH.prod) ? realData.rows : state.rows;
+  const seen = {}, out = [];
+  src.forEach(r=>{
+    if (r.week !== week) return;
+    if (producer && r.producer !== producer) return;
+    const k = skey(r); if (seen[k]) return; seen[k] = 1;
+    out.push({ key: k, r });
+  });
+  return out;
+}
+function pmMineRow(baseKey){ return baseKey ? (state.rows.find(r=>skey(r)===baseKey) || (realData && realData.rows || []).find(r=>skey(r)===baseKey) || null) : null; }
+
+// ---------- загрузка ----------
+async function loadPM(opts){
+  opts = opts || {};
+  if (!AUTH.ok() || !pmCanUse()) return;
+  const pm = state.pm = state.pm || {};
+  if (pm.loading) return pm.loading;
+  const week = opts.week !== undefined ? opts.week : (pm.week || "");
+  pm.loading = wp({ action:"pmread", week: week }, 60000).then(r=>{
+    pm.week = r.week; pm.latest = r.latest; pm.weeks = r.weeks || []; pm.items = r.items || []; pm.screens = r.screens || {};
+    pm.editable = !!r.editable; pm.err = ""; pm.at = Date.now();
+    pmBadgeFromItems();
+  }).catch(e=>{ pm.err = e.message; }).finally(()=>{ pm.loading = null; if (!opts.quiet || pmIsTab(state.tab)) softRender(); });
+  return pm.loading;
+}
+function pmBadgeFromItems(){
+  const it = (state.pm && state.pm.items) || [];
+  if (AUTH.prod) state.pmBadge = it.filter(x=>x.status==="возврат").length;
+  else if (AUTH.edit) state.pmBadge = it.filter(x=>x.status==="отправлено").length;
+}
+// ---------- черновики формы (не теряются при автообновлении и перезагрузке) ----------
+function pmEditKey(k){ return "pmdraft:" + AUTH.user + ":" + k; }
+function pmGetEdit(k){
+  state.pmEdits = state.pmEdits || {};
+  if (k in state.pmEdits) return state.pmEdits[k];
+  let d = null; try { d = JSON.parse(localStorage.getItem(pmEditKey(k)) || "null"); } catch(e){}
+  state.pmEdits[k] = d; return d;
+}
+function pmSetEdit(k, d){
+  state.pmEdits = state.pmEdits || {}; state.pmEdits[k] = d;
+  try { if (d) localStorage.setItem(pmEditKey(k), JSON.stringify(d)); else localStorage.removeItem(pmEditKey(k)); } catch(e){}
+}
+function pmFormVals(k, it, br){ // значения формы: черновик → запись → команда недели
+  const d = pmGetEdit(k);
+  const src = it || {};
+  const base = br || {};
+  const v = {
+    nick: src.id ? src.nick : (base.opNick || ""), opname: src.id ? src.opName : (base.opName || ""), model: src.id ? src.model : (base.model || ""),
+    links: src.id ? src.linksTxt : (base.linksTxt || ""), comment: src.comment || "", cats: (src.cats || []).slice()
+  };
+  while (v.cats.length < 9) v.cats.push("");
+  if (d){ ["nick","opname","model","links","comment"].forEach(f=>{ if (d[f] !== undefined) v[f] = d[f]; }); for (let j=0;j<9;j++) if (d["f"+j] !== undefined) v.cats[j] = d["f"+j]; }
+  return v;
+}
+function pmDirty(k){ return !!pmGetEdit(k); }
+
+// ---------- отрисовка ----------
+function pmCardHtml(c, canEdit, isEd){
+  const it = c.it, br = c.br, k = c.k;
+  const v = pmFormVals(k, it, br);
+  const st = (it && it.status) || "не начат";
+  const mine = pmMineRow(it ? it.base : c.baseKey);
+  const mineSt = mine ? rowStats(mine).st : null;
+  const dif = pmDiff(v.cats, mineSt);
+  const nDif = dif.miss.length + dif.strict.length;
+  const open = !!(state.pmOpen||{})[k];
+  const title = (v.opname || v.nick || "—") + " / " + (v.model || "—");
+  const scr = it && it.id ? ((state.pm.screens||{})["PM|" + it.id] || []) : [];
+  const checked = pmChecked(it || { cats: v.cats });
+  const head = `<div class="pmhead" data-pmk="${esc(k)}" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer">
+      <b>${esc(title)}</b>
+      <span style="color:var(--faint);font-size:11.5px">${esc(clabel((it && it.city) || (br && br.city) || ""))}${isEd && it ? " · " + esc(it.producer) : ""}${!c.baseKey && !(it && it.base) ? " · ＋ добавлена продюсером" : ""}</span>
+      <span class="ptag ${PM_ST_CLS[st]||""}">${esc(PM_ST_LBL[st] || "○ не начат")}</span>
+      ${checked ? "" : '<span class="ptag">не проверено</span>'}
+      ${nDif ? `<span class="ptag pt-bad" title="категорий, где оценки продюсера и смотрящего разные">≠ ${nDif}</span>` : ""}
+      ${pmDirty(k) ? '<span class="ptag pt-warn" title="есть несохранённые правки (они в черновике)">✎ не сохранено</span>' : ""}
+      <span style="margin-left:auto;color:var(--faint);font-size:11.5px">${it && it.updated ? esc(fmtDay(it.updated)) + (it.who ? " · " + esc(it.who) : "") : ""} ${open ? "▴" : "▾"}</span>
+    </div>`;
+  if (!open) return `<div class="card pmcard" style="margin-bottom:8px">${head}</div>`;
+  const dis = canEdit ? "" : "disabled";
+  const ta = (id, val, ph, h) => `<textarea id="${id}" ${dis} placeholder="${esc(ph||"")}" style="width:100%;min-height:${h||46}px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;box-sizing:border-box">${esc(val)}</textarea>`;
+  const inp = (id, val, ph) => `<input id="${id}" ${dis} value="${esc(val)}" placeholder="${esc(ph)}" style="flex:1;min-width:120px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px">`;
+  const kid = strHash(k);
+  const cats = CATS.map((n,j)=>{
+    const myS = catState(v.cats[j]||""), hisS = mineSt ? mineSt[j] : null;
+    const miss = dif.miss.includes(j), strict = dif.strict.includes(j);
+    const bg = miss ? "background:rgba(220,70,70,.12);border-radius:6px;padding:4px" : strict ? "background:rgba(230,170,40,.12);border-radius:6px;padding:4px" : "";
+    const hint = mine && hisS ? `<span style="font-size:11px;color:var(--faint);font-weight:400"> · смотрящий: ${hisS==="ok"?"✅":"❌"}${miss?" — продюсер пропустил":strict?" — продюсер строже":""}</span>` : "";
+    const sc = scr.filter(s=>String(s.cat)===n);
+    return `<div class="f" style="${bg}"><b>${myS==="ok"?"✅ ":myS==="bad"?"❌ ":""}${esc(n)}${hint}${canEdit?`<span><button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="">✕</button></span>`:""}</b>
+      ${ta("pm"+kid+"_"+j, v.cats[j]||"", "что увидел")}
+      ${pmThumbs(sc, it, canEdit)}</div>`;
+  }).join("");
+  const note = it && it.status === "возврат" && it.note ? `<div class="failbar" style="margin:8px 0">↩ Смотрящий вернул: <span class="utext">${esc(it.note)}</span></div>` : "";
+  const isAdded = it ? !it.base : !c.baseKey;
+  const prodBtns = canEdit && AUTH.prod ? `
+      <button class="abtn2" data-pmsave="${esc(k)}">💾 Сохранить</button>
+      <button class="abtn2" data-pmsend="${esc(k)}">📤 Отправить смотрящему</button>
+      <span style="flex:1"></span>
+      ${isAdded ? `<button class="abtn2" data-pmhide="${esc(k)}" data-del="1">🗑 Удалить команду</button>` : `<button class="abtn2" data-pmhide="${esc(k)}">🙈 Убрать из моего мониторинга</button>`}` : "";
+  const unhide = it && it.status === "скрыта" && AUTH.prod && !viewAsActive() && state.pm.week === state.pm.latest ? `<button class="abtn2" data-pmunhide="${esc(it.id)}">↩ Вернуть в мой мониторинг</button>` : "";
+  const edBtns = isEd && AUTH.edit && !viewAsActive() && it && it.status !== "скрыта" ? `
+      <button class="abtn2" data-pmsave="${esc(k)}">💾 Сохранить правки</button>
+      ${it.status !== "принято" ? `<button class="abtn2" data-pmacc="${esc(it.id)}">✅ Принять</button>` : `<button class="abtn2" data-pmreopen="${esc(it.id)}">🔓 Открыть снова</button>`}
+      <button class="abtn2" data-pmret="${esc(it.id)}">↩ Вернуть с замечанием</button>
+      ${mine ? `<button class="abtn2" data-pmtake="${esc(k)}" title="перенести оценки продюсера в ТВОЙ разбор этой команды как черновик (в таблицу — только по «Сохранить»)">📝 Взять в мой разбор</button>` : ""}` : "";
+  const retBox = isEd && it ? `<div id="pmret${esc(it.id)}" style="display:none;margin-top:8px">${ta("pmretta"+strHash(it.id), it.note||"", "что исправить — продюсер увидит это у себя", 54)}<button class="abtn2" data-pmretgo="${esc(it.id)}" style="margin-top:6px">↩ Отправить возврат</button></div>` : "";
+  return `<div class="card pmcard" data-pmcard="${esc(k)}" style="margin-bottom:10px">${head}
+    ${note}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px">${inp("pm"+kid+"_nick", v.nick, "ник опера")}${inp("pm"+kid+"_opname", v.opname, "опер")}${inp("pm"+kid+"_model", v.model, "модель")}</div>
+    <div class="f" style="margin-bottom:8px"><b>🔗 Ссылки (одна в строке: «CB = https://chaturbate.com/…»)</b>${ta("pm"+kid+"_links", v.links, "CB = https://chaturbate.com/имя", 40)}</div>
+    <div class="editgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">${cats}</div>
+    <div class="f" style="margin-top:8px"><b>💬 Общий комментарий</b>${ta("pm"+kid+"_comment", v.comment, "", 54)}</div>
+    ${pmThumbs(scr.filter(s=>!CATS.includes(String(s.cat))), it, canEdit)}
+    ${canEdit ? `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="pm${kid}_cat" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px">${CATS.map(n=>`<option>${esc(n)}</option>`).join("")}<option value="">без категории</option></select>
+      <button class="abtn2" data-pmfile="${esc(k)}">📎 файл</button><button class="abtn2" data-pmcam="${esc(k)}">📸 камера</button>
+      <span style="color:var(--faint);font-size:11.5px">или вставь скрин Ctrl+V в карточку</span></div>` : ""}
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${prodBtns}${edBtns}${unhide}</div>
+    ${retBox}
+  </div>`;
+}
+function pmThumbs(list, it, canEdit){
+  if (!list || !list.length) return "";
+  return `<div class="scrow">${list.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || BLANK)}" data-tk="${esc(s.mini||s.link)}" data-full="${esc(s.link)}" data-cat="${esc(s.cat||"скрин")}" alt="скрин">${canEdit && it ? `<span class="sqx" data-pmdel="${esc(it.id)}" data-link="${esc(s.link)}" title="удалить скрин">✕</span>` : ""}</span>`).join("")}</div>`;
+}
+function pmCards(){ // список карточек текущего вида
+  const pm = state.pm || {};
+  const items = (pm.items || []).filter(it=> !(viewAsActive() && state.viewAs && state.viewAs.type==="prod") || it.producer === state.viewAs.name);
+  const isEd = !AUTH.prod;
+  const prodF = isEd ? (state.pmProd || "") : "";
+  const base = AUTH.prod ? pmBaseTeams(pm.week) : pmBaseTeams(pm.week, prodF || null);
+  const cards = [];
+  const used = {};
+  if (AUTH.prod){
+    base.forEach(b=>{ const it = items.find(x=>x.base===b.key); if (it) used[it.id] = 1; cards.push({ k: pmCardKey(it, b.key), it: it || null, br: b.r, baseKey: b.key }); });
+    items.forEach(it=>{ if (!used[it.id]) cards.push({ k: it.id, it, br: null, baseKey: it.base || "" }); });
+  } else {
+    items.forEach(it=>{ if (prodF && it.producer !== prodF) return; cards.push({ k: it.id, it, br: pmMineRow(it.base), baseKey: it.base || "" }); });
+  }
+  return { cards, items, base };
+}
+function renderPM(){
+  document.getElementById("pbar").innerHTML = "";
+  const box = document.getElementById("content");
+  const pm = state.pm || {};
+  if (!pm.at && !pm.err){ box.innerHTML = '<div class="card"><div class="empty">Загружаю мониторинг…</div></div>'; loadPM(); return; }
+  if (pm.at && Date.now() - pm.at > 120000 && !pm.loading) loadPM({ quiet: true }); // фоновое обновление раз в 2 минуты при открытой вкладке
+  const isEd = !AUTH.prod;
+  const canWrite = AUTH.prod && !viewAsActive() && pm.week === pm.latest;
+  const { cards, items, base } = pmCards();
+  const f = state.pmFilter || "all";
+  const statusOf = c => c.it ? c.it.status : "не начат";
+  const filt = c => f === "all" ? statusOf(c) !== "скрыта"
+    : f === "todo" ? !pmChecked(c.it) && statusOf(c) !== "скрыта"
+    : f === "diff" ? (()=>{ const m = pmMineRow(c.baseKey || (c.it && c.it.base)); if (!m) return false; const d = pmDiff(pmFormVals(c.k, c.it, c.br).cats, rowStats(m).st); return d.miss.length + d.strict.length > 0; })()
+    : statusOf(c) === f;
+  const shown = cards.filter(filt);
+  const cnt = s => cards.filter(c=>statusOf(c)===s).length;
+  const chips = [["all","все"],["todo","не проверены"],["отправлено","ждут проверки · "+cnt("отправлено")],["возврат","возврат · "+cnt("возврат")],["принято","принято · "+cnt("принято")],["diff","есть расхождения"],["скрыта","скрытые · "+cnt("скрыта")]];
+  // покрытие
+  let covHtml = "";
+  if (AUTH.prod){
+    const cv = pmCoverage(base, items);
+    const pc = cv.total ? Math.round(cv.done*100/cv.total) : 0;
+    covHtml = `<div style="margin-top:8px"><div class="pbar-track"><div class="pbar-fill" style="width:${pc}%"></div></div><div style="color:var(--faint);font-size:12px;margin-top:4px">проверено мной: <b>${cv.done} из ${cv.total}</b> команд за неделю (${pc}%)</div></div>`;
+  } else {
+    const prods = [...new Set(pmBaseTeams(pm.week).map(b=>b.r.producer).concat(items.map(i=>i.producer)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru"));
+    covHtml = `<div style="overflow:auto;margin-top:8px"><table class="mini" style="width:100%;font-size:12.5px;border-collapse:collapse"><tr style="color:var(--faint);text-align:left"><th>продюсер</th><th>проверено</th><th>ждут</th><th>возврат</th><th>расхождений</th></tr>` +
+      prods.map(p=>{
+        const its = items.filter(i=>i.producer===p);
+        const cv = pmCoverage(pmBaseTeams(pm.week, p), its);
+        const nd = its.reduce((a,i)=>{ const m = pmMineRow(i.base); if (!m) return a; const d = pmDiff(i.cats, rowStats(m).st); return a + d.miss.length + d.strict.length; }, 0);
+        return `<tr data-pmprod="${esc(p)}" style="cursor:pointer;border-top:1px solid var(--line)"><td><b>${esc(p)}</b></td><td>${cv.done} из ${cv.total}</td><td>${its.filter(i=>i.status==="отправлено").length||""}</td><td>${its.filter(i=>i.status==="возврат").length||""}</td><td>${nd||""}</td></tr>`;
+      }).join("") + `</table></div>`;
+  }
+  const weeks = (pm.weeks||[]).slice().reverse();
+  const prodSel = isEd ? `<select id="pm-prod" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px"><option value="">все продюсеры</option>${[...new Set(items.map(i=>i.producer))].sort().map(p=>`<option ${state.pmProd===p?"selected":""}>${esc(p)}</option>`).join("")}</select>` : "";
+  const addForm = canWrite ? `<details id="pm-add" style="margin-top:8px"><summary style="cursor:pointer">＋ добавить команду</summary>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <select id="pma-city" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px">${(AUTH.cities.includes("all") ? CITY_ORDER : AUTH.cities.filter(c=>CITY_ORDER.includes(c))).map(c=>`<option value="${esc(c)}">${esc(clabel(c))}</option>`).join("")}</select>
+        <input id="pma-nick" placeholder="ник опера" style="flex:1;min-width:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
+        <input id="pma-op" placeholder="опер" style="flex:1;min-width:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
+        <input id="pma-model" placeholder="модель" style="flex:1;min-width:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
+        <input id="pma-links" placeholder="CB = https://chaturbate.com/…" style="flex:2;min-width:180px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
+        <button class="abtn2" id="pma-go">＋ добавить</button></div></details>` : "";
+  box.innerHTML = `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="margin:0">📋 ${AUTH.prod ? "Мой мониторинг" : "Мониторинг продюсеров"}</h2>
+        <select id="pm-week" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px">${weeks.map(w=>`<option ${w===pm.week?"selected":""} value="${esc(w)}">неделя ${esc(w)}${w===pm.latest?" (открытая)":""}</option>`).join("")}</select>
+        ${prodSel}
+        <button class="gbtn" id="pm-reload" title="обновить">⟳</button>
+        ${pm.loading ? '<span style="color:var(--faint);font-size:12px">обновляю…</span>' : ""}
+      </div>
+      ${pm.err ? `<div class="failbar" style="margin-top:8px">⚠ ${esc(pm.err)}</div>` : ""}
+      ${AUTH.prod && pm.week !== pm.latest ? '<div style="color:var(--faint);font-size:12px;margin-top:6px">прошлая неделя — только просмотр</div>' : ""}
+      ${AUTH.prod ? '<div style="color:var(--faint);font-size:12px;margin-top:6px">Это твой мониторинг: разборы смотрящего он не меняет. Заполни категории, приложи скрины и нажми «📤 Отправить смотрящему».</div>' : '<div style="color:var(--faint);font-size:12px;margin-top:6px">Мониторинг, который ведут сами продюсеры. Красным — где продюсер поставил «ок», а у тебя замечание; жёлтым — наоборот.</div>'}
+      ${covHtml}
+      <div class="fchips" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${chips.map(c=>`<button class="fchip ${f===c[0]?"on":""}" data-pmf="${esc(c[0])}">${esc(c[1])}</button>`).join("")}</div>
+      ${addForm}
+    </div>
+    ${shown.length ? shown.map(c=>pmCardHtml(c, pmCardCanEdit(c, canWrite), isEd)).join("")
+      : `<div class="empty">${f==="all" ? (AUTH.prod ? "На этой неделе у тебя нет команд — добавь свою кнопкой «＋ добавить команду»" : "Продюсеры ещё не вели мониторинг на этой неделе") : "Под этот фильтр ничего нет"}</div>`}
+`;
+  pmBind();
+  setTimeout(ensureThumbs, 30);
+}
+// продюсер — своя открытая неделя, кроме «принято»/«скрыта»; смотрящий — любая запись (кроме скрытой), не в режиме «глазами»
+function pmCardCanEdit(c, canWrite){
+  if (AUTH.prod) return !!canWrite && !(c.it && ["принято","скрыта"].includes(c.it.status));
+  return !!(AUTH.edit && !viewAsActive() && c.it && c.it.status !== "скрыта");
+}
+function pmFindCard(k){ return pmCards().cards.find(c=>c.k===k); }
+function pmCollect(k){ // значения формы из DOM (или из черновика, если карточка закрыта)
+  const c = pmFindCard(k); if (!c) return null;
+  const kid = strHash(k);
+  const v = pmFormVals(k, c.it, c.br);
+  const g = id => { const el = document.getElementById("pm"+kid+"_"+id); return el ? el.value : null; };
+  ["nick","opname","model","links","comment"].forEach(f=>{ const x = g(f); if (x !== null) v[f] = x; });
+  for (let j=0;j<9;j++){ const x = g(j); if (x !== null) v.cats[j] = x; }
+  return { c, v };
+}
+async function pmSave(k, send){
+  const got = pmCollect(k); if (!got) { toast("Карточка не найдена — обнови", true); return; }
+  const { c, v } = got;
+  const p = { action:"pmsave", nick: v.nick, opname: v.opname, model: v.model, links: v.links, comment: v.comment, cats: v.cats };
+  if (c.it && c.it.id){ p.id = c.it.id; p.rev = c.it.rev; }
+  else { p.base = c.baseKey; p.city = c.br ? c.br.city : ""; }
+  if (send) p.send = 1;
+  if (send && !v.cats.some(x=>String(x||"").trim())){ toast("Сначала заполни хотя бы одну категорию", true); return; }
+  try {
+    toast(send ? "📤 Отправляю…" : "💾 Сохраняю…");
+    const r = await wp(p, 45000);
+    pmSetEdit(k, null);
+    if (!c.it || !c.it.id){ state.pmOpen = state.pmOpen || {}; if (state.pmOpen[k]){ delete state.pmOpen[k]; state.pmOpen[r.id] = true; } }
+    toast(send ? "📤 Отправлено смотрящему ✓" : "💾 Сохранено ✓");
+    await loadPM();
+    return r;
+  } catch(e){ toast("Не сохранилось: " + e.message + " (текст остался в черновике)", true); }
+}
+async function pmEnsureId(k){ // для скрина нужна запись — новую карточку сначала сохраняем
+  const c = pmFindCard(k); if (!c) return null;
+  if (c.it && c.it.id) return c.it.id;
+  const r = await pmSave(k, false);
+  return r && r.id;
+}
+async function pmUploadFiles(k, files){
+  const list = [...(files||[])].filter(f=>f && /^image\//.test(f.type||"image/"));
+  if (!list.length) return;
+  const sel = document.getElementById("pm"+strHash(k)+"_cat");
+  const cat = sel ? sel.value : "";
+  const id = await pmEnsureId(k); if (!id){ toast("Сначала сохрани мониторинг", true); return; }
+  let ok = 0;
+  for (const f of list){
+    try {
+      toast("📸 Скрин " + (ok+1) + "/" + list.length + ": сжимаю…");
+      const enc = await shotEncode(f);
+      toast("📸 Скрин " + (ok+1) + "/" + list.length + ": загружаю…");
+      const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, cat }, 90000);
+      const key = r.key || ("PM|" + id);
+      state.pm.screens = state.pm.screens || {};
+      (state.pm.screens[key] = state.pm.screens[key] || []).push({ cat: r.cat||"", link: r.link, mini: r.mini||"", ts: r.ts||"" });
+      ok++;
+    } catch(e){ toast("Скрин не загрузился: " + e.message, true); }
+  }
+  if (ok) toast("📸 Загружено: " + ok + " ✓");
+  softRender();
+}
+function pmBind(){
+  const box = document.getElementById("content");
+  box.querySelectorAll(".pmhead").forEach(h=>h.onclick=(ev)=>{
+    if (ev.target.closest("button,select,input,textarea,a")) return;
+    const k = h.dataset.pmk; state.pmOpen = state.pmOpen || {};
+    if (state.pmOpen[k]) delete state.pmOpen[k]; else state.pmOpen[k] = true;
+    render();
+  });
+  // ввод → черновик
+  box.querySelectorAll(".pmcard[data-pmcard]").forEach(card=>{
+    const k = card.dataset.pmcard;
+    card.addEventListener("input", ev=>{
+      const t = ev.target; if (!t || !t.id || !/^pm[a-z0-9]+_(\d|nick|opname|model|links|comment)$/.test(t.id)) return; // поле возврата и пр. — не черновик
+      const got = pmCollect(k); if (!got) return;
+      const d = { nick: got.v.nick, opname: got.v.opname, model: got.v.model, links: got.v.links, comment: got.v.comment };
+      got.v.cats.forEach((x,j)=>{ d["f"+j] = x; });
+      // черновик только если что-то отличается от сохранённого
+      state.pmEdits = state.pmEdits || {}; const keep = state.pmEdits[k]; state.pmEdits[k] = null;
+      const saved = pmFormVals(k, got.c.it, got.c.br); state.pmEdits[k] = keep;
+      const same = ["nick","opname","model","links","comment"].every(f=>String(saved[f]||"")===String(d[f]||"")) && saved.cats.every((x,j)=>String(x||"")===String(d["f"+j]||""));
+      pmSetEdit(k, same ? null : d);
+    });
+    card.addEventListener("paste", ev=>{
+      const items = (ev.clipboardData && ev.clipboardData.items) ? [...ev.clipboardData.items] : [];
+      const files = items.filter(i=>i.kind==="file" && /^image\//.test(i.type)).map(i=>i.getAsFile()).filter(Boolean);
+      if (!files.length) return;
+      if (!card.querySelector("[data-pmfile]")){ toast("Скрины здесь добавлять нельзя (только просмотр)", true); return; }
+      ev.preventDefault(); pmUploadFiles(k, files);
+    });
+  });
+  box.querySelectorAll(".pmq").forEach(b=>b.onclick=()=>{ const ta = document.getElementById(b.dataset.pmta); if (!ta) return; ta.value = b.dataset.v; ta.dispatchEvent(new Event("input", { bubbles: true })); softRender(); });
+  box.querySelectorAll("[data-pmf]").forEach(b=>b.onclick=()=>{ state.pmFilter = b.dataset.pmf; render(); });
+  box.querySelectorAll("[data-pmprod]").forEach(tr=>tr.onclick=()=>{ state.pmProd = state.pmProd === tr.dataset.pmprod ? "" : tr.dataset.pmprod; render(); });
+  const ws = document.getElementById("pm-week"); if (ws) ws.onchange = ()=>{ state.pmOpen = {}; loadPM({ week: ws.value }); };
+  const ps = document.getElementById("pm-prod"); if (ps) ps.onchange = ()=>{ state.pmProd = ps.value; render(); };
+  const rl = document.getElementById("pm-reload"); if (rl) rl.onclick = ()=>loadPM();
+  box.querySelectorAll("[data-pmsave]").forEach(b=>b.onclick=()=>pmSave(b.dataset.pmsave, false));
+  box.querySelectorAll("[data-pmsend]").forEach(b=>b.onclick=()=>pmSave(b.dataset.pmsend, true));
+  box.querySelectorAll("[data-pmhide]").forEach(b=>b.onclick=async ()=>{
+    const c = pmFindCard(b.dataset.pmhide); if (!c) return;
+    const del = !!b.dataset.del;
+    const name = (c.it ? (c.it.opName||c.it.nick) + " / " + c.it.model : (c.br ? (c.br.opName||c.br.opNick) + " / " + c.br.model : "команда"));
+    if (!confirm(del ? "Удалить добавленную команду «" + name + "» вместе с её мониторингом и скринами? Отменить нельзя." : "Убрать «" + name + "» из твоего мониторинга? Вернуть можно в фильтре «скрытые». Разбор смотрящего не меняется.")) return;
+    try { await wp(c.it ? { action:"pmhide", id: c.it.id } : { action:"pmhide", base: c.baseKey }); pmSetEdit(b.dataset.pmhide, null); toast(del ? "🗑 Удалено" : "🙈 Убрано"); loadPM(); }
+    catch(e){ toast("Ошибка: " + e.message, true); }
+  });
+  box.querySelectorAll("[data-pmunhide]").forEach(b=>b.onclick=async ()=>{ try { await wp({ action:"pmunhide", id: b.dataset.pmunhide }); toast("↩ Команда вернулась в мониторинг"); state.pmFilter = "all"; loadPM(); } catch(e){ toast("Ошибка: " + e.message, true); } });
+  box.querySelectorAll("[data-pmacc]").forEach(b=>b.onclick=()=>pmStatus(b.dataset.pmacc, "accept"));
+  box.querySelectorAll("[data-pmreopen]").forEach(b=>b.onclick=()=>pmStatus(b.dataset.pmreopen, "reopen"));
+  box.querySelectorAll("[data-pmret]").forEach(b=>b.onclick=()=>{ const el = document.getElementById("pmret"+b.dataset.pmret); if (el) el.style.display = el.style.display === "none" ? "" : "none"; });
+  box.querySelectorAll("[data-pmretgo]").forEach(b=>b.onclick=()=>{ const ta = document.getElementById("pmretta"+strHash(b.dataset.pmretgo)); pmStatus(b.dataset.pmretgo, "return", ta ? ta.value.trim() : ""); });
+  box.querySelectorAll("[data-pmtake]").forEach(b=>b.onclick=()=>pmTake(b.dataset.pmtake));
+  box.querySelectorAll("[data-pmfile],[data-pmcam]").forEach(b=>b.onclick=()=>{
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = !b.dataset.pmcam;
+    if (b.dataset.pmcam) inp.setAttribute("capture", "environment");
+    inp.onchange = ()=>pmUploadFiles(b.dataset.pmfile || b.dataset.pmcam, inp.files);
+    inp.click();
+  });
+  box.querySelectorAll("[data-pmdel]").forEach(x=>x.onclick=async (ev)=>{
+    ev.stopPropagation();
+    if (!confirm("Удалить этот скрин из мониторинга?")) return;
+    try { await wp({ action:"pmdelscreen", id: x.dataset.pmdel, link: x.dataset.link }); const key = "PM|" + x.dataset.pmdel; state.pm.screens[key] = (state.pm.screens[key]||[]).filter(s=>s.link!==x.dataset.link); toast("Скрин удалён"); render(); }
+    catch(e){ toast("Ошибка: " + e.message, true); }
+  });
+  const ag = document.getElementById("pma-go");
+  if (ag) ag.onclick = async ()=>{
+    const val = id => (document.getElementById(id)||{}).value || "";
+    const p = { action:"pmsave", city: val("pma-city"), nick: val("pma-nick").trim(), opname: val("pma-op").trim(), model: val("pma-model").trim(), links: val("pma-links").trim(), comment: "", cats: ["","","","","","","","",""] };
+    if (!p.nick && !p.opname && !p.model){ toast("Укажи опера или модель", true); return; }
+    try { const r = await wp(p); state.pmOpen = state.pmOpen || {}; state.pmOpen[r.id] = true; toast("＋ Команда добавлена"); loadPM(); }
+    catch(e){ toast("Ошибка: " + e.message, true); }
+  };
+  // клик по миниатюре — полный размер (как в разборах)
+  box.querySelectorAll(".pmcard .sthumb img[data-full]").forEach(im=>{
+    im.onclick = ()=>{
+      document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
+      const ai = document.getElementById("cam-ai"); if (ai) ai.style.display = "none";
+      const ao = document.getElementById("cam-aiout"); if (ao) ao.style.display = "none";
+      camShow(im.getAttribute("src") || BLANK, true);
+      openModal("cammodal");
+      camLoadFull(driveId(im.getAttribute("data-full") || ""));
+    };
+  });
+}
+async function pmStatus(id, op, note){
+  const it = ((state.pm||{}).items||[]).find(x=>x.id===id); if (!it) return;
+  if (op === "return" && !note){ toast("Напиши, что исправить", true); return; }
+  try { await wp({ action:"pmstatus", id, op, note: note || "", rev: it.rev }); toast(op==="accept" ? "✅ Принято" : op==="return" ? "↩ Возвращено продюсеру" : "🔓 Открыто снова"); loadPM(); }
+  catch(e){ toast("Ошибка: " + e.message, true); }
+}
+// смотрящий: оценки продюсера → в СВОЙ разбор этой команды как черновик (только пустые категории; в таблицу — по «Сохранить»)
+function pmTake(k){
+  const c = pmFindCard(k); if (!c || !c.it) return;
+  const r = pmMineRow(c.it.base);
+  if (!r){ toast("Команда не найдена в неделе — обнови данные", true); return; }
+  if (!rowEditable(r)){ toast("Твой разбор этой команды сейчас нельзя править (закрытая неделя или режим «глазами»)", true); return; }
+  const d = Object.assign({}, getDraft(r) || {});
+  let n = 0;
+  for (let j=0;j<9;j++){
+    const cur = d["f"+j] !== undefined ? d["f"+j] : (r.cats[j]||"");
+    const pv = String(c.it.cats[j]||"").trim();
+    if (pv && !String(cur||"").trim()){ d["f"+j] = pv; n++; }
+  }
+  if (!n){ toast("Переносить нечего: у тебя уже заполнены все категории, где писал продюсер", true); return; }
+  setDraft(r, d);
+  toast("📝 Перенесено в твой черновик: " + n + " катег. Открываю команду — проверь и нажми «Сохранить»");
+  gotoRow(r._sheet + "|" + r._row);
+}
+// блок в карточке команды у смотрящего (основная таблица): статус мониторинга продюсера и расхождения
+function pmBlockFor(r){
+  if (!AUTH.edit || viewAsActive() || !state.pm || !state.pm.items) return "";
+  const it = state.pm.items.find(x=>x.base===skey(r) && x.status !== "скрыта");
+  if (!it) return "";
+  const d = pmDiff(it.cats, rowStats(r).st);
+  const nd = d.miss.length + d.strict.length;
+  return `<div class="drow"><b>📋 Мониторинг продюсера</b><span><span class="ptag ${PM_ST_CLS[it.status]||""}">${esc(PM_ST_LBL[it.status]||it.status)}</span> ${nd ? `<span class="ptag pt-bad">≠ ${nd}: ${esc(d.miss.concat(d.strict).map(j=>CATS[j]).join(", "))}</span>` : (pmChecked(it) ? '<span class="ptag pt-ok">оценки совпадают</span>' : "")} <button class="abtn2" data-pmgo="${esc(it.id)}">открыть</button></span></div>`;
+}
+document.addEventListener("click", ev=>{
+  const b = ev.target && ev.target.closest ? ev.target.closest("[data-pmgo]") : null;
+  if (!b) return;
+  ev.stopPropagation();
+  state.pmOpen = state.pmOpen || {}; state.pmOpen[b.dataset.pmgo] = true; state.pmFilter = "all"; state.pmProd = "";
+  switchTab(PM_TAB_ED);
+}, true);
+// общий кодировщик скрина (тот же, что у основной загрузки): оригинал до 2560 px и < 5,5 МБ + мини 480 px
+async function shotEncode(blob){
+  if (blob && blob.size > 25*1024*1024) throw new Error("файл больше 25 МБ");
+  const img = await createImageBitmap(blob);
+  const FULL_MAX_DIM = 2560, FULL_MAX_BYTES = 5.5*1024*1024;
+  const scale = Math.min(1, FULL_MAX_DIM/Math.max(img.width, img.height));
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(img, 0, 0, cv.width, cv.height);
+  let data = "";
+  for (const qv of [0.92, 0.85, 0.75, 0.65]){ data = cv.toDataURL("image/jpeg", qv).split(",")[1]; if (data.length * 3 / 4 <= FULL_MAX_BYTES) break; }
+  if (data.length * 3 / 4 > 6*1024*1024) throw new Error("скрин слишком большой даже после сжатия");
+  const scale2 = Math.min(1, 480/Math.max(img.width, img.height));
+  const cv2 = document.createElement("canvas");
+  cv2.width = Math.round(img.width*scale2); cv2.height = Math.round(img.height*scale2);
+  const ctx2 = cv2.getContext("2d");
+  ctx2.fillStyle = "#fff"; ctx2.fillRect(0, 0, cv2.width, cv2.height);
+  ctx2.drawImage(img, 0, 0, cv2.width, cv2.height);
+  return { data, small: cv2.toDataURL("image/jpeg", 0.8).split(",")[1] };
+}
+
 // ---------- «Итог» — последний итог дня по сверкам (лист «Итог», только чтение) ----------
 function renderItog(){
   document.getElementById("pbar").innerHTML = "";
@@ -3354,7 +3817,8 @@ function sessionExpired(){ // C: сессия истекла/погашена �
 function wp(params, timeoutMs){
   const a = String(params && params.action || "");
   if (viewAsActive() && WRITE_ACTIONS_FE.indexOf(a) >= 0) return Promise.reject(new Error("в режиме «глазами …» изменения отключены — выйди из режима"));
-  return postJSON(Object.assign({}, params, { token: AUTH.token }), timeoutMs)
+  // v6 (исправление 10): в режиме «глазами» запрос помечается — сервер тоже откажет в любой записи
+  return postJSON(Object.assign({}, params, { token: AUTH.token }, viewAsActive() ? { viewAs: 1 } : {}), timeoutMs)
     .then(j => {
       if (j && j.error){
         if (/требуется вход/.test(j.error) && a !== "logout") sessionExpired();
@@ -3498,6 +3962,21 @@ function linksArrFromText(key, text){
 // ТОЛЬКО после ответа сервера; повтор упавшей отправки не перетирает более новые правки того же поля.
 let saveSeq = 0, inflightSaves = 0;
 const saveQueue = {};
+// v6: облегчённая строка прошлой недели → полный текст с сервера (одна строка), подменяем поля на месте
+const _fullReq = {};
+function ensureRowFull(r){
+  if (!r || !r._lite) return Promise.resolve(r);
+  const k = rk(r);
+  if (_fullReq[k]) return _fullReq[k];
+  _fullReq[k] = wp(Object.assign({ action:"rowfull" }, rowKeyParams(r)), 30000).then(res=>{
+    const f = res && res.row;
+    if (!f) throw new Error("нет данных");
+    const targets = [r].concat(realData && realData.rows ? realData.rows.filter(x=>x!==r && rk(x)===k) : []).concat(state.rows.filter(x=>x!==r && rk(x)===k));
+    targets.forEach(t=>{ ["cats","obs","reco","linksTxt","status","updated","scoreM","verdictM","opName"].forEach(f2=>{ if (f[f2] !== undefined) t[f2] = Array.isArray(f[f2]) ? f[f2].slice() : f[f2]; }); delete t._lite; delete t._st; });
+    return r;
+  }).finally(()=>{ delete _fullReq[k]; });
+  return _fullReq[k];
+}
 function rowByRk(k){ return state.rows.find(r=>rk(r)===k) || (realData ? realData.rows.find(r=>rk(r)===k) : null); }
 function queueRowSave(x, key, changes){
   const qk = rk(x.r);
@@ -4275,12 +4754,13 @@ function hideGate(){ document.getElementById("gate").classList.add("hide"); }
 function clearLocalData(){
   try {
     const rm = [];
-    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (/^draft2?:/.test(k)) rm.push(k); }
+    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (/^(draft2?|pmdraft):/.test(k)) rm.push(k); } // v6: и черновики мониторинга продюсера
     rm.concat(["dash_weeks","dash_filters","dash_addlast","dash_last_user"]).forEach(k=>localStorage.removeItem(k));
     sessionStorage.removeItem("dash_cache");
   } catch(e){}
   state.rows = []; state.plans = {}; state.checks = {}; state.recs = {}; state.screens = {}; state.tasks = []; state.thumbData = {};
   state.dataFp = ""; state.knownWeeks = []; state.failedSaves = {}; state.fullLoaded = false;
+  state.pm = null; state.pmEdits = {}; state.pmOpen = {}; state.pmBadge = 0; state.gen = ""; // v6
   try { Object.keys(saveQueue).forEach(k=>delete saveQueue[k]); } catch(e){}
 }
 document.getElementById("loginbtn").onclick = ()=>{
@@ -4543,6 +5023,8 @@ function applyData(j, isHistory, mergeWeek){
   document.getElementById("sugbtn").style.display = AUTH.ok() ? "" : "none";
   render();
   if (document.getElementById("a-prod")) updateProdList();
+  // v6: смотрящему — статусы мониторинга продюсеров для карточек команд (тихо, не чаще раза в 5 минут)
+  if (AUTH.edit && !viewAsActive() && (!state.pm || !state.pm.at || Date.now() - state.pm.at > 5*60*1000)) setTimeout(()=>loadPM({ quiet: true }), 2500);
 }
 // ---------- 🐞 диагностика транспорта (вызывается с экрана загрузки) ----------
 function runDiag(out){
@@ -4575,7 +5057,11 @@ function prodModeSet(m){
   try{ sessionStorage.setItem("dash_prodmode", state.prodMode); }catch(e){}
 }
 let loadingNow = false;
-async function load(){
+// v6: облегчённое чтение. Автообновление шлёт gen прошлого ответа — если через сайт ничего не меняли, сервер отвечает
+// {same:true} без данных. Раз в LITE_FULL_MS читаем полностью (правки руками прямо в таблице gen не меняют).
+const LITE_FULL_MS = 10*60*1000;
+async function load(opts){
+  const auto = !!(opts && opts.auto);
   if (loadingNow) return; // не запускать параллельные загрузки
   if (!AUTH.ok()){ showGate(); return; }
   loadingNow = true;
@@ -4614,7 +5100,10 @@ async function load(){
     while (readAttempt < 2 && !j){
       readAttempt++;
       try {
-        j = await wp({action:"read", week: weekReq}, 120000);
+        const rq = {action:"read", week: weekReq};
+        if (weekReq === "all") rq.lite = 1;
+        if (auto && state.gen && state.genWeek === weekReq && Date.now() - (state.lastFullAt||0) < LITE_FULL_MS) rq.gen = state.gen;
+        j = await wp(rq, 120000);
         if (j.error) throw new Error(j.error);
       } catch(eRead){
         lastErr = eRead;
@@ -4624,8 +5113,14 @@ async function load(){
       }
     }
     if (!j) throw lastErr;
+    state.lastLoadAt = Date.now();
+    if (j.same){ // v6: сервер подтвердил — с прошлого раза ничего не менялось
+      dot.className = "dot-live";
+      txt.textContent = "";
+    } else {
+    state.gen = j.gen || ""; state.genWeek = weekReq; state.lastFullAt = Date.now();
     // автообновление не перерисовывает экран, если данные не изменились (отпечаток ВСЕГО ответа)
-    const fp = weekReq + ":" + strHash(JSON.stringify(j));
+    const fp = weekReq + ":" + strHash(JSON.stringify(Object.assign({}, j, { gen: "" })));
     if (fp === state.dataFp){
       dot.className = "dot-live";
       txt.textContent = "";
@@ -4637,6 +5132,7 @@ async function load(){
       state.dataFp = fp;
       try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, week:state.week, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans, itog:j.itog||[] })); }catch(e){ try{ sessionStorage.removeItem("dash_cache"); }catch(e2){} } // C: не влезло — старый кэш не оставляем
     }
+    } // v6: конец «не same»
     // проверка ролей не чаще раза в 5 минут (после логина уже была)
     if (Date.now()-(state.lastCheck||0) > 5*60*1000 && !viewAsActive()){ // в режиме «глазами» не переобновляем права
       state.lastCheck = Date.now();
@@ -4686,7 +5182,11 @@ setTimeout(function(){
   if (db) db.onclick = function(){ runDiag(document.getElementById("spl-diagout")); };
 }, 15000);
 load();
-setInterval(()=>{ if (AUTH.ok() && !anyDirty()) load(); }, CONFIG.REFRESH_MIN*60*1000);
+// v6 (исправление 7): фоновая вкладка не дёргает сервер; вернулись на вкладку — обновим, если данные устарели
+setInterval(()=>{ if (AUTH.ok() && !anyDirty() && document.visibilityState === "visible") load({ auto: true }); }, CONFIG.REFRESH_MIN*60*1000);
+document.addEventListener("visibilitychange", ()=>{
+  if (document.visibilityState === "visible" && AUTH.ok() && !anyDirty() && !loadingNow && Date.now() - (state.lastLoadAt||0) > CONFIG.REFRESH_MIN*60*1000) load({ auto: true });
+});
 // задача 3: лёгкий опрос уведомлений раз в 60 с — работает и при черновиках (полное обновление при них пропускается)
 async function pingNotif(){
   if (!AUTH.ok() || viewAsActive() || document.visibilityState !== "visible") return;
@@ -4696,6 +5196,9 @@ async function pingNotif(){
       state.lastPing = Date.now();
       updateResetBell((r.resetPending||0) + (r.suggestions||0));
       updateSugBadge(r.myAnswers||0);
+      // v6: бейдж мониторинга продюсера (продюсеру — возвраты, смотрящему — ждут проверки)
+      const nb = AUTH.prod ? (r.pmReturned||0) : (r.pmSent||0);
+      if (nb !== (state.pmBadge||0)){ state.pmBadge = nb; if (pmIsTab(state.tab)) loadPM({ quiet: true }); else softRender(); }
     }
   } catch(e){}
 }
