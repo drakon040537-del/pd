@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#191c21">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="https://script.google.com">
 <title>Мониторинг</title>
@@ -68,6 +71,9 @@
   td{padding:8px;border-bottom:1px solid var(--line)}
   tr.r:hover td{background:var(--panel2);cursor:pointer}
   tr.detail td{background:#191c21;padding:0}
+  .feedtop{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.feedtop .gbtn.on{border-color:var(--acc,#6aa0ff)}
+  .feedc{padding:10px 12px;margin-bottom:8px}.feedc.off{opacity:.55}.feedh{display:flex;justify-content:space-between;gap:8px}
+  .feedm{color:var(--dim);font-size:12px;margin:4px 0 8px}.feedb{display:flex;gap:6px;flex-wrap:wrap}.feedb .abtn2{flex:1;min-height:40px}
   .detail-in{padding:0 18px;overflow:hidden;max-height:0;transition:max-height .35s ease, padding .35s ease}
   tr.detail.open .detail-in{max-height:3000px;padding:14px 18px 18px}
   .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}
@@ -194,7 +200,7 @@
   .rflyout .tab:hover{color:var(--ink);background:var(--panel2)}
   .rflyout .tab.on{background:var(--accent);color:#fff}
   .rflyout .tab .cnt,.rflyout .ritem .cnt{margin-left:auto}
-  @media(max-width:820px){.rgrp{width:100%}.rgbody{flex-direction:row;flex-wrap:wrap}.ritem,#tabs .rgbody .tab{width:auto}}
+  @media(max-width:820px){.rail.mini{width:100%;min-width:0;flex-direction:row;flex-wrap:wrap;padding:8px;gap:4px}.rail.mini .rtoggle{width:44px;margin:0}.rail.mini .rgrp{width:auto}.rail.mini .rghead{margin:0}.rail.mini .tab,.rail.mini .wtab{margin:0}.rgrp{width:100%}.rgbody{flex-direction:row;flex-wrap:wrap}.ritem,#tabs .rgbody .tab{width:auto}}
   .rail.mini .tab .cnt.due{position:absolute;top:1px;right:1px;margin:0;font-size:9px;max-width:40px;line-height:1}
   .wdrop{position:absolute;z-index:130;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:190px;max-height:70vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:3px}
   .witem{background:none;border:none;color:var(--ink);text-align:left;padding:8px 11px;border-radius:7px;cursor:pointer;font:inherit;font-size:12.5px}
@@ -269,6 +275,12 @@
   .myq{border-color:rgba(91,157,255,.45)}
   .qx{color:var(--bad);font-weight:700;margin-left:3px}
   .scrow{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .camwrap{position:relative;max-height:82vh;overflow:auto;border-radius:8px;background:#000;cursor:zoom-in;text-align:center}
+  .camwrap img{display:block;margin:0 auto;max-width:100%;max-height:82vh;width:auto;height:auto;image-rendering:auto}
+  .camwrap.zoom{cursor:zoom-out}
+  .camwrap.zoom img{max-width:none;max-height:none}
+  .camq{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 7px;border-radius:6px;pointer-events:none}
+  .camq:empty{display:none}
   .sthumb{position:relative;display:inline-block;line-height:0}
   .sthumb img{width:96px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block}
   .sthumb:hover img{border-color:var(--accent)}
@@ -324,6 +336,16 @@
   .shbadge.off{background:var(--bad);color:#fff}
   .shpart{margin:10px 0 6px;font-size:12.5px;color:var(--dim);font-weight:600}
   .shweek{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px}
+  table.heat{border-collapse:separate;border-spacing:2px;font-size:12px}table.heat th{font-weight:600;color:var(--dim);font-size:11px;padding:2px 4px;max-width:80px;vertical-align:bottom}
+  .hm{width:34px;height:22px;border-radius:4px;cursor:pointer}.hm-ok{background:rgba(70,180,110,.75)}.hm-bad{background:rgba(230,80,80,.85)}.hm-none{background:var(--panel2)}
+  .hm-name{cursor:pointer;white-space:nowrap;padding-right:8px}.hm-name:hover{color:var(--accent)}.hm-sc{color:var(--dim);padding-left:6px;white-space:nowrap}.hm-tot{color:var(--bad);font-weight:400}.hm-key{display:inline-block;width:14px;height:10px;vertical-align:-1px}
+  .upq{margin-top:6px;max-height:180px;overflow:auto}.upqi{font-size:12px;color:var(--dim);padding:1px 0}.upqi.err{color:var(--warn)}.upqi.ok{color:var(--ok)}.uplzone.drag{border-color:var(--accent);background:rgba(90,140,255,.08)}
+  .annwrap{max-height:76vh;overflow:auto;background:#000;border-radius:8px;text-align:center}#ann-cv{max-width:100%;max-height:74vh;touch-action:none;cursor:crosshair}
+  .anncol{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);margin:0 2px;cursor:pointer;vertical-align:middle}.anncol.on{border-color:#fff;outline:2px solid var(--accent)}
+  .aidgrid{display:flex;gap:12px;flex-wrap:wrap}.aidcol{flex:1;min-width:260px}.aidrow{margin:3px 0;font-size:12.5px;line-height:1.4}
+  .shlink{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700;text-decoration:none;color:var(--accent);border:1px solid var(--line);vertical-align:1px}
+  .shlink.cb{color:#fff;background:#f47321;border-color:#f47321}
+  .shlink:hover{border-color:var(--accent)}
   .shweekcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;font-size:12.5px}
   .shweekcard:hover,.shweekcard.on{border-color:var(--accent)}
   .shweekcard.today{outline:2px solid var(--accent)}
@@ -427,10 +449,10 @@
     </div>
   </div>
   <div class="modal-ov" id="cammodal">
-    <div class="modal" style="width:min(900px,96vw)">
+    <div class="modal" style="width:min(1400px,98vw)">
       <button class="x" id="cam-x">✕</button>
       <h3 id="cam-title">📷 Скрин</h3>
-      <img id="cam-img" style="width:100%;border-radius:8px" alt="скрин">
+      <div id="cam-wrap" class="camwrap" title="клик — 1:1 / вписать"><img id="cam-img" alt="скрин" decoding="async"><span id="cam-q" class="camq"></span></div>
       <button class="abtn2" id="cam-ai" style="display:none;margin-top:8px">🤖 что с кадром</button>
       <div id="cam-aiout" class="aibox" style="display:none"></div>
     </div>
@@ -481,10 +503,28 @@
     <div class="modal" style="width:min(460px,94vw)">
       <button class="x" id="u-x">✕</button>
       <h3 id="u-title">📷 Фото</h3>
-      <div class="uplzone" id="u-zone">Ctrl+V — вставь скрин из буфера<br><span style="color:var(--faint);font-size:11.5px">скрин сохранится и появится у команды</span></div>
-      <button class="abtn" id="u-file">📁 Выбрать файл с ПК</button>
-      <input type="file" id="u-fileinp" accept="image/*" style="display:none">
+      <div class="uplzone" id="u-zone">Ctrl+V — вставь скрин(ы) из буфера<br>или перетащи сюда несколько файлов<br><span style="color:var(--faint);font-size:11.5px">скрины встанут в очередь и загрузятся по одному</span></div>
+      <button class="abtn" id="u-file">📁 Файлы с ПК</button> <button class="abtn" id="u-cam" title="снять камерой телефона прямо в эту категорию">📷 Камера</button>
+      <input type="file" id="u-caminp" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="u-fileinp" accept="image/*" multiple style="display:none">
+      <label style="display:block;margin-top:8px;font-size:12.5px"><input type="checkbox" id="u-ann"> ✏ разметить перед загрузкой (стрелка, рамка, текст)</label>
+      <div id="u-queue" class="upq"></div>
       <div id="u-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="modal-ov" id="annmodal">
+    <div class="modal" style="width:min(1300px,98vw)">
+      <button class="x" id="ann-x">✕</button>
+      <h3 id="ann-title">✏ Разметка скрина</h3>
+      <div class="filters" style="gap:6px;flex-wrap:wrap">
+        <button class="gbtn on" data-anntool="arrow">➜ стрелка</button><button class="gbtn" data-anntool="rect">▭ рамка</button><button class="gbtn" data-anntool="text">T текст</button>
+        <span id="ann-colors"></span>
+        <button class="gbtn" id="ann-undo">↶ отменить</button><button class="gbtn" id="ann-clear">очистить</button>
+        <label style="font-size:12px"><input type="checkbox" id="ann-keep"> загрузить и оригинал</label>
+        <button class="savebtn" id="ann-ok">✅ готово</button><button class="abtn2" id="ann-skip">без разметки</button>
+      </div>
+      <div class="annwrap"><canvas id="ann-cv"></canvas></div>
+      <div style="color:var(--faint);font-size:11.5px;margin-top:4px" id="ann-left"></div>
     </div>
   </div>
   <div class="modal-ov" id="delmodal">
@@ -529,7 +569,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-05.40"
+  VER: "2026-10-07.46"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -544,13 +584,14 @@ const AUTH = {
   edit: localStorage.getItem("dash_edit") === "1",
   cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
   prod: localStorage.getItem("dash_prod") === "1",
+  admin: localStorage.getItem("dash_admin") === "1", // Обновление 6: админ (ADMIN_LOGINS на сервере) — только для показа меню; права проверяет сервер
   ok(){ return !!(this.user && this.token); },
   set(u,tok,edit,cities,name){ this.user=u; this.token=tok; this.edit=edit; this.cities=cities; this.name=name||u;
     try{ localStorage.setItem("dash_user",u); localStorage.setItem("dash_token",tok);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
     localStorage.setItem("dash_name",this.name); }catch(e){} // приватный режим iOS — хранилище может бросать
     return true; },
-  clear(){ try{ ["dash_user","dash_token","dash_edit","dash_cities","dash_name","dash_prod"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
+  clear(){ try{ ["dash_user","dash_token","dash_edit","dash_cities","dash_name","dash_prod","dash_admin"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
     this.user=""; this.token=""; this.edit=false; this.cities=[]; this.name=""; this.prod=false; }
 };
 
@@ -602,8 +643,12 @@ function tabs(){
   if (state.cityOrder) cities = cities.slice().sort((a,b)=>{ const ia=state.cityOrder.indexOf(a), ib=state.cityOrder.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
   const tools = ["Операторы","Рекомендации"];
   if (AUTH.edit) tools.push("Мои задачи"); // свод задач продюсерам (ставит редактор)
+  if (AUTH.edit && !viewAsActive()) tools.push("Лента"); // Обновление 6 (12): мобильная лента сегодняшних смен — только смотрящему
   if (AUTH.edit && !viewAsActive()) tools.push("Смены"); // задача 5: «Расписание» смен моделей — только смотрящему
   if (AUTH.edit || AUTH.cities.includes("all")) tools.push("Итог"); // итоги дня по сверкам — смотрящему/директору
+  tools.push("Карта"); // Обновление 6: тепловая карта категорий (команды × 9 категорий) — в пределах своих компаний
+  if (AUTH.edit && !viewAsActive()) tools.push("Состояние"); // Обновление 6: здоровье сервера — смотрящему/редактору
+  if (AUTH.admin && AUTH.edit && !viewAsActive()) tools.push("Пользователи"); // Обновление 6: только админ (сервер проверяет ADMIN_LOGINS)
   return ["Обзор"].concat(cities).concat(tools);
 }
 const CITY_ORDER = ["Томск","Новосибирск","Онлайн"];
@@ -639,7 +684,18 @@ function catState(t){
   if (/не\s*$|нет\s*$|не-$/.test(pre)) return "bad"; // «не хорошо», «не-нравится» — отрицание перед хорошим словом
   return "ok";
 }
+// Обновление 6 (7): rowStats запоминается по «отпечатку» строки (тексты категорий + ручная оценка/вердикт);
+// правка в строке меняет отпечаток — пересчёт. Результат нельзя менять снаружи (только читать).
+const _rsMemo = (typeof WeakMap === "function") ? new WeakMap() : null;
+function rowFp(r){ return (r.cats||[]).join("\u0001") + "\u0002" + String(r.scoreM==null?"":r.scoreM) + "\u0002" + String(r.verdictM==null?"":r.verdictM); }
 function rowStats(r){
+  if (!_rsMemo || !r || typeof r !== "object") return rowStatsRaw(r);
+  const fp = rowFp(r), m = _rsMemo.get(r);
+  if (m && m.fp === fp) return m.v;
+  const v = rowStatsRaw(r); _rsMemo.set(r, { fp, v });
+  return v;
+}
+function rowStatsRaw(r){
   const st = r.cats.map(catState);
   const ok = st.filter(x=>x==="ok").length;
   const bad = st.filter(x=>x==="bad").length;
@@ -886,7 +942,8 @@ function toast(msg, isErr){
 }
 
 function openModal(id){ document.getElementById(id).classList.add("show"); }
-function closeModal(id){ document.getElementById(id).classList.remove("show"); }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); if (id === "annmodal" && typeof annOnClose === "function"){ const f = annOnClose; annOnClose = null; f(); } }
+let annOnClose = null; // Обновление 6: закрытие окна разметки фоном/Esc = «не загружать этот скрин», очередь идёт дальше
 document.addEventListener("click", e=>{
   document.querySelectorAll(".modal-ov.show").forEach(ov=>{ if (e.target === ov) closeModal(ov.id); });
 });
@@ -1076,8 +1133,13 @@ function renderMain(){
   const wdOpen = !!document.getElementById("weekdrop"); // открытый список недель тоже переживает перерисовку
   try{ localStorage.setItem("dash_filters", JSON.stringify({tab:state.tab, producer:state.producer, quick:state.quick, week:state.week==="latest"?"latest":state.week})); }catch(e){}
   const wks = rememberWeeks(); // полный список недель — не только загруженная
-  const icons = Object.assign({"Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌","Смены":"📅"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
+  // Обновление 6 (7): при вводе в поиск меню слева не перестраивается — только содержимое (state.railSkipOnce)
+  const railSkip = !!state.railSkipOnce && !!document.getElementById("railtoggle"); state.railSkipOnce = false;
+  if (!railSkip){
+  const icons = Object.assign({"Лента":"📱","Обзор":"📊","Сводка":"🧭","Расписание":"📅","Томск":"🟠","Новосибирск":"🟢","Онлайн":"🔵","Операторы":"👥","Сравнение":"⚖️","Чек":"📈","Рекомендации":"💡","Итог":"🧾","Мои задачи":"📌","Смены":"📅","Пользователи":"🔑","Состояние":"🩺","Карта":"🌡"}, AUTH.prod ? (()=>{ const o={}; o[prodTabName()]="👤"; return o; })() : {});
   // панель: секции + красная метка на вкладках с критичными сменами
+  // AUDIT4 P3-1: у вкладок-инструментов число команд не показываем (у «Мои задачи» — бейдж 📌 открытых задач)
+  const NO_TEAM_COUNT_TABS = ["Состояние","Пользователи","Карта","Лента","Мои задачи","Рекомендации","Итог","Смены","Расписание"];
   const tabBtn = c=>{
     const raw = rowsOf(c);
     const rs = (c==="Сравнение") ? raw : dedupeRows(raw); // счётчик вкладки всегда по КОМАНДАМ, не по строкам недель
@@ -1087,7 +1149,7 @@ function renderMain(){
     if (c==="Расписание"){ const od = overdueCount(); if (od) badge = `<span class="cnt due" title="просрочено перепроверок: ${od}">⏰${od}</span>`; }
     else if (c==="Мои задачи"){ const nt = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan).length; if (nt) badge = `<span class="cnt due" title="открытых задач: ${nt}">📌${nt}</span>`; }
     else if (CITY_ORDER.includes(c)){ const od = overdueCount(c); if (od) badge = `<span class="cnt due" title="просрочено перепроверок в компании: ${od}">⏰${od}</span>`; }
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":c==="Смены"?"Расписание":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span>${badge}</button>`;
+    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":c==="Смены"?"Расписание":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${(NO_TEAM_COUNT_TABS.includes(c) ? "" : n) || ""}</span>${badge}</button>`;
   };
   const sect = t => `<div class="rsect">${t}</div>`;
   // Обновление 4: CRM-меню — группы сворачиваются (состояние в localStorage), в свёрнутом рельсе группа открывает всплывающий список.
@@ -1150,6 +1212,7 @@ function renderMain(){
     try{ localStorage.setItem("rail_mini", state.railMini?"1":"0"); }catch(e){}
     render();
   };
+  } // конец перестройки рельса
 
   let rows = rowsOf(state.tab);
   if (state.search) rows = state.rows.slice(); // глобальный поиск: все города и недели
@@ -1168,7 +1231,11 @@ function renderMain(){
   if (state.tab==="Рекомендации"){ renderNotes("recs"); return; }
   if (state.tab==="Итог"){ renderItog(); return; }
   if (state.tab==="Мои задачи"){ renderMyTasks(); return; }
+  if (state.tab==="Лента"){ renderFeed(); return; }
   if (state.tab==="Смены"){ renderShifts(); return; }
+  if (state.tab==="Пользователи"){ renderUsers(); return; }
+  if (state.tab==="Состояние"){ renderStatus(); return; }
+  if (state.tab==="Карта"){ renderHeat(); return; }
   // Обновление 4: по умолчанию — обзор (карточки, прогресс, проблемы, вердикты); «Разборы» — только по явному переключателю.
   // Раньше условие было «prodMode !== "table"», и при первом рендере (prodMode ещё undefined) открывались разборы,
   // а после клика «Таблица» — обзор: два разных экрана для одного состояния.
@@ -1364,7 +1431,7 @@ function renderMain(){
     state.search = e.target.value;
     clearTimeout(searchTimer); // перерисовка не на каждый символ, а 200мс после паузы
     searchTimer = setTimeout(()=>{
-      state.page = 1; render(); // C: фокус и позицию каретки сохраняет render() (раньше каретка прыгала в конец)
+      state.page = 1; state.railSkipOnce = true; render(); // C: фокус и позицию каретки сохраняет render() (раньше каретка прыгала в конец)
     }, 200);
   };
 
@@ -1454,7 +1521,7 @@ function renderMain(){
       const rowScreens = (state.screens||{})[skey(x.r)] || [];
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.length ? rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"🔗")}</a>`).join("") : '<span style="color:var(--faint)">—</span>';
-      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,320)))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const readDet = CATS.map((n,j)=>{
         const t = (x.r.cats[j]||"").trim();
         const scr = rowScreens.filter(s=>String(s.cat)===n);
@@ -1487,6 +1554,8 @@ function renderMain(){
         <button class="abtn2" id="aicmp${key}" title="сравнение этой команды с прошлой неделей">🤖 сравнить с прошлой неделей</button>
         <button class="abtn2" id="aiodv${key}" title="3 совета оператору простыми словами — ничего не отправляет, только копирует">💬 совет оператору</button>
         <button class="abtn2" id="aitone${key}" title="проверка тона общего комментария">🧐 тон комментария</button>
+        ${rowScreens.length?`<button class="abtn2" id="aiscr${key}" title="ИИ смотрит скрин и предлагает черновик по 9 категориям — в текст попадает только то, что ты примешь">🤖 черновик по скрину</button>`:""}
+        ${rowScreens.length && AUTH.edit?`<button class="abtn2" id="aiscc${key}" title="сравнить ответы Gemini и Grok на одном скрине">⚖ Gemini/Grok</button>`:""}
         <button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">📌 поручить продюсеру</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
         <div class="aibox" id="aibox${key}" style="display:none"></div>`
@@ -1597,14 +1666,11 @@ function renderMain(){
           cout.innerHTML = res.issues.map(i2=>"• "+esc(i2)).join("<br>");
         } catch(e){ cout.textContent = "🤖 " + e.message; }
       };
-      document.getElementById("cam-img").src = BLANK;
+      camShow(im.getAttribute("src") || BLANK, true); // сразу миниатюра как заглушка, следом — оригинал
       document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
       const full = im.getAttribute("data-full") || "";
-      wp({ action:"thumb", id: driveId(full) }).then(res=>{
-        if (res.error || !res.d) return;
-        document.getElementById("cam-img").src = "data:image/jpeg;base64," + res.d;
-      }).catch(()=>{});
+      camLoadFull(driveId(full));
     };
   });
   document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
@@ -1628,7 +1694,7 @@ function renderMain(){
     toast("Скрин вернул на место — сервер не подтвердил удаление, попробуй ещё раз", true);
     render();
   });
-  document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const v=prompt("Своя формулировка для «"+b.dataset.n+"» (сохранится в этом браузере):"); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
+  document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const cur = (document.getElementById("ed"+b.dataset.add)||{}).value || ""; const v=prompt("Шаблон замечания для «"+b.dataset.n+"» (сохранится у тебя на всех устройствах):", cur.trim().split("\n").pop().slice(0,300)); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
   document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
     const x = state.lastView[b.dataset.rop]; if (!x) return;
@@ -1661,6 +1727,7 @@ function renderMain(){
     const d = document.querySelector(`tr.detail[data-d="${tr.dataset.i}"]`);
     if (d.classList.contains("open") && rowDirty(tr.dataset.i) && !confirm("Есть несохранённые правки (они сохранены в черновик и не пропадут). Закрыть?")) return;
     d.classList.toggle("open");
+    if (d.classList.contains("open")) setTimeout(ensureThumbs, 60); // скрины карточки — по раскрытию
     if (d.classList.contains("open")){
       // п.12: черновик прошлого сеанса — спрашиваем, восстановить ли его
       const x0 = state.lastView[tr.dataset.i];
@@ -1737,6 +1804,10 @@ function renderMain(){
     // U1: ИИ-ответ рисуется через aiShow(key, …): после await элементы ищутся ЗАНОВО по стабильному key,
     // а сам блок переживает перерисовку (state.aiBox). Ничего не сохраняется без «принять»/«заменить».
     const edVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
+    const aisc = document.getElementById("aiscr"+key);
+    if (aisc) aisc.onclick = ()=>aiScreenDraft(key, x, false);
+    const aiscc = document.getElementById("aiscc"+key);
+    if (aiscc) aiscc.onclick = ()=>aiScreenDraft(key, x, true);
     const aiv = document.getElementById("aiv"+key);
     if (aiv) aiv.onclick = async ()=>{
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
@@ -2149,9 +2220,14 @@ function openRailFly(head){
   const f = document.createElement("div");
   f.id = "railfly"; f.className = "rflyout"; f.dataset.g = key;
   f.innerHTML = `<div class="rfltitle">${esc(head.querySelector("span:nth-child(2)").textContent)}</div>` + body.innerHTML;
-  f.style.left = (r.right + 8) + "px";
-  f.style.top = Math.max(8, Math.min(r.top, window.innerHeight - 240)) + "px";
   document.body.appendChild(f);
+  // AUDIT4 P2-7: всплывающий список не уходит за край экрана; на узком экране — под иконкой
+  const fw = f.offsetWidth, fh = f.offsetHeight, W = window.innerWidth, Hh = window.innerHeight;
+  let left = r.right + 8, top = r.top;
+  if (W <= 820 || left + fw > W - 8){ left = r.left; top = r.bottom + 4; }
+  left = Math.max(8, Math.min(left, W - fw - 8));
+  top = Math.max(8, Math.min(top, Hh - fh - 8));
+  f.style.left = left + "px"; f.style.top = top + "px";
   f.querySelectorAll("[draggable]").forEach(x=>x.removeAttribute("draggable"));
   bindRailItems(f);
 }
@@ -2349,6 +2425,27 @@ function schedNorm(s){
 function ymdLocal(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
 function ymdShift(ymd, n){ const p = ymd.split("-").map(Number); return ymdLocal(new Date(p[0], p[1]-1, p[2] + n)); }
 const WD_RU = ["вс","пн","вт","ср","чт","пт","сб"];
+// Обновление 5: ссылки на страницу модели берутся из колонки «Ссылки» (U → r.linksTxt) её строки мониторинга.
+// Строки «Название = URL» или просто URL; только http/https; chaturbate — первой; дубли убираются.
+const MODEL_SITES = [["chaturbate.com","CB"],["stripchat.com","SC"],["bongacams","BC"],["camsoda.com","CS"],["myfreecams.com","MFC"],["livejasmin.com","LJ"],["cam4.","C4"],["onlyfans.com","OF"],["flirt4free.com","F4F"],["xlovecam.com","XLC"]];
+function safeHttpUrl(u){
+  const s = String(u || "").trim();
+  if (!/^https?:\/\//i.test(s)) return "";
+  try { const x = new URL(s); return (x.protocol === "http:" || x.protocol === "https:") && x.hostname ? x.href : ""; } catch(e){ return ""; }
+}
+function shiftModelLinks(teams){
+  const seen = {}, out = [];
+  (teams || []).forEach(r => String((r && r.linksTxt) || "").split("\n").forEach(line => {
+    const m = line.match(/^(.+?)\s*=\s*(\S+)\s*$/);
+    const url = safeHttpUrl(m ? m[2] : line.trim());
+    if (!url || seen[url]) return;
+    seen[url] = 1;
+    let host = ""; try { host = new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch(e){}
+    const site = MODEL_SITES.find(p => host.indexOf(p[0]) >= 0);
+    out.push({ url: url, host: host, label: site ? site[1] : host.split(".")[0].slice(0, 6).toUpperCase(), title: m ? m[1].trim() : host, cb: host.indexOf("chaturbate.com") >= 0 });
+  }));
+  return out.sort((a, b) => (b.cb ? 1 : 0) - (a.cb ? 1 : 0));
+}
 function shiftTeamsIndex(company){
   const lw = latestWeekName(), idx = {};
   realRows().forEach(r=>{
@@ -2395,6 +2492,94 @@ async function loadShifts(force){
   } catch(e){ state.schedCache[key] = { error: e.message }; }
   if (state.tab === "Смены") renderShifts();
 }
+// Обновление 6 (12): действия меню смены вынесены — их же зовёт «Лента сегодняшних смен»
+async function shDoAct(b, name){
+    const act = b.dataset.act;
+  if (act === "goto") gotoRow(b.dataset.sheet + "|" + b.dataset.row);
+  else if (act === "scr") openShiftScreens(b.dataset.key, name);
+  else if (act === "task"){
+    document.getElementById("tk-team").textContent = b.dataset.label;
+    document.getElementById("tk-text").value = "";
+    document.getElementById("tk-msg").textContent = "";
+    const ta = document.getElementById("tk-text");
+    ta.dataset.sheet = b.dataset.sheet; ta.dataset.nick = b.dataset.nick;
+    ta.dataset.model = b.dataset.model; ta.dataset.producer = b.dataset.producer;
+    const lt = (state.tasks||[]).filter(t=>t.key === b.dataset.sheet+"|"+b.dataset.nick+"|"+b.dataset.model);
+    document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")}</b><span class="utext">${esc(t.text)}</span></div>`).join("") : '<div class="empty">Открытых задач нет</div>';
+    openModal("taskmodal");
+  } else if (act === "add"){
+    if (weekPinned()){ toast("Сначала выбери конкретную неделю", true); return; }
+    document.getElementById("a-msg").textContent = "";
+    document.getElementById("a-city").value = b.dataset.city;
+    updateProdList();
+    document.getElementById("a-model").value = b.dataset.model || "";
+    document.getElementById("a-opname").value = b.dataset.op || "";
+    document.getElementById("a-nick").value = "";
+    openModal("addmodal");
+  }
+}
+// ===== Обновление 6 (12): «Лента сегодняшних смен» =====
+// чистая: смены дня → карточки (по одной на фамилию), зачёркнутые в конце, затем по времени
+function feedItems(day, idx){
+  const out = [];
+  ((day && day.shifts) || []).forEach(s=>{
+    (s.names || []).forEach(nm=>{
+      out.push({ name: nm, time: s.time || "", operator: s.operator || "", struck: !!s.struck, reason: s.reason || "", raw: s.raw || "", teams: (idx && idx[schedNorm(nm)]) || [] });
+    });
+  });
+  out.sort((a, b)=> (a.struck - b.struck) || String(a.time).localeCompare(String(b.time)) || String(a.name).localeCompare(String(b.name)));
+  return out;
+}
+function renderFeed(){
+  document.getElementById("pbar").innerHTML = "";
+  const box = document.getElementById("content");
+  const comps = CITY_ORDER.filter(c=>AUTH.cities.includes("all") || AUTH.cities.includes(c));
+  const today = ymdLocal(new Date());
+  state.feed = state.feed || { company: comps[0] || "Онлайн" };
+  const f = state.feed;
+  if (!comps.includes(f.company) && comps.length) f.company = comps[0];
+  const key = f.company + "|" + today + "|1";
+  state.schedCache = state.schedCache || {};
+  const ent = state.schedCache[key];
+  const load = async (force)=>{
+    state.schedCache[key] = { loading: true }; if (state.tab === "Лента") renderFeed();
+    try { const res = await wp({ action:"sched", company: f.company, date: today, days: 1, refresh: !!force }, 90000); if (res.error) throw new Error(res.error); state.schedCache[key] = { data: res }; }
+    catch(e){ state.schedCache[key] = { error: e.message }; }
+    if (state.tab === "Лента") renderFeed();
+  };
+  if (!ent){ setTimeout(()=>load(false), 0); }
+  const idx = shiftTeamsIndex(f.company);
+  const day = ent && ent.data ? ((ent.data.days || []).find(d=>d.date === today) || (ent.data.days || [])[0]) : null;
+  const items = feedItems(day, idx);
+  const card = (it, i) => {
+    const t = it.teams[0];
+    const btns = [];
+    if (t) btns.push(`<button class="abtn2" data-fd="goto" data-i="${i}">📝 мониторинг</button>`);
+    else btns.push(`<button class="abtn2" data-fd="add" data-i="${i}">＋ мониторинг</button>`);
+    btns.push(`<button class="abtn2" data-fd="scr" data-i="${i}"${t?"":" disabled"}>📷 скрин</button>`);
+    btns.push(`<button class="abtn2" data-fd="task" data-i="${i}"${t?"":" disabled"}>📌 задача</button>`);
+    return `<div class="card feedc${it.struck?" off":""}"><div class="feedh"><b>${esc(it.name)}</b><span>${esc(it.time||"—")}</span></div>
+      <div class="feedm">${esc(it.operator||"оператор не указан")}${t?" · "+esc(t.producer||"—"):" · нет команды на дашборде"}${it.struck?' · <span style="color:var(--bad)">отписка'+(it.reason?": "+esc(it.reason):"")+'</span>':""}</div>
+      <div class="feedb">${btns.join("")}</div></div>`;
+  };
+  box.innerHTML = `<div class="feedtop">${comps.map(c=>`<button class="gbtn${c===f.company?" on":""}" data-fc="${esc(c)}">${esc(clabel(c))}</button>`).join("")}
+      <button class="gbtn" id="fd-ref" title="перечитать расписание">⟳</button></div>
+    ${ent && ent.loading ? '<div class="empty">Загружаю расписание…</div>' : ""}
+    ${ent && ent.error ? `<div class="empty" style="color:var(--warn)">${esc(ent.error)}</div>` : ""}
+    ${ent && ent.data && !items.length ? '<div class="empty">Сегодня смен нет</div>' : ""}
+    ${items.map(card).join("")}`;
+  box.querySelectorAll("[data-fc]").forEach(b=>b.onclick=()=>{ f.company = b.dataset.fc; renderFeed(); });
+  const rb = document.getElementById("fd-ref"); if (rb) rb.onclick = ()=>load(true);
+  box.querySelectorAll("[data-fd]").forEach(b=>b.onclick=()=>{
+    const it = items[+b.dataset.i]; if (!it) return;
+    const r = it.teams[0], act = b.dataset.fd;
+    const ds = (o)=>({ dataset: o });
+    if (act === "goto" && r) shDoAct(ds({ act:"goto", sheet: r._sheet, row: String(r._row) }), it.name);
+    else if (act === "add") shDoAct(ds({ act:"add", model: it.name, op: it.operator, city: f.company }), it.name);
+    else if (act === "scr" && r) openUpload({ r: r }, undefined, "общее фото · " + it.name);
+    else if (act === "task" && r) shDoAct(ds({ act:"task", sheet: r._sheet, nick: r.opNick||"", model: r.model||"", producer: r.producer||"", label: (r.opName||r.opNick||"—")+" / "+(r.model||"—") }), it.name);
+  });
+}
 function closeShMenu(){ const m = document.getElementById("sh-menu"); if (m) m.remove(); }
 function openShMenu(ev, payload){
   closeShMenu();
@@ -2417,33 +2602,12 @@ function openShMenu(ev, payload){
   document.body.appendChild(m);
   const x = Math.min(ev.clientX, window.innerWidth - 220), y = Math.min(ev.clientY, window.innerHeight - 160);
   m.style.left = x + "px"; m.style.top = y + "px";
-  m.onclick = async (e)=>{
+  m.onclick = (e)=>{
     const b = e.target.closest("button[data-act]"); if (!b) return;
     closeShMenu();
-    const act = b.dataset.act;
-    if (act === "goto") gotoRow(b.dataset.sheet + "|" + b.dataset.row);
-    else if (act === "scr") openShiftScreens(b.dataset.key, name);
-    else if (act === "task"){
-      document.getElementById("tk-team").textContent = b.dataset.label;
-      document.getElementById("tk-text").value = "";
-      document.getElementById("tk-msg").textContent = "";
-      const ta = document.getElementById("tk-text");
-      ta.dataset.sheet = b.dataset.sheet; ta.dataset.nick = b.dataset.nick;
-      ta.dataset.model = b.dataset.model; ta.dataset.producer = b.dataset.producer;
-      const lt = (state.tasks||[]).filter(t=>t.key === b.dataset.sheet+"|"+b.dataset.nick+"|"+b.dataset.model);
-      document.getElementById("tk-list").innerHTML = lt.length ? lt.map(t=>`<div class="drow"><b>${t.status==="сделана"?"✅":"📌"} ${esc(t.when||"")}</b><span class="utext">${esc(t.text)}</span></div>`).join("") : '<div class="empty">Открытых задач нет</div>';
-      openModal("taskmodal");
-    } else if (act === "add"){
-      if (weekPinned()){ toast("Сначала выбери конкретную неделю", true); return; }
-      document.getElementById("a-msg").textContent = "";
-      document.getElementById("a-city").value = b.dataset.city;
-      updateProdList();
-      document.getElementById("a-model").value = b.dataset.model || "";
-      document.getElementById("a-opname").value = b.dataset.op || "";
-      document.getElementById("a-nick").value = "";
-      openModal("addmodal");
-    }
+    shDoAct(b, name);
   };
+
   setTimeout(()=>document.addEventListener("click", function once(ev){ if (!ev.target.closest("#sh-menu")){ closeShMenu(); document.removeEventListener("click", once); } }), 0);
 }
 function openShiftScreens(key, title){
@@ -2453,11 +2617,132 @@ function openShiftScreens(key, title){
   document.getElementById("cam-ai").style.display = "none";
   document.getElementById("cam-aiout").style.display = "none";
   const first = arr[0];
-  document.getElementById("cam-img").src = (state.thumbData||{})[first.mini||first.link] || BLANK;
+  camShow((state.thumbData||{})[first.mini||first.link] || BLANK, !!(state.thumbData||{})[first.mini||first.link]);
   openModal("cammodal");
-  const id = (first.mini||first.link||"");
-  if (id) wp({ action:"thumb", id: driveId(id) }).then(res=>{ if (res && res.d) document.getElementById("cam-img").src = "data:image/jpeg;base64,"+res.d; }).catch(()=>{});
+  // Обновление 5: в большом окне — ОРИГИНАЛ (раньше сюда грузилась мини-копия 480 px — отсюда «мыло»)
+  const id = (first.link||first.mini||"");
+  if (id) camLoadFull(driveId(id));
   setTimeout(ensureThumbs, 30);
+}
+// ===== Обновление 6: тепловая карта категорий =====
+function heatOrder(items){ // чистая: сначала больше замечаний, затем ниже оценка, затем по продюсеру
+  return items.slice().sort((a,b)=> (b.bad - a.bad) || ((a.score==null?99:a.score) - (b.score==null?99:b.score)) || String(a.producer).localeCompare(String(b.producer), "ru"));
+}
+function heatColTotals(items, n){ // чистая: по каждой категории — сколько ✅/❌/пусто
+  const t = Array.from({length:n}, ()=>({ ok:0, bad:0, none:0 }));
+  items.forEach(it => it.st.forEach((s,j)=>{ if (j < n) t[j][s==="ok"?"ok":s==="bad"?"bad":"none"]++; }));
+  return t;
+}
+function renderHeat(){
+  document.getElementById("pbar").innerHTML = "";
+  const comps = AUTH.prod ? [""] : CITY_ORDER.filter(c=>AUTH.cities.includes("all") || AUTH.cities.includes(c));
+  state.heatCo = comps.includes(state.heatCo) ? state.heatCo : (comps[0] || "");
+  const co = state.heatCo;
+  const rows = dedupeRows(AUTH.prod ? rowsOf(prodTabName()) : rowsOf(co));
+  const items = heatOrder(rows.map((r,i)=>{ const s = rowStats(r); return { i, r, st: s.st, bad: s.bad, score: s.score, verdict: s.verdict, producer: r.producer||"" }; }));
+  const tot = heatColTotals(items, CATS.length);
+  const cls = s => s==="ok" ? "hm-ok" : s==="bad" ? "hm-bad" : "hm-none";
+  const short = n => n.replace("Работа с ", "").replace("Общение с ", "").replace(" / раскладка", "").replace(" / картинка", "");
+  document.getElementById("content").innerHTML = `<div class="card"><h2 style="margin:0 0 8px">🌡 Тепловая карта категорий</h2>
+    <div class="filters">${comps.filter(Boolean).map(c=>`<button class="gbtn ${c===co?"on":""}" data-hco="${c}">${esc(clabel(c))}</button>`).join(" ")}
+      <span style="color:var(--faint);font-size:12px">неделя: ${esc(document.getElementById("weeklabel").textContent||"—")} · команд: ${items.length} · клик по клетке — карточка команды</span></div>
+    ${items.length ? `<div style="overflow:auto"><table class="heat"><thead><tr><th>Продюсер · команда</th>${CATS.map((n,j)=>`<th title="${esc(n)}: ✅${tot[j].ok} ❌${tot[j].bad}">${esc(short(n))}<div class="hm-tot">❌${tot[j].bad}</div></th>`).join("")}<th>оценка</th></tr></thead>
+      <tbody>${items.map(it=>`<tr><td class="hm-name" data-hgo="${it.i}"><b>${esc(it.producer||"—")}</b> · ${esc(it.r.opName||it.r.opNick||"—")} / ${esc(it.r.model||"—")}</td>${it.st.map((s,j)=>`<td class="hm ${cls(s)}" data-hgo="${it.i}" title="${esc(CATS[j])}: ${esc((it.r.cats[j]||"").slice(0,160)||"не заполнено")}"></td>`).join("")}<td class="hm-sc">${it.score==null?"–":it.score+"/"+MAX_SCORE}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">нет команд за эту неделю</div>'}
+    <div style="color:var(--faint);font-size:11.5px;margin-top:6px"><span class="hm hm-ok hm-key"></span> хорошо · <span class="hm hm-bad hm-key"></span> замечание · <span class="hm hm-none hm-key"></span> не заполнено</div></div>`;
+  document.querySelectorAll("[data-hco]").forEach(b=>b.onclick=()=>{ state.heatCo = b.dataset.hco; renderHeat(); });
+  document.querySelectorAll("[data-hgo]").forEach(td=>td.onclick=()=>{
+    const r = rows[+td.dataset.hgo]; if (!r) return;
+    state.tab = AUTH.prod ? prodTabName() : r.city; state.search = r.opNick || r.opName || r.model || ""; state.quick = ""; state.page = 1;
+    render();
+  });
+}
+// ===== Обновление 6: «Состояние» — только чтение, значения свойств сервер не отдаёт (только «есть/нет») =====
+function renderStatus(){
+  document.getElementById("pbar").innerHTML = "";
+  const box = document.getElementById("content");
+  const st = state.statusPg = state.statusPg || { d: null, err: "", loading: false, deep: false };
+  const d = st.d;
+  const yes = v => v ? '<span style="color:var(--ok)">✓ есть</span>' : '<span style="color:var(--faint)">— нет</span>';
+  const kv = (k, v) => `<tr><td style="color:var(--dim)">${esc(k)}</td><td>${v}</td></tr>`;
+  box.innerHTML = `<div class="card"><h2 style="margin:0 0 8px">🩺 Состояние</h2>
+    <div class="filters"><button class="gbtn" id="stp-ref">⟳ обновить</button> <button class="gbtn" id="stp-deep" title="открыть таблицы расписаний (только чтение)">📅 проверить доступ к расписаниям</button>
+      <span style="color:var(--faint);font-size:12px">сайт ${esc(CONFIG.VER)}${d?" · сервер "+esc(d.ver)+(d.ver!==CONFIG.VER?' <b style="color:var(--warn)">— версии разные: обнови Code.gs или страницу</b>':""):""}</span></div>
+    ${st.err?`<div class="empty" style="color:var(--warn)">${esc(st.err)}</div>`:""}
+    ${!d ? '<div class="empty">загружаю…</div>' : `
+    <div class="aidgrid">
+      <div class="aidcol"><h3>Сегодня (приблизительно, кэш ≤ 6 ч)</h3><table class="shtable">
+        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}
+        ${kv("вызовов ИИ", d.counters.ai)}${kv("UrlFetch (ИИ + Drive)", d.counters.urlfetch + " из ~20 000/сутки")}${kv("провайдер ИИ", esc(d.aiProvider))}${kv("сессий", d.sessions)}
+        ${kv("Script Properties", d.propsSizeKB + " КБ из " + d.propsLimitKB + " КБ")}${kv("USERS_JSON", d.usersSize + " симв. из ~9000" + (d.userChunks?" + кусков: "+d.userChunks:""))}</table></div>
+      <div class="aidcol"><h3>Свойства скрипта (только наличие)</h3><table class="shtable">${Object.keys(d.props).map(k=>kv(k, yes(d.props[k]))).join("")}</table>
+        ${Object.keys(d.sched||{}).length?`<h3>Расписания</h3><table class="shtable">${Object.keys(d.sched).map(k=>kv(k, esc(d.sched[k]))).join("")}</table>`:""}</div>
+    </div>
+    <h3>Последние ошибки (${d.errors.length})</h3>
+    ${d.errors.length?`<table class="shtable"><thead><tr><th>когда</th><th>действие</th><th>текст</th></tr></thead><tbody>${d.errors.map(e=>`<tr><td style="white-space:nowrap">${esc(e.t)}</td><td>${esc(e.a)}</td><td>${esc(e.m)}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">ошибок нет</div>'}`}
+  </div>`;
+  const load = deep => { st.loading = true; st.err = ""; wp({ action:"status", deep: !!deep }, 60000).then(r=>{ if (r && r.error) throw new Error(r.error); r = r || {}; r.counters = r.counters || {}; r.errors = Array.isArray(r.errors) ? r.errors : []; r.props = r.props || {}; st.d = r; }).catch(e=>{ st.err = e.message; }).finally(()=>{ st.loading = false; if (state.tab==="Состояние") renderStatus(); }); };
+  if (!d && !st.loading && !st.err) load(false);
+  document.getElementById("stp-ref").onclick = ()=>{ st.d = null; load(false); renderStatus(); };
+  document.getElementById("stp-deep").onclick = ()=>{ load(true); toast("проверяю доступ…"); };
+}
+// ===== Обновление 6: управление пользователями (админ). Хэши сервер не отдаёт; временный пароль показывается один раз =====
+const CO_LABEL = { "Томск":"ArtLife", "Новосибирск":"VVCAM", "Онлайн":"DIAMOND" };
+function userRoleText(x){
+  if (x.prod) return "продюсер «" + x.prod + "»";
+  if (x.edit) return "смотрящий/редактор";
+  return (x.cities === "all") ? "директор (просмотр)" : "просмотр";
+}
+function renderUsers(){
+  document.getElementById("pbar").innerHTML = "";
+  const box = document.getElementById("content");
+  const st = state.usersAdm = state.usersAdm || { list: null, err: "", temp: null };
+  const rowsHtml = (st.list || []).map(x=>`<tr class="${x.off?"uoff":""}">
+      <td><b>${esc(x.u)}</b>${x.admin?' <span class="ptag pt-ok" title="в ADMIN_LOGINS">админ</span>':""}${x.off?' <span class="ptag pt-bad">отключён</span>':""}</td>
+      <td>${esc(x.name||"")}</td><td>${esc(userRoleText(x))}</td>
+      <td>${x.cities==="all"?"все":esc((x.cities||[]).map(c=>CO_LABEL[c]||c).join(", ")||"—")}</td>
+      <td style="white-space:nowrap"><button class="gbtn" data-uedit="${esc(x.u)}">✎</button> <button class="gbtn" data-ureset="${esc(x.u)}" title="выдать временный пароль">🔑</button> <button class="gbtn" data-uoff="${esc(x.u)}" data-on="${x.off?"1":""}">${x.off?"включить":"отключить"}</button></td></tr>`).join("");
+  box.innerHTML = `<div class="card"><h2 style="margin:0 0 8px">🔑 Пользователи</h2>
+    <div style="color:var(--faint);font-size:12px;margin-bottom:8px">Права проверяет сервер. Пароли и хэши здесь не видны; новый или сброшенный пароль показывается один раз. Все изменения пишутся в скрытый лист «Журнал пользователей».</div>
+    ${st.temp?`<div class="failbar" style="background:rgba(80,160,90,.15)">Временный пароль для <b>${esc(st.temp.u)}</b>: <code id="u-temp">${esc(st.temp.p)}</code> <button class="gbtn" id="u-copy">копировать</button> — передай лично, он больше не покажется. <button class="gbtn" id="u-tempx">скрыть</button></div>`:""}
+    ${st.err?`<div class="empty" style="color:var(--warn)">${esc(st.err)}</div>`:""}
+    <div style="overflow:auto"><table class="shtable"><thead><tr><th>Логин</th><th>Имя</th><th>Роль</th><th>Компании</th><th></th></tr></thead><tbody>${st.list?rowsHtml:'<tr><td colspan="5">загружаю…</td></tr>'}</tbody></table></div>
+    <h3 style="margin:14px 0 6px" id="u-formtitle">➕ Добавить / изменить</h3>
+    <div class="filters" style="flex-wrap:wrap;gap:6px">
+      <input id="u-login" placeholder="логин (латиница)" style="width:150px"> <input id="u-name" placeholder="имя" style="width:150px">
+      <select id="u-role"><option value="view">просмотр</option><option value="dir">директор (все компании, просмотр)</option><option value="edit">смотрящий/редактор</option><option value="prod">продюсер</option></select>
+      <input id="u-prod" placeholder="имя продюсера как в таблице" style="width:190px">
+      ${CITY_ORDER.map(c=>`<label style="font-size:12px"><input type="checkbox" class="u-city" value="${c}"> ${CO_LABEL[c]}</label>`).join(" ")}
+      <button class="savebtn" id="u-add">➕ добавить</button> <button class="abtn2" id="u-save">💾 сохранить изменения</button>
+    </div></div>`;
+  if (!st.list && !st.loading){
+    st.loading = true;
+    wp({ action:"users" }).then(r=>{ st.list = r.list || []; st.err = r.adminsConfigured ? "" : "ADMIN_LOGINS не задан"; if (r.sizeMain > r.chunkLimit * 0.85) st.err = "USERS_JSON близок к лимиту — следующие записи уйдут в USERS_JSON_1…"; })
+      .catch(e=>{ st.err = e.message; st.list = []; }).finally(()=>{ st.loading = false; if (state.tab==="Пользователи") renderUsers(); });
+  }
+  const form = ()=>{
+    const role = document.getElementById("u-role").value;
+    const cities = role==="dir" ? "all" : [...document.querySelectorAll(".u-city:checked")].map(x=>x.value);
+    return { login: document.getElementById("u-login").value.trim(), name: document.getElementById("u-name").value.trim(),
+      edit: role==="edit", prod: role==="prod" ? document.getElementById("u-prod").value.trim() : "", cities: cities };
+  };
+  const run = (body, okMsg)=> wp(Object.assign({ action:"useradmin" }, body)).then(r=>{
+      if (r.tempPass) st.temp = { u: body.login, p: r.tempPass };
+      st.list = null; toast(okMsg); renderUsers();
+    }).catch(e=>toast(e.message, true));
+  document.getElementById("u-add").onclick = ()=>{ const f = form(); if (f.prod === "" && document.getElementById("u-role").value==="prod") return toast("укажи имя продюсера", true); run(Object.assign({ op:"add" }, f), "пользователь добавлен"); };
+  document.getElementById("u-save").onclick = ()=>{ const f = form(); if (!f.login) return toast("выбери пользователя (✎)", true); run(Object.assign({ op:"set" }, f), "сохранено — пользователю нужно войти заново"); };
+  const tx = document.getElementById("u-tempx"); if (tx) tx.onclick = ()=>{ st.temp = null; renderUsers(); };
+  const cp = document.getElementById("u-copy"); if (cp) cp.onclick = ()=>{ try{ navigator.clipboard.writeText(st.temp.p); toast("скопировано"); }catch(e){} };
+  box.querySelectorAll("[data-uedit]").forEach(b=>b.onclick=()=>{
+    const x = (st.list||[]).find(q=>q.u===b.dataset.uedit); if (!x) return;
+    document.getElementById("u-login").value = x.u; document.getElementById("u-name").value = x.name||"";
+    document.getElementById("u-role").value = x.prod ? "prod" : x.edit ? "edit" : x.cities==="all" ? "dir" : "view";
+    document.getElementById("u-prod").value = x.prod||"";
+    document.querySelectorAll(".u-city").forEach(c=>{ c.checked = x.cities==="all" || (x.cities||[]).includes(c.value); });
+    document.getElementById("u-formtitle").textContent = "✎ Изменить: " + x.u;
+  });
+  box.querySelectorAll("[data-ureset]").forEach(b=>b.onclick=()=>{ if (confirm("Выдать новый временный пароль для «"+b.dataset.ureset+"»? Старый перестанет работать, все входы погаснут.")) run({ op:"reset", login:b.dataset.ureset }, "пароль сброшен"); });
+  box.querySelectorAll("[data-uoff]").forEach(b=>b.onclick=()=>{ const on = !!b.dataset.on; if (on || confirm("Отключить «"+b.dataset.uoff+"»? Вход и все сессии будут закрыты.")) run({ op: on?"on":"off", login:b.dataset.uoff }, on?"включён":"отключён"); });
 }
 function renderShifts(){
   document.getElementById("pbar").innerHTML = "";
@@ -2490,6 +2775,7 @@ function renderShifts(){
       + (s.struck?'<span class="shbadge off" title="'+esc(s.reason||"зачёркнута в таблице")+'">зачёркнута</span>':"")
       + (orphan?'<span class="shbadge orphan">без мониторинга</span>':"")
       + teams.map(r=>`<span class="shchip">${esc(r.producer||"—")} · ${esc(r.opName||r.opNick||"—")}</span>`).join("")
+      + shiftModelLinks(teams).slice(0, 6).map(l=>`<a class="shlink${l.cb?" cb":""}" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" title="${esc(l.title + " — " + l.url)}">${esc(l.label)}</a>`).join("")
       + (s.struck && s.reason ? `<div style="color:var(--dim);font-size:11.5px;margin-top:2px">💬 ${esc(s.reason)}</div>` : "");
   };
   const shiftsTable = (list) => {
@@ -2659,7 +2945,7 @@ function renderProdReviews(rows){
   const list = rows.filter(r=>r.opName||r.opNick||r.model).slice().sort((a,b)=>tms(b)-tms(a));
   const thumbs = r => {
     const scr = (state.screens||{})[skey(r)] || [];
-    return scr.length ? `<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,320)))}" data-tk="${esc(s.mini||"")}" alt="скрин"></span>`).join("")}</div>` : "";
+    return scr.length ? `<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" data-cat="${esc(s.cat||"скрин")}" alt="скрин"></span>`).join("")}</div>` : "";
   };
   const card = r => {
     const s = rowStats(r);
@@ -2690,6 +2976,18 @@ function renderProdReviews(rows){
     ${list.length ? list.map(card).join("") : `<div class="empty">${esc(emptyReason())}</div>`}`;
   const tb = document.getElementById("pr-table");
   if (tb) tb.onclick = ()=>{ prodModeSet("overview"); render(); };
+  // Обновление 5: в «Разборах» продюсера миниатюры открываются в полном размере (раньше клик ничего не делал)
+  document.querySelectorAll("#main .sthumb img[data-full], .maincol .sthumb img[data-full]").forEach(im=>{
+    if (im.onclick) return;
+    im.onclick = ()=>{
+      document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
+      const ai = document.getElementById("cam-ai"); if (ai) ai.style.display = "none";
+      const ao = document.getElementById("cam-aiout"); if (ao) ao.style.display = "none";
+      camShow(im.getAttribute("src") || BLANK, true);
+      openModal("cammodal");
+      camLoadFull(driveId(im.getAttribute("data-full") || ""));
+    };
+  });
   const tb2 = document.getElementById("pr-rev2");
   if (tb2) tb2.onclick = ()=>{ prodModeSet("overview"); render(); };
   setTimeout(ensureThumbs, 30);
@@ -2962,12 +3260,14 @@ function postOnce(body, ms){
     })
     .finally(() => { if (to) clearTimeout(to); });
 }
-// повторять безопасно: needPost — всегда (doPost не выполнялся); прочие временные сбои — только для чтений
-const NO_RETRY_FE = ["aiq","login"];
+// Обновление 5 (AUDIT4 P1-1): повтор на HTML/пусто/обрыв — ТОЛЬКО для явного списка чтений.
+// Всё остальное (save, suggest, resetreq, resetdo, logout, auth, aiq, …) повторяется лишь на NEED_POST —
+// тогда doPost точно не выполнялся и двойной записи быть не может.
+const READ_RETRY_FE = ["status","users","read","ping","check","thumbs","thumb","screens","sched","mysuggest","suggestlist","resetlist"];
 function postRetryable(e, action){
   if (!e || !e.transient) return false;
   if (e.needPost) return true;
-  return WRITE_ACTIONS_FE.indexOf(action) < 0 && NO_RETRY_FE.indexOf(action) < 0;
+  return READ_RETRY_FE.indexOf(action) >= 0;
 }
 const POST_BACKOFF_MS = [700, 2500];
 function postJSON(body, timeoutMs){
@@ -2985,7 +3285,7 @@ function postJSON(body, timeoutMs){
   });
 }
 // действия, меняющие таблицу: в режиме «глазами» они запрещены (там чужие права и отфильтрованные данные)
-const WRITE_ACTIONS_FE = ["upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply"];
+const WRITE_ACTIONS_FE = ["tpl","useradmin","suggest","resetreq","upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply"];
 let sessionGone = false;
 function sessionExpired(){ // C: сессия истекла/погашена — сразу окно входа (черновики остаются в браузере)
   if (sessionGone) return; sessionGone = true;
@@ -3009,6 +3309,65 @@ function wp(params, timeoutMs){
     });
 }
 
+// ===== Обновление 6: черновик разбора по скрину (Gemini/Grok на сервере). Ничего не сохраняется: «принять» только
+// вписывает текст в поле категории (черновик), в таблицу уходит лишь по «Сохранить в таблицу». =====
+function aiDraftText(item){ // чистая
+  if (!item || item.state === "unknown" || !String(item.remark||"").trim()) return "";
+  const r = String(item.remark).trim();
+  return item.state === "ok" ? ("✅ " + r.replace(/^✅\s*/, "")) : r.replace(/^✅\s*/, "");
+}
+function aiDraftMerge(existing, add){ // чистая: не дублируем и не затираем написанное человеком
+  const e = String(existing || "").trim(), a = String(add || "").trim();
+  if (!a) return e;
+  if (!e) return a;
+  if (e.toLowerCase().indexOf(a.toLowerCase()) >= 0) return e;
+  return e + "\n" + a;
+}
+function aiPickScreen(list){ // чистая: кадр/картинка → общее → первый
+  const L = list || [];
+  return L.find(s=>String(s.cat)==="Кадр / картинка") || L.find(s=>!s.cat) || L[0] || null;
+}
+function aiAcceptCat(key, item){
+  const ta = document.getElementById("ed"+key+"_"+item.i);
+  if (!ta) return false;
+  const v = aiDraftMerge(ta.value, aiDraftText(item));
+  if (v === ta.value.trim()) return false;
+  ta.value = v; ta.dispatchEvent(new Event("input", {bubbles:true}));
+  return true;
+}
+async function aiScreenDraft(key, x, compare){
+  const scr = aiPickScreen((state.screens||{})[skey(x.r)] || []);
+  if (!scr){ aiMsg(key, "🤖 у команды нет скринов"); return; }
+  const id = driveId(scr.link || scr.mini || "");
+  aiMsg(key, compare ? "⚖ Gemini и Grok смотрят скрин… (до 2 минут)" : "🤖 ИИ смотрит скрин… (до минуты)");
+  try {
+    const res = await aiAsk("screendraft", { id: id, text: compare ? "compare" : "", ckey: "scr|" + id + (compare ? "|cmp" : "") });
+    if (res.error) throw new Error(res.error);
+    const icon = s => s==="ok" ? "✅" : s==="bad" ? "❌" : "·";
+    const col = (d, tag) => {
+      if (!d || d.error) return `<div class="aidcol"><b>${esc(tag)}</b><div style="color:var(--warn)">${esc(d && d.error || "нет ответа")}</div></div>`;
+      return `<div class="aidcol"><b>${esc(tag)}${d.provider?` <span style="color:var(--faint);font-weight:400">(${esc(d.provider)})</span>`:""}</b>
+        ${d.summary?`<div style="color:var(--dim);margin:3px 0">${esc(d.summary)}</div>`:""}
+        ${d.cats.map(c=>`<div class="aidrow">${icon(c.state)} <b>${esc(c.cat)}</b> <span>${esc(c.remark||"—")}</span>${aiDraftText(c)?` <button class="qbtn" data-aiacc="${esc(tag)}|${c.i}">принять</button>`:""}</div>`).join("")}
+        <button class="abtn2" data-aiall="${esc(tag)}">✅ принять всё (${d.cats.filter(c=>aiDraftText(c)).length})</button></div>`;
+    };
+    const drafts = res.compare ? { "Gemini": res.gemini, "Grok": res.grok } : { "ИИ": res };
+    aiShow(key, box=>{
+      box.innerHTML = `<div style="color:var(--faint);font-size:11.5px;margin-bottom:4px">🤖 черновик по скрину${scr.cat?" «"+esc(scr.cat)+"»":""} — ничего не сохранено; «принять» вписывает текст в поле, в таблицу — только «Сохранить»</div>
+        <div class="aidgrid">${Object.keys(drafts).map(t=>col(drafts[t], t)).join("")}</div> <button class="abtn2" data-aiclose="1">✕ закрыть</button>`;
+      box.querySelectorAll("[data-aiacc]").forEach(b=>b.onclick=()=>{
+        const [tag, i] = b.dataset.aiacc.split("|"); const d = drafts[tag]; const it = d && d.cats && d.cats[+i];
+        if (it && aiAcceptCat(key, it)){ b.textContent = "✓ вписано"; b.disabled = true; }
+      });
+      box.querySelectorAll("[data-aiall]").forEach(b=>b.onclick=()=>{
+        const d = drafts[b.dataset.aiall]; let n = 0;
+        (d && d.cats || []).forEach(it=>{ if (aiAcceptCat(key, it)) n++; });
+        aiMsg(key, "🤖 вписано категорий: " + n + " — проверь и нажми «Сохранить в таблицу»");
+      });
+      const cl = box.querySelector("[data-aiclose]"); if (cl) cl.onclick = ()=>aiHide(key);
+    });
+  } catch(e){ aiMsg(key, "🤖 " + e.message); }
+}
 function aiErrText(m){
   m = String(m || "");
   if (/429/.test(m)) return "лимит Gemini — попробуй через пару минут";
@@ -3030,12 +3389,23 @@ function skey(r){ return r._sheet+"|"+String(r.opNick||"").trim()+"|"+String(r.m
 function teamKey(r){ return r.city+"|"+String(r.opName||r.opNick||"").trim().toLowerCase()+"|"+String(r.model||"").trim().toLowerCase(); }
 function driveId(lk){ const m = String(lk||"").match(/[?&]id=([\w-]+)/); return m ? m[1] : String(lk||""); }
 const thumbBusy = {}; // id → идёт запрос
+// Обновление 6 (8): миниатюра «видна» — не в закрытой карточке, не скрыта и в пределах экрана + 800 px
+function thumbVisibleRect(r, vh, margin){ return !!r && r.width > 0 && r.bottom > -margin && r.top < vh + margin; } // чистая
+function thumbVisible(im){
+  const det = im.closest ? im.closest("tr.detail") : null;
+  if (det && !det.classList.contains("open")) return false;
+  if (im.offsetParent === null && getComputedStyle(im).position !== "fixed") return false;
+  return thumbVisibleRect(im.getBoundingClientRect(), window.innerHeight || 800, 800);
+}
+let thumbScrollT = null;
+window.addEventListener("scroll", ()=>{ clearTimeout(thumbScrollT); thumbScrollT = setTimeout(ensureThumbs, 250); }, { passive: true });
 function ensureThumbs(){ // миниатюры через сервер: приватные файлы, доступ только своим
   // D: одна пачка до 30 миниатюр на запрос вместо запроса на каждую картинку
   const need = {};
   document.querySelectorAll("img[data-tk]").forEach(im=>{
     const lk = im.getAttribute("data-tk"); if (!lk) return;
     if (state.thumbData && state.thumbData[lk]){ if (im.src !== state.thumbData[lk]) im.src = state.thumbData[lk]; return; }
+    if (!thumbVisible(im)) return; // Обновление 6 (8): только видимые — закрытые карточки и то, что далеко ниже экрана, не грузим
     const id = driveId(lk);
     if (!/^[\w-]{10,100}$/.test(id) || thumbBusy[id]) return;
     need[id] = lk;
@@ -3058,6 +3428,8 @@ function ensureThumbs(){ // миниатюры через сервер: прив
   }
 }
 // Drive-ссылки: uc?export=view блокируется браузером (ORB) — показываем через thumbnail
+// Обновление 5: размер миниатюры = размер на экране × devicePixelRatio (шаг 100 px, 200…1000)
+function thumbPx(cssW){ const d = Math.min(3, Math.max(1, (typeof window !== "undefined" && window.devicePixelRatio) || 1)); return Math.min(1000, Math.max(200, Math.ceil((cssW||96) * d / 100) * 100)); }
 function driveThumb(u, w){
   const m = String(u||"").match(/[?&]id=([\w-]+)/);
   return m ? "https://drive.google.com/thumbnail?id="+m[1]+"&sz=w"+(w||800) : String(u||"");
@@ -3318,6 +3690,26 @@ document.getElementById("d-one").onclick = ()=>doDelTeam(false);
 document.getElementById("d-all").onclick = ()=>doDelTeam(true);
 document.getElementById("op-x").onclick = ()=>closeModal("opmodal");
 document.getElementById("cam-x").onclick = ()=>closeModal("cammodal");
+// Обновление 5: просмотр скрина — заглушка-миниатюра, затем оригинал полного размера; клик — 1:1 / вписать
+let camSeq = 0;
+function camShow(src, isMini){
+  const w = document.getElementById("cam-wrap"); if (w) w.classList.remove("zoom");
+  document.getElementById("cam-img").src = src || BLANK;
+  const q = document.getElementById("cam-q"); if (q) q.textContent = isMini ? "миниатюра · загружаю оригинал…" : "";
+}
+function camLoadFull(id){
+  const my = ++camSeq;
+  if (!id) return;
+  wp({ action:"thumb", id: id }, 60000).then(res=>{
+    if (my !== camSeq) return; // уже открыт другой скрин
+    const q = document.getElementById("cam-q");
+    if (!res || res.error || !res.d){ if (q) q.textContent = "оригинал недоступен — показана миниатюра"; return; }
+    const im = document.getElementById("cam-img");
+    im.onload = ()=>{ if (my === camSeq && q) q.textContent = im.naturalWidth ? (im.naturalWidth + "×" + im.naturalHeight) : ""; im.onload = null; };
+    im.src = "data:image/jpeg;base64," + res.d;
+  }).catch(()=>{ const q = document.getElementById("cam-q"); if (my === camSeq && q) q.textContent = "нет связи — показана миниатюра"; });
+}
+document.getElementById("cam-wrap").onclick = ()=>document.getElementById("cam-wrap").classList.toggle("zoom");
 // ---------- окно вставки фото (кнопка или Ctrl+V) ----------
 let uplTarget = null;
 function openUpload(x, catIdx, label){
@@ -3326,15 +3718,150 @@ function openUpload(x, catIdx, label){
   document.getElementById("u-msg").textContent = "";
   openModal("uplmodal");
 }
-function doUpload(blob){
+// Обновление 6 (6): разметка скрина перед загрузкой — рисуем в координатах картинки, на выходе JPEG того же размера
+const ANN_COLORS = ["#ff3b30","#ffcc00","#34c759","#0a84ff","#ffffff"];
+function annPoint(rect, cw, ch, clientX, clientY){ // чистая: экранные → координаты картинки
+  const x = (clientX - rect.left) * cw / (rect.width || 1), y = (clientY - rect.top) * ch / (rect.height || 1);
+  return { x: Math.max(0, Math.min(cw, x)), y: Math.max(0, Math.min(ch, y)) };
+}
+function annArrowHead(x1, y1, x2, y2, size){ // чистая: две точки «усиков» стрелки
+  const a = Math.atan2(y2 - y1, x2 - x1), s = size || 20;
+  return [{ x: x2 - s * Math.cos(a - Math.PI/7), y: y2 - s * Math.sin(a - Math.PI/7) }, { x: x2 - s * Math.cos(a + Math.PI/7), y: y2 - s * Math.sin(a + Math.PI/7) }];
+}
+function annDraw(ctx, img, shapes, W){
+  ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height);
+  const lw = Math.max(3, Math.round(W / 320));
+  shapes.forEach(s=>{
+    ctx.strokeStyle = ctx.fillStyle = s.c; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (s.t === "rect"){ ctx.strokeRect(Math.min(s.x1,s.x2), Math.min(s.y1,s.y2), Math.abs(s.x2-s.x1), Math.abs(s.y2-s.y1)); }
+    else if (s.t === "arrow"){
+      ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      const h = annArrowHead(s.x1, s.y1, s.x2, s.y2, lw * 5);
+      ctx.beginPath(); ctx.moveTo(s.x2, s.y2); ctx.lineTo(h[0].x, h[0].y); ctx.lineTo(h[1].x, h[1].y); ctx.closePath(); ctx.fill();
+    } else if (s.t === "text"){
+      const fs = Math.max(18, Math.round(W / 40));
+      ctx.font = "bold " + fs + "px sans-serif"; ctx.lineWidth = Math.max(3, fs / 6); ctx.strokeStyle = "rgba(0,0,0,.75)";
+      ctx.strokeText(s.text, s.x1, s.y1); ctx.fillText(s.text, s.x1, s.y1);
+    }
+  });
+}
+// очередь файлов на разметку: каждый — по очереди через окно; на выходе — размеченный JPEG (+ оригинал по галочке)
+function annotateGate(files, enqueue){
+  const on = document.getElementById("u-ann") && document.getElementById("u-ann").checked;
+  if (!on){ enqueue(files); return; }
+  const rest = files.slice();
+  const next = async ()=>{
+    const f = rest.shift(); if (!f) return;
+    try {
+      const res = await annotateOne(f, rest.length);
+      if (res && res.keepOrig) enqueue([f], { tag: "оригинал" });
+      if (res && res.blob) enqueue([res.blob], { tag: res.marked ? "с разметкой" : "" });
+    } catch(e){ toast("Разметка: " + e.message, true); enqueue([f]); }
+    next();
+  };
+  next();
+}
+function annotateOne(file, left){
+  return new Promise(async (resolve)=>{
+    const img = await createImageBitmap(file);
+    const MAX = 2560, k = Math.min(1, MAX / Math.max(img.width, img.height));
+    const cv = document.getElementById("ann-cv"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    const ctx = cv.getContext("2d");
+    const shapes = []; let tool = "arrow", color = ANN_COLORS[0], cur = null;
+    const redraw = ()=>{ annDraw(ctx, img, cur ? shapes.concat([cur]) : shapes, cv.width); };
+    document.getElementById("ann-colors").innerHTML = ANN_COLORS.map(c=>`<button class="anncol${c===color?" on":""}" data-annc="${c}" style="background:${c}"></button>`).join("");
+    document.querySelectorAll("[data-annc]").forEach(b=>b.onclick=()=>{ color = b.dataset.annc; document.querySelectorAll("[data-annc]").forEach(z=>z.classList.toggle("on", z===b)); });
+    document.querySelectorAll("[data-anntool]").forEach(b=>b.onclick=()=>{ tool = b.dataset.anntool; document.querySelectorAll("[data-anntool]").forEach(z=>z.classList.toggle("on", z===b)); });
+    document.getElementById("ann-left").textContent = left ? "после этого — ещё " + left : "";
+    document.getElementById("ann-keep").checked = false;
+    const pt = ev => annPoint(cv.getBoundingClientRect(), cv.width, cv.height, ev.clientX, ev.clientY);
+    cv.onpointerdown = ev=>{
+      ev.preventDefault(); const a = pt(ev);
+      if (tool === "text"){ const t = prompt("Текст на скрине:"); if (t && t.trim()){ shapes.push({ t:"text", c:color, x1:a.x, y1:a.y, text:t.trim().slice(0,80) }); redraw(); } return; }
+      cur = { t: tool, c: color, x1: a.x, y1: a.y, x2: a.x, y2: a.y }; try { cv.setPointerCapture(ev.pointerId); } catch(e){}
+    };
+    cv.onpointermove = ev=>{ if (!cur) return; const a = pt(ev); cur.x2 = a.x; cur.y2 = a.y; redraw(); };
+    cv.onpointerup = ()=>{ if (!cur) return; if (Math.hypot(cur.x2-cur.x1, cur.y2-cur.y1) > 6) shapes.push(cur); cur = null; redraw(); };
+    document.getElementById("ann-undo").onclick = ()=>{ shapes.pop(); redraw(); };
+    document.getElementById("ann-clear").onclick = ()=>{ shapes.length = 0; redraw(); };
+    let done = false;
+    annOnClose = ()=>finish(null);
+    const finish = (val)=>{ if (done) return; done = true; annOnClose = null; closeModal("annmodal"); cv.onpointerdown = cv.onpointermove = cv.onpointerup = null; resolve(val); };
+    document.getElementById("ann-ok").onclick = ()=>{
+      if (!shapes.length){ finish({ blob: file, marked: false }); return; }
+      const keep = document.getElementById("ann-keep").checked;
+      cv.toBlob(b=>finish({ blob: b || file, marked: !!b, keepOrig: keep }), "image/jpeg", 0.92);
+    };
+    document.getElementById("ann-skip").onclick = ()=>finish({ blob: file, marked: false });
+    document.getElementById("ann-x").onclick = ()=>finish(null); // закрыть — этот скрин не загружать
+    redraw(); openModal("annmodal");
+  });
+}
+// Обновление 6 (5): очередь загрузки — несколько скринов из буфера/перетаскивания/выбора, по одному, с прогрессом.
+// Лимиты JPEG прежние (сжатие в uploadScreen). Окно можно закрыть — очередь догрузится, итог придёт тостом.
+const uplQueue = { items: [], running: false };
+function uplImagesFrom(list){ // чистая: из FileList/DataTransferItemList — только картинки, не больше 20
+  const out = [];
+  for (let i = 0; i < (list ? list.length : 0); i++){
+    const it = list[i]; if (!it) continue;
+    const f = (typeof it.getAsFile === "function") ? (it.kind === "file" || /^image\//.test(it.type||"") ? it.getAsFile() : null) : it;
+    if (f && (!f.type || /^image\//.test(f.type))) out.push(f);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+function uplQueueText(items){ // чистая: «загружено 2 из 5 · ошибок 1»
+  const done = items.filter(q=>q.st==="ok").length, bad = items.filter(q=>q.st==="err").length;
+  return "загружено " + done + " из " + items.length + (bad ? " · ошибок " + bad : "");
+}
+function uplQueueDraw(){
+  const el = document.getElementById("u-queue"); if (!el) return;
+  const L = uplQueue.items;
+  el.innerHTML = L.length ? `<div style="font-size:12px;color:var(--dim);margin:6px 0 3px">${esc(uplQueueText(L))}</div>` + L.slice(-12).map(q=>`<div class="upqi ${q.st}">${q.st==="ok"?"✅":q.st==="err"?"⚠":q.st==="run"?"⏳":"·"} ${esc(q.name)}${q.err?` — ${esc(q.err)}`:""}</div>`).join("") : "";
+}
+function uplEnqueue(files, opts){
+  if (!uplTarget || !files.length) return;
+  const t = { x: uplTarget.x, catIdx: uplTarget.catIdx };
+  files.forEach((f,i)=>uplQueue.items.push({ blob: f, name: (f.name || ("скрин " + (uplQueue.items.length + 1))) + (opts && opts.tag ? " · " + opts.tag : ""), t: t, st: "wait" }));
+  uplQueueDraw();
+  uplRun();
+}
+async function uplRun(){
+  if (uplQueue.running) return;
+  uplQueue.running = true;
+  try {
+    for (;;){
+      const q = uplQueue.items.find(z=>z.st==="wait"); if (!q) break;
+      q.st = "run"; uplQueueDraw();
+      const ok = await uploadScreen(q.blob, q.t.x, q.t.catIdx, true);
+      q.st = ok === true ? "ok" : "err"; if (ok !== true) q.err = String(ok || "ошибка").slice(0, 80);
+      q.blob = null; // память
+      uplQueueDraw();
+    }
+  } finally { uplQueue.running = false; }
+  const L = uplQueue.items;
+  if (L.length > 1) toast("📸 " + uplQueueText(L), L.some(q=>q.st==="err"));
+  setTimeout(()=>{ if (!uplQueue.running && uplQueue.items.every(q=>q.st!=="wait" && q.st!=="run")){ uplQueue.items = uplQueue.items.filter(q=>q.st==="err"); uplQueueDraw(); } }, 4000);
+}
+function doUpload(blobOrList){
   if (!uplTarget) return;
-  const t = uplTarget; uplTarget = null;
-  closeModal("uplmodal");
-  uploadScreen(blob, t.x, t.catIdx);
+  const files = Array.isArray(blobOrList) ? blobOrList : [blobOrList];
+  if (typeof annotateGate === "function") annotateGate(files, uplEnqueue); else uplEnqueue(files);
 }
 document.getElementById("u-file").onclick = ()=>{ document.getElementById("u-fileinp").click(); };
 document.getElementById("u-zone").onclick = ()=>{ document.getElementById("u-fileinp").click(); };
-document.getElementById("u-fileinp").onchange = function(){ if (this.files && this.files[0]) doUpload(this.files[0]); this.value = ""; };
+// Обновление 6 (11): камера телефона → (разметка) → очередь в ту же категорию
+document.getElementById("u-cam").onclick = ()=>{ document.getElementById("u-caminp").click(); };
+document.getElementById("u-caminp").onchange = function(){ const f = uplImagesFrom(this.files); if (f.length) doUpload(f); this.value = ""; };
+document.getElementById("u-fileinp").onchange = function(){ const f = uplImagesFrom(this.files); if (f.length) doUpload(f); this.value = ""; };
+(function(){ // перетаскивание нескольких файлов в окно фото
+  const zone = document.getElementById("u-zone"), modal = document.getElementById("uplmodal");
+  [zone, modal].forEach(el=>{
+    el.addEventListener("dragover", e=>{ if (uplTarget){ e.preventDefault(); zone.classList.add("drag"); } });
+    el.addEventListener("dragleave", ()=>zone.classList.remove("drag"));
+    el.addEventListener("drop", e=>{ if (!uplTarget) return; e.preventDefault(); zone.classList.remove("drag"); const f = uplImagesFrom(e.dataTransfer && e.dataTransfer.files); if (f.length) doUpload(f); else toast("Это не картинки", true); });
+  });
+})();
 document.getElementById("u-x").onclick = ()=>{ uplTarget = null; closeModal("uplmodal"); };
 // ---------- смена пароля с одобрения редактора ----------
 document.getElementById("l-forgot").onclick = ()=>{
@@ -3705,8 +4232,8 @@ async function doLogin(){
       return;
     }
     AUTH.set(u, res.token, !!res.editor, res.cities || [], res.name || u);
-    AUTH.prod = !!res.prod;
-    try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); }catch(e){}
+    AUTH.prod = !!res.prod; AUTH.admin = !!res.admin;
+    try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); localStorage.setItem("dash_admin", res.admin?"1":"0"); }catch(e){}
     state.lastCheck = Date.now();
     try{ localStorage.setItem("dash_last_user",u); }catch(e){}
     historyClean();
@@ -3745,8 +4272,30 @@ function liveEval(vals){
   return "оценка сейчас: " + ok + "/" + MAX_SCORE + " · " + (VLBL[verdict]||verdict);
 }
 function getPhrases(code){ try{ return (JSON.parse(localStorage.getItem("dash_phrases")||"{}")[code]) || []; }catch(e){ return []; } }
-function addPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); const L=all[code]||[]; if(v && !L.includes(v)){ L.push(v); all[code]=L; localStorage.setItem("dash_phrases",JSON.stringify(all)); } }catch(e){} }
-function delPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); all[code]=(all[code]||[]).filter(x=>x!==v); localStorage.setItem("dash_phrases",JSON.stringify(all)); }catch(e){} }
+// Обновление 6: шаблоны замечаний — локально (мгновенно) + лист «Шаблоны» на сервере (одинаково на всех устройствах)
+const PHRASE_MAX = 30;
+function phrasesMerge(local, server){ // чистая: объединение без дублей, не больше PHRASE_MAX на категорию
+  const out = {};
+  [local || {}, server || {}].forEach(src => Object.keys(src).forEach(k => {
+    const L = out[k] = out[k] || [];
+    (Array.isArray(src[k]) ? src[k] : []).forEach(t => { t = String(t || "").trim(); if (t && !L.includes(t) && L.length < PHRASE_MAX) L.push(t); });
+  }));
+  return out;
+}
+function addPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); const L=all[code]||[]; if(v && !L.includes(v)){ if (L.length >= PHRASE_MAX){ toast("в категории уже "+PHRASE_MAX+" шаблонов — удали лишние", true); return; } L.push(v); all[code]=L; localStorage.setItem("dash_phrases",JSON.stringify(all)); if (AUTH.edit && !viewAsActive()) wp({ action:"tpl", op:"add", code, text:v }).catch(e=>toast("шаблон сохранён только в браузере: "+e.message, true)); } }catch(e){} }
+function delPhrase(code,v){ try{ const all=JSON.parse(localStorage.getItem("dash_phrases")||"{}"); all[code]=(all[code]||[]).filter(x=>x!==v); localStorage.setItem("dash_phrases",JSON.stringify(all)); if (AUTH.edit && !viewAsActive()) wp({ action:"tpl", op:"del", code, text:v }).catch(()=>{}); }catch(e){} }
+let tplSynced = false;
+function tplSync(){
+  if (tplSynced || !AUTH.edit || viewAsActive()) return;
+  tplSynced = true;
+  wp({ action:"tpl", op:"list" }).then(r=>{
+    let local = {}; try{ local = JSON.parse(localStorage.getItem("dash_phrases")||"{}"); }catch(e){}
+    const merged = phrasesMerge(local, r.tpl || {});
+    // локальные, которых нет на сервере (созданы до обновления), — один раз отправляем
+    Object.keys(local).forEach(k => (local[k]||[]).forEach(t => { if (!((r.tpl||{})[k]||[]).includes(t)) wp({ action:"tpl", op:"add", code:k, text:t }).catch(()=>{}); }));
+    try{ localStorage.setItem("dash_phrases", JSON.stringify(merged)); }catch(e){}
+  }).catch(()=>{ tplSynced = false; });
+}
 function miniBar(g){ const t=(g.ok+g.warn+g.bad)||1; return '<div class="mini-gauge"><i style="width:'+Math.round(g.ok/t*100)+'%;background:var(--ok)"></i><i style="width:'+Math.round(g.warn/t*100)+'%;background:var(--warn)"></i><i style="width:'+Math.round(g.bad/t*100)+'%;background:var(--bad)"></i></div>'; }
 
 function historyClean(){ try { const q2 = new URLSearchParams(location.search); q2.delete("u"); q2.delete("p"); history.replaceState(null, "", location.pathname + "?" + q2.toString()); } catch(e){} }
@@ -3828,29 +4377,32 @@ document.addEventListener("paste", function(e){
   const um = document.getElementById("uplmodal");
   if (um && um.classList.contains("show") && uplTarget){ // окно фото открыто — вставка идёт туда
     const items = e.clipboardData && e.clipboardData.items;
-    if (items) for (let i=0;i<items.length;i++){
-      if (items[i].type && items[i].type.indexOf("image") === 0){ e.preventDefault(); doUpload(items[i].getAsFile()); return; }
-    }
+    const f = uplImagesFrom(items);
+    if (f.length){ e.preventDefault(); doUpload(f); }
   }
 });
 
-async function uploadScreen(blob, x, catIdx){
+async function uploadScreen(blob, x, catIdx, quiet){ // → true | текст ошибки
   try {
-    if (!rowEditable(x.r)){ toast("Скрины добавляются только в открытой неделе", true); return; }
-    if (blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return; }
-    if (blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка", true); return; }
+    if (!rowEditable(x.r)){ toast("Скрины добавляются только в открытой неделе", true); return "неделя закрыта"; }
+    if (blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return "больше 25 МБ"; }
+    if (blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка", true); return "не картинка"; }
     toast("📸 Скрин"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":"")+": сжимаю…");
     const img = await createImageBitmap(blob);
-    const scale = Math.min(1, 1600/Math.max(img.width, img.height));
+    // Обновление 5: оригинал до 2560 px по длинной стороне (было 1600), качество 0.92 → 0.85 → 0.75 → 0.65, пока < 5,5 МБ
+    const FULL_MAX_DIM = 2560, FULL_MAX_BYTES = 5.5*1024*1024;
+    const scale = Math.min(1, FULL_MAX_DIM/Math.max(img.width, img.height));
     const cv = document.createElement("canvas");
     cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
     const ctx = cv.getContext("2d");
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
-    let data = cv.toDataURL("image/jpeg", 0.85).split(",")[1];
-    // D: сервер принимает до 6 МБ — если не влезло, жмём сильнее
-    if (data.length * 3 / 4 > 6*1024*1024) data = cv.toDataURL("image/jpeg", 0.6).split(",")[1];
-    if (data.length * 3 / 4 > 6*1024*1024){ toast("Скрин слишком большой даже после сжатия", true); return; }
+    let data = "";
+    for (const qv of [0.92, 0.85, 0.75, 0.65]){ // D: сервер принимает до 6 МБ — запас на всякий случай
+      data = cv.toDataURL("image/jpeg", qv).split(",")[1];
+      if (data.length * 3 / 4 <= FULL_MAX_BYTES) break;
+    }
+    if (data.length * 3 / 4 > 6*1024*1024){ toast("Скрин слишком большой даже после сжатия", true); return "слишком большой"; }
     const scale2 = Math.min(1, 480/Math.max(img.width, img.height));
     const cv2 = document.createElement("canvas");
     cv2.width = Math.round(img.width*scale2); cv2.height = Math.round(img.height*scale2);
@@ -3869,9 +4421,10 @@ async function uploadScreen(blob, x, catIdx){
     if (!arr.some(s=>s.link===j.link)) arr.push({ cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" });
     if (realData && realData.screens && realData.screens !== state.screens){ const ra = realData.screens[k0] = realData.screens[k0] || []; if (!ra.some(s=>s.link===j.link)) ra.push({ cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" }); }
     if (j.stamp){ const cur = rowByRk(rk(x.r)); if (cur) cur.updated = j.stamp; }
-    toast("📸 Скрин загружен ✓");
+    if (!quiet) toast("📸 Скрин загружен ✓");
     softRender(); // U11: вставка скрина не перерисовывает экран посреди набора текста и не перезагружает данные
-  } catch(err){ toast("Скрин не загрузился: " + err.message, true); }
+    return true;
+  } catch(err){ toast("Скрин не загрузился: " + err.message, true); return err.message || "ошибка"; }
 }
 
 function applyData(j, isHistory, mergeWeek){
@@ -4006,6 +4559,7 @@ async function load(){
       const merge = (state.fullLoaded && weekReq !== "all" && j.week && j.week !== "all") ? j.week : "";
       applyData(j, false, merge);
       if (weekReq === "all") state.fullLoaded = true; // вся история уже здесь
+      setTimeout(tplSync, 1500); // Обновление 6: шаблоны замечаний с сервера (один раз)
       state.dataFp = fp;
       try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, week:state.week, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans, itog:j.itog||[] })); }catch(e){ try{ sessionStorage.removeItem("dash_cache"); }catch(e2){} } // C: не влезло — старый кэш не оставляем
     }
@@ -4015,8 +4569,8 @@ async function load(){
       wp({ action:"check" }).then(res=>{
         if (!res.error){
           AUTH.set(AUTH.user, AUTH.token, !!res.editor, res.cities || [], res.name || AUTH.user);
-          AUTH.prod = !!res.prod;
-          try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); }catch(e){}
+          AUTH.prod = !!res.prod; AUTH.admin = !!res.admin;
+          try{ localStorage.setItem("dash_prod", res.prod?"1":"0"); localStorage.setItem("dash_admin", res.admin?"1":"0"); }catch(e){}
           updateLoginBtn();
           render();
         }
@@ -4027,7 +4581,7 @@ async function load(){
     if (e && e.transient){ // Обновление 4: временный сбой связи — мягкое сообщение и тихий автоповтор
       txt.textContent = (state.rows.length ? "нет связи, повторю… (показаны данные " + (state.dataFp ? "последней загрузки" : "из кэша") + ")" : "нет связи с сервером, повторю через 20 с…");
       clearTimeout(state.softRetryT);
-      state.softRetryT = setTimeout(()=>{ if (!loadingNow) load(); }, 20000);
+      state.softRetryT = setTimeout(()=>{ if (!loadingNow && !anyDirty()) load(); }, 20000); // AUDIT4 P2-3: при черновиках не трогаем экран
     } else {
       txt.textContent="Ошибка загрузки: "+String(e.message).replace(/эта операция выполняется через POST/gi, "сбой связи")+". Если повторяется — проверь сеть и обнови страницу.";
     }
@@ -4074,6 +4628,10 @@ async function pingNotif(){
 setInterval(pingNotif, 60000);
 setTimeout(pingNotif, 4000);
 document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState === "visible" && Date.now() - (state.lastPing||0) > 60000) pingNotif(); });
+// Обновление 6 (10): PWA — SW кэширует только оболочку (см. sw.js); на file:// и http не регистрируем
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js", { scope: "./" }).catch(()=>{}); });
+}
 </script>
 </body>
 </html>
