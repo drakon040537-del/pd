@@ -160,7 +160,42 @@
   .rtoggle:hover{color:var(--ink);border-color:var(--dim)}
   .rail.mini{width:56px;min-width:56px;padding:10px 6px}
   .rail.mini .tab,.rail.mini .wtab,.rail.mini .rtoggle{justify-content:center;padding:9px 0;gap:0}
-  .rail.mini .tab span:nth-child(2),.rail.mini .wtab span:nth-child(2),.rail.mini .tab .cnt:not(.due),.rail.mini .rsect{display:none}
+  .rail.mini .tab span:nth-child(2),.rail.mini .wtab span:nth-child(2),.rail.mini .tab .cnt:not(.due),.rail.mini .wtab .cnt,.rail.mini .rsect{display:none}
+  /* Обновление 4: ничего не вылезает за рельс — подписи с многоточием, в свёрнутом виде только иконка (+подсказка title) */
+  #tabs .tab,#tabs .wtab{min-width:0;overflow:hidden;white-space:nowrap}
+  #tabs .tab>span:nth-child(2),#tabs .wtab>span:nth-child(2){flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  #tabs .tab .cnt,#tabs .wtab .cnt{flex:0 1 auto;min-width:0;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #tabs .wtab .cnt{margin-left:auto;opacity:.8;font-size:11px}
+  .rail.mini .tab,.rail.mini .wtab{position:relative;width:100%;max-width:44px;margin:0 auto}
+  /* CRM-группы */
+  .rgrp{display:flex;flex-direction:column;gap:3px}
+  .rghead{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:8px;background:none;border:none;color:var(--faint);font:inherit;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;width:100%;min-width:0;overflow:hidden;white-space:nowrap;margin-top:6px}
+  .rghead:hover{color:var(--ink);background:var(--panel2)}
+  .rghead>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .rghead .cnt{margin-left:auto;font-size:11px;letter-spacing:0;text-transform:none;max-width:72px;overflow:hidden;text-overflow:ellipsis}
+  .rghead .cnt.crit{color:var(--bad);font-weight:700}
+  .rghead .rgcar{margin-left:6px;font-size:10px}
+  .rghead .cnt+.rgcar{margin-left:6px}
+  .rghead>span:nth-child(2)+.rgcar{margin-left:auto}
+  .rgrp:not(.open)>.rgbody{display:none}
+  .rgbody{display:flex;flex-direction:column;gap:3px;padding-left:6px}
+  .ritem{display:flex;align-items:center;gap:9px;padding:7px 12px;border-radius:8px;color:var(--dim);background:none;border:none;font:inherit;font-size:12.5px;width:100%;min-width:0;overflow:hidden;white-space:nowrap;cursor:pointer;text-align:left}
+  .ritem:hover{color:var(--ink);background:var(--panel2)}
+  .ritem.on{background:var(--accent);color:#fff;font-weight:600}
+  .ritem>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .ritem .cnt{margin-left:auto;opacity:.75;font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+  .rail.mini .rgbody{display:none!important}
+  .rail.mini .rghead{justify-content:center;padding:9px 0;margin:4px auto 0;max-width:44px;font-size:15px;position:relative}
+  .rail.mini .rghead>span:nth-child(2),.rail.mini .rghead .rgcar,.rail.mini .rghead .cnt:not(.crit){display:none}
+  .rail.mini .rghead .cnt.crit{position:absolute;top:1px;right:1px;margin:0;font-size:9px}
+  .rflyout{position:fixed;z-index:140;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:200px;max-width:280px;max-height:70vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:3px}
+  .rflyout .rfltitle{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:4px 8px}
+  .rflyout .tab{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:7px;color:var(--dim);background:none;border:none;font:inherit;font-size:12.5px;width:100%;cursor:pointer;white-space:nowrap;overflow:hidden}
+  .rflyout .tab:hover{color:var(--ink);background:var(--panel2)}
+  .rflyout .tab.on{background:var(--accent);color:#fff}
+  .rflyout .tab .cnt,.rflyout .ritem .cnt{margin-left:auto}
+  @media(max-width:820px){.rgrp{width:100%}.rgbody{flex-direction:row;flex-wrap:wrap}.ritem,#tabs .rgbody .tab{width:auto}}
+  .rail.mini .tab .cnt.due{position:absolute;top:1px;right:1px;margin:0;font-size:9px;max-width:40px;line-height:1}
   .wdrop{position:absolute;z-index:130;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;min-width:190px;max-height:70vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:3px}
   .witem{background:none;border:none;color:var(--ink);text-align:left;padding:8px 11px;border-radius:7px;cursor:pointer;font:inherit;font-size:12.5px}
   .witem:hover{background:var(--panel2)}
@@ -946,6 +981,7 @@ function filterViewData(){
 }
 function snapData(){ return { rows: state.rows.slice(), plans: state.plans, checks: state.checks, recs: state.recs, screens: state.screens, tasks: (state.tasks||[]).slice(), itog: (state.itog||[]).slice() }; }
 function startViewAs(mode){ // "" — свой вид, "dir" — директор, "prod:Имя" — продюсер
+  state.prodMode = "overview"; // «глазами продюсера» тоже открывается на обзоре
   if (!AUTH.edit && !viewAsActive()) return; // из режима «глазами» выходить можно всегда
   if (!mode){
     if (!viewAsActive()) return;
@@ -1054,20 +1090,43 @@ function renderMain(){
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":c==="Смены"?"Расписание":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${n||""}</span>${badge}</button>`;
   };
   const sect = t => `<div class="rsect">${t}</div>`;
-  const prodTabs = AUTH.prod ? [prodTabName()] : []; // 2b: закреплённая кнопка продюсера (раньше не рисовалась вовсе)
-  const mainTabs = tabs().filter(c=>["Обзор","Сводка","Расписание"].includes(c));
-  const cityTabs = tabs().filter(c=>["Томск","Новосибирск","Онлайн"].includes(c));
-  const toolTabs = tabs().filter(c=>["Операторы","Сравнение","Чек","Рекомендации","Итог","Мои задачи","Смены"].includes(c));
+  // Обновление 4: CRM-меню — группы сворачиваются (состояние в localStorage), в свёрнутом рельсе группа открывает всплывающий список.
+  // Состав вкладок — ровно tabs() (роли и «глазами» как раньше), новых доступов нет.
+  const T = tabs();
+  const prodTabs = AUTH.prod ? [prodTabName()] : []; // 2b: закреплённая кнопка продюсера
+  const mainTabs = T.filter(c=>["Обзор","Итог"].includes(c));
+  const cityTabs = T.filter(c=>CITY_ORDER.includes(c));
+  const toolTabs = T.filter(c=>!prodTabs.includes(c) && !mainTabs.includes(c) && !cityTabs.includes(c));
   const weekLabel = state.week==="latest" ? "последняя" : state.week==="all" ? "все" : state.week==="__month__" ? "месяц" : state.week;
-  const weeksHtml = wks.length
-    ? sect("недели") + `<button class="wtab" id="weekdrop-btn" title="выбрать неделю"><span>🗓</span><span>Неделя</span><span class="cnt">${esc(weekLabel)}</span></button>`
+  const RG = railGroups();
+  const grp = (key, icon, title, body, badge) => {
+    if (!body) return "";
+    const open = !!RG[key];
+    return `<div class="rgrp${open?" open":""}" data-g="${key}"><button class="rghead" data-g="${key}" title="${esc(title)}${state.railMini?" — открыть список":open?" — свернуть":" — развернуть"}"><span>${icon}</span><span>${esc(title)}</span>${badge||""}<span class="rgcar">${open?"▾":"▸"}</span></button><div class="rgbody">${body}</div></div>`;
+  };
+  const critTotal = cityTabs.reduce((a,c)=>a+dedupeRows(rowsOf(c)).reduce((x,r)=>x+(rowStats(r).verdict==="критично"?1:0),0),0);
+  const prodNames = (AUTH.edit && !AUTH.prod && T.includes("Обзор")) ? [...new Set(state.rows.map(r=>r.producer).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru")) : [];
+  const ritem = (attrs, icon, label, cnt, on) => `<button class="ritem${on?" on":""}" ${attrs} title="${esc(label)}${cnt?" · "+esc(cnt):""}"><span>${icon}</span><span>${esc(label)}</span>${cnt?`<span class="cnt">${esc(cnt)}</span>`:""}</button>`;
+  const wDesc = wks.slice().reverse(); // последняя сверху
+  const weekBody = wks.length
+    ? ritem('data-w="latest"', "🗓", "последняя", wDesc[0] || "", state.week==="latest")
+      + ritem('data-w="__month__"', "🗓", "месяц", "", state.week==="__month__")
+      + ritem('data-w="all"', "🗓", "все недели", "", state.week==="all")
+      + wDesc.map(w=>ritem(`data-w="${esc(w)}"`, "·", w, "", state.week===w)).join("")
     : "";
-  document.getElementById("tabs").innerHTML = `<button class="rtoggle" id="railtoggle" title="${state.railMini?"развернуть панель":"свернуть в иконки"}">${state.railMini?"⇥":"⇤"}</button>`
-    + (prodTabs.length ? sect("продюсер") + prodTabs.map(tabBtn).join("") : "")
-    + mainTabs.map(tabBtn).join("")
-    + (cityTabs.length?sect("компании")+cityTabs.map(tabBtn).join(""):"")
-    + sect("инструменты")+toolTabs.map(tabBtn).join("")
-    + weeksHtml;
+  const weekBadge = `<span class="cnt">${esc(weekLabel)}</span>`;
+  let railHtml = `<button class="rtoggle" id="railtoggle" title="${state.railMini?"развернуть панель":"свернуть в иконки"}">${state.railMini?"⇥":"⇤"}</button>`;
+  if (AUTH.prod){ // компактное меню продюсера: его имя, Мои задачи, Рекомендации, Недели
+    railHtml += prodTabs.map(tabBtn).join("") + toolTabs.map(tabBtn).join("")
+      + grp("weeks", "🗓", "Недели", weekBody, weekBadge);
+  } else {
+    railHtml += (mainTabs.length ? sect("главное") + mainTabs.map(tabBtn).join("") : "")
+      + grp("companies", "🏢", "Компании", cityTabs.map(tabBtn).join(""), critTotal ? `<span class="cnt crit" title="критичных смен: ${critTotal}">${critTotal}</span>` : "")
+      + grp("producers", "🧑‍💼", "Продюсеры", prodNames.map(p=>ritem(`data-prodgo="${esc(p)}"`, "👤", p, "", state.tab==="Обзор" && state.producer===p)).join(""), prodNames.length ? `<span class="cnt">${prodNames.length}</span>` : "")
+      + grp("tools", "🧰", "Инструменты", toolTabs.map(tabBtn).join(""), "")
+      + grp("weeks", "🗓", "Недели", weekBody, weekBadge);
+  }
+  document.getElementById("tabs").innerHTML = railHtml;
   document.getElementById("tabs").classList.toggle("mini", !!state.railMini);
   if (wdOpen) toggleWeekDrop(); // пересобрать открытый список недель (список мог обновиться после догрузки)
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
@@ -1084,8 +1143,7 @@ function renderMain(){
       dragCity=null; render();
     };
   });
-  const wdb = document.getElementById("weekdrop-btn");
-  if (wdb) wdb.onclick = toggleWeekDrop;
+  bindRail(document.getElementById("tabs"));
   const rt = document.getElementById("railtoggle");
   if (rt) rt.onclick = ()=>{
     state.railMini = !state.railMini;
@@ -1111,7 +1169,10 @@ function renderMain(){
   if (state.tab==="Итог"){ renderItog(); return; }
   if (state.tab==="Мои задачи"){ renderMyTasks(); return; }
   if (state.tab==="Смены"){ renderShifts(); return; }
-  if (AUTH.prod && state.tab===prodTabName() && state.prodMode!=="table" && !state.search){ renderProdReviews(dedupeRows(rows)); return; }
+  // Обновление 4: по умолчанию — обзор (карточки, прогресс, проблемы, вердикты); «Разборы» — только по явному переключателю.
+  // Раньше условие было «prodMode !== "table"», и при первом рендере (prodMode ещё undefined) открывались разборы,
+  // а после клика «Таблица» — обзор: два разных экрана для одного состояния.
+  if (AUTH.prod && state.tab===prodTabName() && prodModeGet()==="reviews" && !state.search){ renderProdReviews(dedupeRows(rows)); return; }
   const checkedN = withScore.length;
   document.getElementById("pbar").innerHTML = rows.length ? `<div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(checkedN/rows.length*100)}%"></div></div>
     <div style="color:var(--faint);font-size:11.5px;margin-top:4px">прогресс проверки: ${checkedN} из ${rows.length} (${Math.round(checkedN/rows.length*100)}%)</div>` : "";
@@ -1153,7 +1214,7 @@ function renderMain(){
     </div>
     <div class="card">
       <h2>Команды <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
-      <div class="filters">${AUTH.prod && state.tab===prodTabName() ? '<button class="gbtn" id="pr-rev" title="разборы смотрящего карточками">📝 Разборы</button>' : ""}${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
+      <div class="filters">${AUTH.prod && state.tab===prodTabName() ? '<button class="gbtn" id="pr-rev" title="переключить на разборы смотрящего карточками">📝 Разборы</button>' : ""}${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
         <button class="abtn2" id="aisearch" title="поиск по смыслу (ИИ)" style="${AUTH.edit?"":"display:none"}">🤖 смысл</button>
         <span class="count" id="f-count"></span>
       </div>
@@ -1297,7 +1358,7 @@ function renderMain(){
   };
   
   const prv = document.getElementById("pr-rev");
-  if (prv) prv.onclick = ()=>{ state.prodMode = "reviews"; render(); };
+  if (prv) prv.onclick = ()=>{ prodModeSet("reviews"); render(); };
   const fs=document.getElementById("f-search");
   fs.oninput = e=>{
     state.search = e.target.value;
@@ -2053,6 +2114,67 @@ function renderSchedule(){
 }
 
 // ---------- выпадающий список недель ----------
+// Обновление 4: состояние групп меню (открыта/закрыта) — localStorage
+const RAIL_GROUPS_DEFAULT = { companies:true, producers:false, tools:true, weeks:false };
+function railGroups(){
+  let g = null; try{ g = JSON.parse(localStorage.getItem("rail_groups") || "null"); }catch(e){}
+  return Object.assign({}, RAIL_GROUPS_DEFAULT, (g && typeof g === "object") ? g : {});
+}
+function railGroupToggle(key){
+  const g = railGroups(); g[key] = !g[key];
+  try{ localStorage.setItem("rail_groups", JSON.stringify(g)); }catch(e){}
+  if (key === "weeks" && g[key] && !state.fullLoaded && !state.fullLoading) ensureFull().then(render); // подтянуть полный список недель
+}
+function railPickWeek(w){
+  state.week = w; state.page = 1; closeRailFly(); closeWeekDrop();
+  if (w !== "latest" && !state.fullLoaded){ render(); ensureFull().then(render); return; }
+  render();
+}
+function railPickProducer(p){
+  if (state.tab !== "Обзор" && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
+  closeRailFly();
+  state.tab = "Обзор"; state.producer = p; state.page = 1; state.quick = "";
+  render();
+}
+function closeRailFly(){ const f = document.getElementById("railfly"); if (f) f.remove(); }
+function openRailFly(head){
+  const was = document.getElementById("railfly");
+  const key = head.dataset.g;
+  closeRailFly();
+  if (was && was.dataset.g === key) return; // повторный клик — закрыть
+  const body = head.parentElement.querySelector(".rgbody");
+  if (!body) return;
+  if (key === "weeks" && !state.fullLoaded && !state.fullLoading) ensureFull().then(render);
+  const r = head.getBoundingClientRect();
+  const f = document.createElement("div");
+  f.id = "railfly"; f.className = "rflyout"; f.dataset.g = key;
+  f.innerHTML = `<div class="rfltitle">${esc(head.querySelector("span:nth-child(2)").textContent)}</div>` + body.innerHTML;
+  f.style.left = (r.right + 8) + "px";
+  f.style.top = Math.max(8, Math.min(r.top, window.innerHeight - 240)) + "px";
+  document.body.appendChild(f);
+  f.querySelectorAll("[draggable]").forEach(x=>x.removeAttribute("draggable"));
+  bindRailItems(f);
+}
+function bindRailItems(root){
+  root.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>railPickWeek(b.dataset.w));
+  root.querySelectorAll("[data-prodgo]").forEach(b=>b.onclick=()=>railPickProducer(b.dataset.prodgo));
+  if (root.id === "railfly") root.querySelectorAll(".tab[data-t]").forEach(b=>b.onclick=()=>{ closeRailFly(); switchTab(b.dataset.t); });
+}
+function bindRail(rail){
+  if (!rail) return;
+  rail.querySelectorAll(".rghead").forEach(h=>h.onclick=(ev)=>{
+    ev.stopPropagation();
+    if (state.railMini){ openRailFly(h); return; }
+    railGroupToggle(h.dataset.g); render();
+  });
+  bindRailItems(rail);
+}
+document.addEventListener("click", e=>{
+  if (!document.getElementById("railfly")) return;
+  if (e.target.closest("#railfly") || e.target.closest(".rghead")) return;
+  closeRailFly();
+});
+document.addEventListener("keydown", e=>{ if (e.key === "Escape") closeRailFly(); });
 function closeWeekDrop(){ const e = document.getElementById("weekdrop"); if (e) e.remove(); }
 function toggleWeekDrop(){
   const ex = document.getElementById("weekdrop");
@@ -2246,6 +2368,18 @@ function shiftPartOf(s){
 }
 function shiftMatched(s, idx){ return (s.names||[]).some(n => (idx[schedNorm(n)]||[]).length); }
 function shiftOrphan(s, idx){ return !shiftMatched(s, idx); }
+// сводка дня: запланировано = все смены (вкл. зачёркнутые), на смене = не зачёркнутые, отписок = зачёркнутые,
+// без мониторинга = вышедшие на смену без своей строки в дашборде (orphanFn подменяется в тестах)
+function shiftDaySummary(shifts, idx, orphanFn){
+  const all = Array.isArray(shifts) ? shifts : [];
+  const of = orphanFn || shiftOrphan;
+  const act = all.filter(s=>s && !s.struck), off = all.filter(s=>s && s.struck);
+  return { planned: act.length + off.length, act: act.length, off: off.length, orphan: act.filter(s=>of(s, idx)).length };
+}
+function shiftSummaryText(st, sep){
+  sep = sep || " · ";
+  return "запланировано " + st.planned + sep + "на смене " + st.act + sep + "отписок " + st.off + sep + "без мониторинга " + st.orphan;
+}
 function teamCheckedThisWeek(r){ return !!parseUpd(r && r.updated); } // строка уже из последней недели
 async function loadShifts(force){
   const sh = state.shift;
@@ -2382,11 +2516,7 @@ function renderShifts(){
         <tbody>${act.map(row).join("")}${off.map(row).join("")}</tbody></table>`;
     }).join("");
   };
-  const dayStats = (shifts) => {
-    const act = shifts.filter(s=>!s.struck), off = shifts.filter(s=>s.struck);
-    const orphan = act.filter(s=>shiftOrphan(s, idx)).length;
-    return { act: act.length, off: off.length, orphan };
-  };
+  const dayStats = (shifts) => shiftDaySummary(shifts, idx);
   const dayBlock = (d, compact) => {
     const p = d.date.split("-"); const dt = new Date(+p[0], +p[1]-1, +p[2]);
     let shifts = (d.shifts||[]).filter(passFilt);
@@ -2394,13 +2524,13 @@ function renderShifts(){
     if (compact){
       return `<div class="shweekcard${d.date===today?" today":""}${sh.expand===d.date?" on":""}" data-shexp="${esc(d.date)}">
         <b>${WD_RU[dt.getDay()]} ${esc(p[2]+"."+p[1])}</b>
-        <div style="color:var(--faint);margin-top:4px">смен ${st.act}${st.off?" · отписок "+st.off:""}${st.orphan?" · без монитор. "+st.orphan:""}</div>
+        <div style="color:var(--faint);margin-top:4px;line-height:1.5">запланировано ${st.planned}<br>на смене ${st.act}<br><span style="${st.off?"color:var(--bad)":""}">отписок ${st.off}</span><br><span style="${st.orphan?"color:var(--warn)":""}">без мониторинга ${st.orphan}</span></div>
         ${d.error?`<div style="color:var(--warn);font-size:11px">${esc(d.error)}</div>`:""}
       </div>`;
     }
     return `<div class="card shday${d.date===today?" today":""}" data-shday="${esc(d.date)}">
       <h2 style="margin:0 0 6px">${WD_RU[dt.getDay()]} ${esc(p[2]+"."+p[1])}${d.date===today?' <span class="ptag pt-ok">сегодня</span>':""}
-        <span style="color:var(--faint);font-size:11.5px;font-weight:400">смен: ${st.act}${st.off?" · отписок: "+st.off:""}${st.orphan?" · без монитор.: "+st.orphan:""}${d.sheet?" · «"+esc(d.sheet)+"»":""}</span></h2>
+        <span style="color:var(--faint);font-size:11.5px;font-weight:400">${esc(shiftSummaryText(st))}${d.sheet?" · «"+esc(d.sheet)+"»":""}</span></h2>
       ${d.error?`<div class="empty" style="color:var(--warn)">${esc(d.error)}</div>`:""}
       ${shiftsTable(shifts)}
     </div>`;
@@ -2555,11 +2685,13 @@ function renderProdReviews(rows){
     <div class="card" style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <h2 style="margin:0">👤 ${esc(prodTabName())} — разборы смотрящего</h2>
       <span style="color:var(--faint);font-size:12px">команд: ${list.length} · свежие сверху</span>
-      <span style="margin-left:auto"><button class="gbtn on" disabled>Разборы</button> <button class="gbtn" id="pr-table">Таблица</button></span>
+      <span style="margin-left:auto"><button class="gbtn" id="pr-table" title="вернуться к обзору">📊 Обзор</button> <button class="gbtn on" id="pr-rev2" title="выключить разборы">📝 Разборы</button></span>
     </div>
     ${list.length ? list.map(card).join("") : `<div class="empty">${esc(emptyReason())}</div>`}`;
   const tb = document.getElementById("pr-table");
-  if (tb) tb.onclick = ()=>{ state.prodMode = "table"; render(); };
+  if (tb) tb.onclick = ()=>{ prodModeSet("overview"); render(); };
+  const tb2 = document.getElementById("pr-rev2");
+  if (tb2) tb2.onclick = ()=>{ prodModeSet("overview"); render(); };
   setTimeout(ensureThumbs, 30);
 }
 
@@ -2800,16 +2932,57 @@ function netErr(e, timeoutMs){
   if (/Failed to fetch|NetworkError|Load failed|network error|ERR_/i.test(m)) return new Error("нет связи с сервером — проверь интернет и попробуй ещё раз");
   return (e instanceof Error) ? e : new Error(m);
 }
-function postJSON(body, timeoutMs){
-  const ms = timeoutMs || 30000;
+// Обновление 4: «эта операция выполняется через POST» — это ответ doGet. Сайт шлёт только POST, но переадресация
+// Google на /exec иногда превращает его в GET без тела (doPost при этом не выполняется). Такие ответы, а также
+// HTML-страницу вместо JSON, пустой ответ и обрыв сети считаем временным сбоем и повторяем с паузой.
+function postOnce(body, ms){
   const ctl = ("AbortController" in window) ? new AbortController() : null;
   const to = ctl ? setTimeout(()=>ctl.abort(), ms) : null;
-  return fetch(CONFIG.API_URL, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
+  const a = encodeURIComponent(String(body && body.action || "")); // в адресе — только имя действия (не секрет); токен — в теле
+  const url = CONFIG.API_URL + (CONFIG.API_URL.indexOf("?") < 0 ? "?" : "&") + "a=" + a + "&_=" + Date.now().toString(36);
+  return fetch(url, { method:"POST", redirect:"follow", cache:"no-store", credentials:"omit",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
       body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
     .then(r => r.text())
-    .then(parseServerText)
-    .catch(e => { throw netErr(e, ms); })
+    .then(t => {
+      let j;
+      try { j = parseServerText(t); }
+      catch(e){ e.transient = true; e.htmlish = true; throw e; } // HTML/пусто/нечитаемо — сбой Google, не наш ответ
+      if (j && (j.code === "NEED_POST" || /через POST/i.test(String(j.error || "")))){
+        const e = new Error("нет связи с сервером — повторяю"); e.transient = true; e.needPost = true; throw e;
+      }
+      return j;
+    })
+    .catch(e => {
+      if (e && e.transient) throw e;
+      const n = netErr(e, ms);
+      if (e && e.name === "AbortError") n.timeout = true;
+      else if (/нет связи/.test(n.message)) n.transient = true;
+      throw n;
+    })
     .finally(() => { if (to) clearTimeout(to); });
+}
+// повторять безопасно: needPost — всегда (doPost не выполнялся); прочие временные сбои — только для чтений
+const NO_RETRY_FE = ["aiq","login"];
+function postRetryable(e, action){
+  if (!e || !e.transient) return false;
+  if (e.needPost) return true;
+  return WRITE_ACTIONS_FE.indexOf(action) < 0 && NO_RETRY_FE.indexOf(action) < 0;
+}
+const POST_BACKOFF_MS = [700, 2500];
+function postJSON(body, timeoutMs){
+  const ms = timeoutMs || 30000;
+  const action = String(body && body.action || "");
+  let attempt = 0;
+  const go = () => postOnce(body, ms).catch(e => {
+    if (attempt >= POST_BACKOFF_MS.length || !postRetryable(e, action)) throw e;
+    const wait = POST_BACKOFF_MS[attempt++] + Math.floor(Math.random() * 300);
+    return new Promise(r => setTimeout(r, wait)).then(go);
+  });
+  return go().catch(e => {
+    if (e && e.needPost){ const n = new Error("нет связи с сервером — повторю чуть позже"); n.transient = true; throw n; } // текст «через POST» наружу не показываем
+    throw e;
+  });
 }
 // действия, меняющие таблицу: в режиме «глазами» они запрещены (там чужие права и отфильтрованные данные)
 const WRITE_ACTIONS_FE = ["upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply"];
@@ -3762,6 +3935,18 @@ function runDiag(out){
     .catch(e => put("✗ " + String(e && e.message || e).slice(0, 160)));
 }
 
+// режим вкладки продюсера: "overview" (по умолчанию) | "reviews"; выбор помнится только в пределах сессии вкладки
+function prodModeGet(){
+  if (state.prodMode !== "overview" && state.prodMode !== "reviews"){
+    let m = ""; try{ m = sessionStorage.getItem("dash_prodmode") || ""; }catch(e){}
+    state.prodMode = (m === "reviews") ? "reviews" : "overview";
+  }
+  return state.prodMode;
+}
+function prodModeSet(m){
+  state.prodMode = (m === "reviews") ? "reviews" : "overview";
+  try{ sessionStorage.setItem("dash_prodmode", state.prodMode); }catch(e){}
+}
 let loadingNow = false;
 async function load(){
   if (loadingNow) return; // не запускать параллельные загрузки
@@ -3839,7 +4024,13 @@ async function load(){
     }
   }catch(e){
     dot.className="dot-off";
-    txt.textContent="Ошибка загрузки: "+e.message+". Если повторяется — проверь сеть и обнови страницу.";
+    if (e && e.transient){ // Обновление 4: временный сбой связи — мягкое сообщение и тихий автоповтор
+      txt.textContent = (state.rows.length ? "нет связи, повторю… (показаны данные " + (state.dataFp ? "последней загрузки" : "из кэша") + ")" : "нет связи с сервером, повторю через 20 с…");
+      clearTimeout(state.softRetryT);
+      state.softRetryT = setTimeout(()=>{ if (!loadingNow) load(); }, 20000);
+    } else {
+      txt.textContent="Ошибка загрузки: "+String(e.message).replace(/эта операция выполняется через POST/gi, "сбой связи")+". Если повторяется — проверь сеть и обнови страницу.";
+    }
     if (/^недели «/.test(String(e.message)) && state.week !== "latest"){ // неделю удалили/переименовали — вернуться к последней
       state.week = "latest"; state.dataFp = ""; toast(e.message, true); setTimeout(load, 200);
     }
