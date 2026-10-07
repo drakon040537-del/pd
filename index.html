@@ -453,6 +453,7 @@
       <button class="x" id="cam-x">✕</button>
       <h3 id="cam-title">📷 Скрин</h3>
       <div id="cam-wrap" class="camwrap" title="клик — 1:1 / вписать"><img id="cam-img" alt="скрин" decoding="async"><span id="cam-q" class="camq"></span></div>
+      <button class="abtn2" id="cam-orig" style="display:none;margin-top:8px" title="загрузить оригинал в полном разрешении">⚡ оригинал (полный размер)</button>
       <button class="abtn2" id="cam-ai" style="display:none;margin-top:8px">🤖 что с кадром</button>
       <div id="cam-aiout" class="aibox" style="display:none"></div>
     </div>
@@ -1264,7 +1265,7 @@ function renderMain(){
     }
   }
   document.getElementById("content").innerHTML = `
-    ${(CITY_ORDER.includes(state.tab) && AUTH.edit) ? `<div class="card" style="margin:0 0 10px"><b>🤖 по компании:</b> <button class="abtn2" id="aisum">что горит</button> <button class="abtn2" id="aigrp">сгруппировать замечания недели</button> <div id="aisumout" style="margin-top:8px"></div></div>` : ""}
+    ${(CITY_ORDER.includes(state.tab) && AUTH.edit) ? `<div class="card" style="margin:0 0 10px"><b>🤖 по компании:</b> <button class="abtn2" id="aisum">что горит</button> <button class="abtn2" id="aigrp">сгруппировать замечания недели</button> <button class="abtn2" id="aibatch0">🤖 разобрать все непроверенные</button> <button class="abtn2" id="aibatch1">🤖 разобрать все проверенные</button> <div id="aisumout" style="margin-top:8px"></div></div>` : ""}
     ${state.tab==="Обзор" && AUTH.edit ? `<div class="card" style="margin:0 0 10px"><b>🤖 за неделю:</b> <button class="abtn2" id="aidelta">что изменилось с прошлой недели</button> <div id="aideltaout" style="margin-top:8px"></div></div>` : ""}
     <div class="tiles">
       <div class="tile"><div class="n">${withScore.length}</div><div class="l">команд проверено</div></div>
@@ -1355,6 +1356,60 @@ function renderMain(){
       out.innerHTML = res.groups.map(g=>"<div>• <b>"+esc(g.title)+"</b> — "+esc(g.count)+" шт</div>").join("");
     } catch(e){ out.textContent = "🤖 " + e.message; }
   };
+  // Обновление 7: батч-ИИ по компании. «Непроверенные» — черновик по скрину (если есть скрин); «проверенные» — авто-вердикт + тон комментария.
+  // Результат только в черновики (localStorage): в таблицу уходит по «Сохранить». Последовательно, стоп на лимите ИИ (20/час на задачу).
+  const runBatchAi = async (checkedOnly)=>{
+    const out = document.getElementById("aisumout");
+    const teams = dedupeRows(rows).filter(r => r.opName || r.opNick || r.model);
+    const target = teams.filter(r => checkedOnly ? rowStats(r).score !== null : rowStats(r).score === null);
+    if (!target.length){ out.textContent = checkedOnly ? "🤖 проверенных команд нет" : "🤖 непроверенных команд нет"; return; }
+    let done = 0, skip = 0, fail = 0;
+    for (let i = 0; i < target.length; i++){
+      const r = target[i];
+      out.textContent = "🤖 " + (checkedOnly ? "разбираю проверенные" : "разбираю непроверенные") + "… " + (i + 1) + " из " + target.length;
+      try {
+        if (!checkedOnly){
+          const scr = aiPickScreen((state.screens || {})[skey(r)] || []);
+          const id = scr ? driveId(scr.link || scr.mini || "") : "";
+          if (!id){ skip++; continue; }
+          const res = await aiAsk("screendraft", { id: id, text: "", ckey: "batch|" + id });
+          if (res.error) throw new Error(res.error);
+          const d = getDraft(r) || {};
+          let n = 0;
+          (res.cats || []).forEach(it => {
+            const v = aiDraftMerge(d["f" + it.i] || "", aiDraftText(it));
+            if (v !== (d["f" + it.i] || "").trim()){ d["f" + it.i] = v; n++; }
+          });
+          if (n){ setDraft(r, d); done++; } else skip++;
+        } else {
+          const text = CATS.map((n,j)=>{ const v = (r.cats[j] || "").trim(); return v ? n + ": " + v : ""; }).filter(Boolean).join("; ").slice(0, 6000) + (r.obs ? "; доп: " + r.obs.slice(0, 500) : "");
+          if (!text.trim()){ skip++; continue; }
+          const res = await aiAsk("verdict", { text: text, ckey: skey(r) + "|batch|" + strHash(text) });
+          if (res.error) throw new Error(res.error);
+          const d = getDraft(r) || {};
+          if (["норма","замечание","критично"].includes(res.verdict)) d.verdict = res.verdict;
+          if ((r.obs || "").trim()){
+            try {
+              const t = await aiAsk("tonecheck", { text: ("КОММЕНТАРИЙ: " + r.obs).slice(0, 8000), ckey: skey(r) + "|tone|" + strHash(r.obs) });
+              if (!t.error && t.rewritten) d.comment = t.rewritten;
+            } catch(e){}
+          }
+          setDraft(r, d);
+          done++;
+        }
+      } catch(e){
+        const m = String(e && e.message || e);
+        if (/лимит|исчерпан|429/.test(m)){ out.textContent = "🤖 стоп: " + m + " — обработано " + done + " из " + target.length + " (остальное — через час)"; return; }
+        fail++;
+      }
+    }
+    out.innerHTML = "🤖 готово: обработано <b>" + done + "</b>" + (skip ? ", пропущено (нет скрина/текста) " + skip : "") + (fail ? ", ошибок " + fail : "") + ". Всё в черновиках — открой команду и жми «Сохранить в таблицу» (значки 📝 обновятся при следующей перерисовке).";
+  };
+  const aib0 = document.getElementById("aibatch0");
+  if (aib0) aib0.onclick = ()=>runBatchAi(false);
+  const aib1 = document.getElementById("aibatch1");
+  if (aib1) aib1.onclick = ()=>runBatchAi(true);
+
   const aid = document.getElementById("aidelta");
   if (aid) aid.onclick = async ()=>{
     const out = document.getElementById("aideltaout");
@@ -3695,21 +3750,40 @@ let camSeq = 0;
 function camShow(src, isMini){
   const w = document.getElementById("cam-wrap"); if (w) w.classList.remove("zoom");
   document.getElementById("cam-img").src = src || BLANK;
-  const q = document.getElementById("cam-q"); if (q) q.textContent = isMini ? "миниатюра · загружаю оригинал…" : "";
+  const q = document.getElementById("cam-q"); if (q) q.textContent = isMini ? "миниатюра · загружаю…" : "";
+  const ob = document.getElementById("cam-orig"); if (ob) ob.style.display = "none";
 }
+// Обновление 7: просмотр — сначала облегчённая копия до 1600 px (сервер через Drive thumbnail),
+// оригинал полного размера — только по кнопке «⚡ оригинал» (телефон не тянет 5–6 МБ в память).
+let camOrigId = "";
 function camLoadFull(id){
   const my = ++camSeq;
+  camOrigId = id || "";
+  const ob = document.getElementById("cam-orig"); if (ob) ob.style.display = id ? "" : "none";
   if (!id) return;
-  wp({ action:"thumb", id: id }, 60000).then(res=>{
+  wp({ action:"thumb", id: id, w: 1600 }, 60000).then(res=>{
     if (my !== camSeq) return; // уже открыт другой скрин
     const q = document.getElementById("cam-q");
-    if (!res || res.error || !res.d){ if (q) q.textContent = "оригинал недоступен — показана миниатюра"; return; }
+    if (!res || res.error || !res.d){ if (q) q.textContent = "скрин недоступен — показана миниатюра"; return; }
     const im = document.getElementById("cam-img");
     im.onload = ()=>{ if (my === camSeq && q) q.textContent = im.naturalWidth ? (im.naturalWidth + "×" + im.naturalHeight) : ""; im.onload = null; };
     im.src = "data:image/jpeg;base64," + res.d;
   }).catch(()=>{ const q = document.getElementById("cam-q"); if (my === camSeq && q) q.textContent = "нет связи — показана миниатюра"; });
 }
+function camLoadOrig(){
+  if (!camOrigId) return;
+  const ob = document.getElementById("cam-orig"); if (ob) ob.disabled = true;
+  const q = document.getElementById("cam-q"); if (q) q.textContent = "загружаю оригинал…";
+  wp({ action:"thumb", id: camOrigId, full: "1" }, 90000).then(res=>{
+    const ob2 = document.getElementById("cam-orig"); if (ob2) ob2.disabled = false;
+    if (!res || res.error || !res.d){ if (q) q.textContent = "оригинал недоступен"; return; }
+    const im = document.getElementById("cam-img");
+    im.onload = ()=>{ if (q) q.textContent = im.naturalWidth ? ("оригинал " + im.naturalWidth + "×" + im.naturalHeight) : ""; im.onload = null; };
+    im.src = "data:image/jpeg;base64," + res.d;
+  }).catch(()=>{ const ob2 = document.getElementById("cam-orig"); if (ob2) ob2.disabled = false; if (q) q.textContent = "нет связи — оригинал не загрузился"; });
+}
 document.getElementById("cam-wrap").onclick = ()=>document.getElementById("cam-wrap").classList.toggle("zoom");
+document.getElementById("cam-orig").onclick = camLoadOrig;
 // ---------- окно вставки фото (кнопка или Ctrl+V) ----------
 let uplTarget = null;
 function openUpload(x, catIdx, label){
@@ -4141,7 +4215,7 @@ document.getElementById("w-del-go").onclick = async ()=>{
     if (state.serverLatest === week) state.serverLatest = "";
     state.dataFp = "";
     closeModal("weekmodal");
-    toast("✔ Удалено листов: " + (res.removed||0));
+    toast("✔ Удалено листов: " + (res.removed||0) + (res.archived ? " · в архив: " + res.archived : ""));
     setTimeout(load, 800);
   } catch(e){
     msg.textContent = "Ошибка: " + e.message + " — неделя могла быть уже удалена, обновляю данные";
