@@ -95,11 +95,22 @@
 
   .qbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:12px}
   .qbtn:hover{color:var(--ink)}
-  .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px}
+  .edit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 24px}
   @media(max-width:900px){.edit-grid{grid-template-columns:1fr}}
   .edit-grid .f{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  /* v6: мониторинг продюсера — колонки не вылезают за карточку, поле тянется только вниз */
+  .pmgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  @media(max-width:1150px){.pmgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:700px){.pmgrid{grid-template-columns:minmax(0,1fr)}}
+  .pmgrid .f{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;display:flex;flex-direction:column}
+  .pmcat-h{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px;min-height:36px}
+  .pmcat-h .nm{font-weight:600;font-size:12.5px;line-height:1.3;min-width:0}
+  .pmcat-h .hint{display:block;font-size:11px;color:var(--faint);font-weight:400;margin-top:2px}
+  .pmcat-h .btns{flex-shrink:0;white-space:nowrap}
+  .pmcard textarea{max-width:100%;resize:vertical;box-sizing:border-box}
+  .pmcard input{min-width:0;box-sizing:border-box}
   .edit-grid .f b{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:11.5px;font-weight:600;margin-bottom:5px}
-  .edit-grid textarea{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;min-height:54px;resize:vertical;box-sizing:border-box}
+  .edit-grid textarea{max-width:100%;width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;min-height:54px;resize:vertical;box-sizing:border-box}
   .edit-grid select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px}
   .savebtn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:9px 22px;font:inherit;font-weight:600;cursor:pointer;margin-top:12px}
   .savebtn:disabled{opacity:.5}
@@ -382,6 +393,7 @@
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="resetbell" class="iconbtn" style="display:none" title="уведомления">🔔</button>
     <button id="sugbtn" class="iconbtn" style="display:none" title="предложение или ошибка">💡</button>
+    <button id="pwbtn" class="iconbtn" style="display:none" title="сменить мой пароль">🔑</button>
     <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Мониторинг</button>
     <button id="weekbtn" class="abtn2" style="display:none">＋ неделя</button>
@@ -481,6 +493,20 @@
       <div id="rs-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
     </div>
   </div>
+  <div class="modal-ov" id="pwmodal">
+    <div class="modal" style="width:min(400px,94vw)">
+      <button class="x" id="pw-x">✕</button>
+      <h3>🔑 Сменить мой пароль</h3>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input type="password" id="pw-old" placeholder="текущий пароль" autocomplete="current-password" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px">
+        <input type="password" id="pw-new" placeholder="новый пароль (не короче 8 символов)" autocomplete="new-password" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px">
+        <input type="password" id="pw-new2" placeholder="новый пароль ещё раз" autocomplete="new-password" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px">
+        <button class="savebtn" id="pw-go" style="margin-top:4px">Сменить пароль</button>
+        <div id="pw-msg" style="font-size:12.5px;color:var(--dim)"></div>
+        <div style="color:var(--faint);font-size:11.5px">После смены все остальные входы (телефон, другие браузеры) погаснут — там войди заново.</div>
+      </div>
+    </div>
+  </div>
   <div class="modal-ov" id="rsreqmodal">
     <div class="modal" style="width:min(480px,94vw)">
       <button class="x" id="rsq-x">✕</button>
@@ -573,7 +599,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-08.60"
+  VER: "2026-10-08.61"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -1130,7 +1156,34 @@ function updateLoginBtn(){
   if (ab) ab.style.display = AUTH.edit ? "" : "none";
   const wb = document.getElementById("weekbtn");
   if (wb) wb.style.display = AUTH.edit ? "" : "none";
+  const pb = document.getElementById("pwbtn"); // v6.1: смена своего пароля — любому вошедшему, не в режиме «глазами»
+  if (pb) pb.style.display = AUTH.ok() && !state.viewAs ? "" : "none";
 }
+document.getElementById("pwbtn").onclick = ()=>{
+  ["pw-old","pw-new","pw-new2"].forEach(id=>{ document.getElementById(id).value = ""; });
+  document.getElementById("pw-msg").textContent = "";
+  openModal("pwmodal");
+  setTimeout(()=>document.getElementById("pw-old").focus(), 50);
+};
+document.getElementById("pw-x").onclick = ()=>closeModal("pwmodal");
+document.getElementById("pw-go").onclick = async ()=>{
+  const o = document.getElementById("pw-old").value, n = document.getElementById("pw-new").value, n2 = document.getElementById("pw-new2").value;
+  const msg = document.getElementById("pw-msg");
+  if (!o || !n){ msg.textContent = "Заполни все поля"; return; }
+  if (n.length < 8){ msg.textContent = "Новый пароль — не короче 8 символов"; return; }
+  if (n !== n2){ msg.textContent = "Новые пароли не совпадают"; return; }
+  const btn = document.getElementById("pw-go"); btn.disabled = true; msg.textContent = "меняю…";
+  try {
+    const r = await postJSON({ action:"chpass", token: AUTH.token, old: o, pass: n }, 45000); // без wp: ошибка «неверный пароль» не должна выкидывать из сессии
+    if (r.error) throw new Error(r.error);
+    if (r.token){ AUTH.token = r.token; try { localStorage.setItem("dash_token", r.token); } catch(e){} }
+    ["pw-old","pw-new","pw-new2"].forEach(id=>{ document.getElementById(id).value = ""; });
+    closeModal("pwmodal");
+    toast("🔑 Пароль изменён" + (r.relogin ? " — войди заново" : ""));
+    if (r.relogin){ AUTH.clear(); showGate(); }
+  } catch(e){ msg.textContent = "⚠ " + e.message; }
+  finally { btn.disabled = false; }
+};
 
 function renderMain(){
   if (!tabs().includes(state.tab)) state.tab = tabs()[0]; // сохранённая вкладка может быть скрыта
@@ -1153,7 +1206,7 @@ function renderMain(){
     const crit = rs.reduce((a,r)=>a+(rowStats(r).verdict==="критично"?1:0),0);
     let badge = "";
     if (c==="Расписание"){ const od = overdueCount(); if (od) badge = `<span class="cnt due" title="просрочено перепроверок: ${od}">⏰${od}</span>`; }
-    else if (pmIsTab(c)){ const nb = state.pmBadge || 0; if (nb) badge = `<span class="cnt due" title="${AUTH.prod ? "вернули на доработку" : "ждут проверки"}: ${nb}">${AUTH.prod ? "↩" : "📥"}${nb}</span>`; } // v6
+    else if (pmIsTab(c)){ const nb = state.pmBadge || 0; if (nb) badge = `<span class="cnt due" title="${AUTH.prod ? "вернули на доработку" : "новые записи продюсеров"}: ${nb}">${AUTH.prod ? "↩" : "📥"}${nb}</span>`; } // v6
     else if (c==="Мои задачи"){ const nt = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan).length; if (nt) badge = `<span class="cnt due" title="открытых задач: ${nt}">📌${nt}</span>`; }
     else if (CITY_ORDER.includes(c)){ const od = overdueCount(c); if (od) badge = `<span class="cnt due" title="просрочено перепроверок в компании: ${od}">⏰${od}</span>`; }
     return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${icons[c]||"•"}</span><span>${c==="Расписание"?"Расписание проверок":c==="Смены"?"Расписание":clabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${(NO_TEAM_COUNT_TABS.includes(c) ? "" : n) || ""}</span>${badge}</button>`;
@@ -3065,12 +3118,14 @@ function renderProdReviews(rows){
 // Данные — сервер (pmread/pmsave/...), набранный текст живёт в state.pmEdits + localStorage, пока не сохранён.
 const PM_TAB_PROD = "Мой мониторинг", PM_TAB_ED = "Мониторинг продюсеров";
 const PM_ST_CLS = { "черновик":"", "отправлено":"pt-warn", "принято":"pt-ok", "возврат":"pt-bad", "скрыта":"" };
-const PM_ST_LBL = { "черновик":"📝 черновик", "отправлено":"📤 ждёт проверки", "принято":"✅ принято", "возврат":"↩ возврат", "скрыта":"🙈 скрыта" };
+const PM_ST_LBL_ED = { "черновик":"📝 начал (пусто)", "отправлено":"🆕 новое", "принято":"✅ принято", "возврат":"↩ возврат", "скрыта":"🙈 скрыта" };
+const PM_ST_LBL_PR = { "черновик":"📝 пусто", "отправлено":"👁 видно смотрящему", "принято":"✅ принято", "возврат":"↩ вернули", "скрыта":"🙈 скрыта" };
+function pmStLbl(st){ return (AUTH.prod ? PM_ST_LBL_PR : PM_ST_LBL_ED)[st] || "○ не начат"; }
 function pmTabName(){ return AUTH.prod ? PM_TAB_PROD : PM_TAB_ED; }
 function pmIsTab(t){ return t === PM_TAB_PROD || t === PM_TAB_ED; }
 function pmCanUse(){ return AUTH.prod || AUTH.edit; }
 // чистая: ключ карточки — id записи или «b:<ключ команды недели>», пока записи ещё нет
-function pmCardKey(it, baseKey){ return it && it.id ? it.id : "b:" + baseKey; }
+function pmCardKey(it, baseKey){ const b = baseKey || (it && it.base) || ""; return b ? "b:" + b : (it && it.id) || ""; } // v6.1: ключ не меняется после первого сохранения
 // чистая: есть ли в записи хоть одна заполненная категория
 function pmChecked(it){ return !!(it && it.status !== "скрыта" && (it.cats||[]).some(c=>String(c||"").trim())); }
 // чистая: расхождения продюсера со смотрящим по 9 категориям (оба поставили оценку, и она разная)
@@ -3168,7 +3223,7 @@ function pmCardHtml(c, canEdit, isEd){
   const head = `<div class="pmhead" data-pmk="${esc(k)}" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer">
       <b>${esc(title)}</b>
       <span style="color:var(--faint);font-size:11.5px">${esc(clabel((it && it.city) || (br && br.city) || ""))}${isEd && it ? " · " + esc(it.producer) : ""}${!c.baseKey && !(it && it.base) ? " · ＋ добавлена продюсером" : ""}</span>
-      <span class="ptag ${PM_ST_CLS[st]||""}">${esc(PM_ST_LBL[st] || "○ не начат")}</span>
+      <span class="ptag ${PM_ST_CLS[st]||""}">${esc(pmStLbl(st))}</span>
       ${checked ? "" : '<span class="ptag">не проверено</span>'}
       ${nDif ? `<span class="ptag pt-bad" title="категорий, где оценки продюсера и смотрящего разные">≠ ${nDif}</span>` : ""}
       ${pmDirty(k) ? '<span class="ptag pt-warn" title="есть несохранённые правки (они в черновике)">✎ не сохранено</span>' : ""}
@@ -3182,10 +3237,10 @@ function pmCardHtml(c, canEdit, isEd){
   const cats = CATS.map((n,j)=>{
     const myS = catState(v.cats[j]||""), hisS = mineSt ? mineSt[j] : null;
     const miss = dif.miss.includes(j), strict = dif.strict.includes(j);
-    const bg = miss ? "background:rgba(220,70,70,.12);border-radius:6px;padding:4px" : strict ? "background:rgba(230,170,40,.12);border-radius:6px;padding:4px" : "";
-    const hint = mine && hisS ? `<span style="font-size:11px;color:var(--faint);font-weight:400"> · смотрящий: ${hisS==="ok"?"✅":"❌"}${miss?" — продюсер пропустил":strict?" — продюсер строже":""}</span>` : "";
+    const bg = miss ? "background:rgba(220,70,70,.12);border-color:rgba(220,70,70,.5)" : strict ? "background:rgba(230,170,40,.12);border-color:rgba(230,170,40,.5)" : "";
+    const hint = mine && hisS ? `<span class="hint">смотрящий: ${hisS==="ok"?"✅":"❌"}${miss?" · продюсер пропустил":strict?" · продюсер строже":""}</span>` : "";
     const sc = scr.filter(s=>String(s.cat)===n);
-    return `<div class="f" style="${bg}"><b>${myS==="ok"?"✅ ":myS==="bad"?"❌ ":""}${esc(n)}${hint}${canEdit?`<span><button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="">✕</button></span>`:""}</b>
+    return `<div class="f" style="${bg}"><div class="pmcat-h"><span class="nm">${myS==="ok"?"✅ ":myS==="bad"?"❌ ":""}${esc(n)}${hint}</span>${canEdit?`<span class="btns"><button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="">✕</button></span>`:""}</div>
       ${ta("pm"+kid+"_"+j, v.cats[j]||"", "что увидел")}
       ${pmThumbs(sc, it, canEdit)}</div>`;
   }).join("");
@@ -3193,7 +3248,7 @@ function pmCardHtml(c, canEdit, isEd){
   const isAdded = it ? !it.base : !c.baseKey;
   const prodBtns = canEdit && AUTH.prod ? `
       <button class="abtn2" data-pmsave="${esc(k)}">💾 Сохранить</button>
-      <button class="abtn2" data-pmsend="${esc(k)}">📤 Отправить смотрящему</button>
+      <span id="pmas${esc(strHash(k))}" style="color:var(--faint);font-size:11.5px">${pmDirty(k) ? "есть несохранённое — сохранится само через пару секунд" : "сохраняется автоматически"}</span>
       <span style="flex:1"></span>
       ${isAdded ? `<button class="abtn2" data-pmhide="${esc(k)}" data-del="1">🗑 Удалить команду</button>` : `<button class="abtn2" data-pmhide="${esc(k)}">🙈 Убрать из моего мониторинга</button>`}` : "";
   const unhide = it && it.status === "скрыта" && AUTH.prod && !viewAsActive() && state.pm.week === state.pm.latest ? `<button class="abtn2" data-pmunhide="${esc(it.id)}">↩ Вернуть в мой мониторинг</button>` : "";
@@ -3207,7 +3262,7 @@ function pmCardHtml(c, canEdit, isEd){
     ${note}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px">${inp("pm"+kid+"_nick", v.nick, "ник опера")}${inp("pm"+kid+"_opname", v.opname, "опер")}${inp("pm"+kid+"_model", v.model, "модель")}</div>
     <div class="f" style="margin-bottom:8px"><b>🔗 Ссылки (одна в строке: «CB = https://chaturbate.com/…»)</b>${ta("pm"+kid+"_links", v.links, "CB = https://chaturbate.com/имя", 40)}</div>
-    <div class="editgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">${cats}</div>
+    <div class="pmgrid">${cats}</div>
     <div class="f" style="margin-top:8px"><b>💬 Общий комментарий</b>${ta("pm"+kid+"_comment", v.comment, "", 54)}</div>
     ${pmThumbs(scr.filter(s=>!CATS.includes(String(s.cat))), it, canEdit)}
     ${canEdit ? `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -3232,9 +3287,9 @@ function pmCards(){ // список карточек текущего вида
   const used = {};
   if (AUTH.prod){
     base.forEach(b=>{ const it = items.find(x=>x.base===b.key); if (it) used[it.id] = 1; cards.push({ k: pmCardKey(it, b.key), it: it || null, br: b.r, baseKey: b.key }); });
-    items.forEach(it=>{ if (!used[it.id]) cards.push({ k: it.id, it, br: null, baseKey: it.base || "" }); });
+    items.forEach(it=>{ if (!used[it.id]) cards.push({ k: pmCardKey(it), it, br: null, baseKey: it.base || "" }); });
   } else {
-    items.forEach(it=>{ if (prodF && it.producer !== prodF) return; cards.push({ k: it.id, it, br: pmMineRow(it.base), baseKey: it.base || "" }); });
+    items.forEach(it=>{ if (prodF && it.producer !== prodF) return; cards.push({ k: pmCardKey(it), it, br: pmMineRow(it.base), baseKey: it.base || "" }); });
   }
   return { cards, items, base };
 }
@@ -3255,7 +3310,7 @@ function renderPM(){
     : statusOf(c) === f;
   const shown = cards.filter(filt);
   const cnt = s => cards.filter(c=>statusOf(c)===s).length;
-  const chips = [["all","все"],["todo","не проверены"],["отправлено","ждут проверки · "+cnt("отправлено")],["возврат","возврат · "+cnt("возврат")],["принято","принято · "+cnt("принято")],["diff","есть расхождения"],["скрыта","скрытые · "+cnt("скрыта")]];
+  const chips = [["all","все"],["todo","не проверены"],["отправлено",(AUTH.prod ? "видно смотрящему · " : "🆕 новые · ")+cnt("отправлено")],["возврат","возврат · "+cnt("возврат")],["принято","принято · "+cnt("принято")],["diff","есть расхождения"],["скрыта","скрытые · "+cnt("скрыта")]];
   // покрытие
   let covHtml = "";
   if (AUTH.prod){
@@ -3264,7 +3319,7 @@ function renderPM(){
     covHtml = `<div style="margin-top:8px"><div class="pbar-track"><div class="pbar-fill" style="width:${pc}%"></div></div><div style="color:var(--faint);font-size:12px;margin-top:4px">проверено мной: <b>${cv.done} из ${cv.total}</b> команд за неделю (${pc}%)</div></div>`;
   } else {
     const prods = [...new Set(pmBaseTeams(pm.week).map(b=>b.r.producer).concat(items.map(i=>i.producer)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru"));
-    covHtml = `<div style="overflow:auto;margin-top:8px"><table class="mini" style="width:100%;font-size:12.5px;border-collapse:collapse"><tr style="color:var(--faint);text-align:left"><th>продюсер</th><th>проверено</th><th>ждут</th><th>возврат</th><th>расхождений</th></tr>` +
+    covHtml = `<div style="overflow:auto;margin-top:8px"><table class="mini" style="width:100%;font-size:12.5px;border-collapse:collapse"><tr style="color:var(--faint);text-align:left"><th>продюсер</th><th>проверено</th><th>новые</th><th>возврат</th><th>расхождений</th></tr>` +
       prods.map(p=>{
         const its = items.filter(i=>i.producer===p);
         const cv = pmCoverage(pmBaseTeams(pm.week, p), its);
@@ -3292,7 +3347,7 @@ function renderPM(){
       </div>
       ${pm.err ? `<div class="failbar" style="margin-top:8px">⚠ ${esc(pm.err)}</div>` : ""}
       ${AUTH.prod && pm.week !== pm.latest ? '<div style="color:var(--faint);font-size:12px;margin-top:6px">прошлая неделя — только просмотр</div>' : ""}
-      ${AUTH.prod ? '<div style="color:var(--faint);font-size:12px;margin-top:6px">Это твой мониторинг: разборы смотрящего он не меняет. Заполни категории, приложи скрины и нажми «📤 Отправить смотрящему».</div>' : '<div style="color:var(--faint);font-size:12px;margin-top:6px">Мониторинг, который ведут сами продюсеры. Красным — где продюсер поставил «ок», а у тебя замечание; жёлтым — наоборот.</div>'}
+      ${AUTH.prod ? '<div style="color:var(--faint);font-size:12px;margin-top:6px">Это твой мониторинг: разборы смотрящего он не меняет. Пиши по категориям и прикладывай скрины — всё сохраняется само, и смотрящий сразу это видит.</div>' : '<div style="color:var(--faint);font-size:12px;margin-top:6px">Мониторинг, который ведут сами продюсеры: видно сразу, как они пишут. Красным — где продюсер поставил «ок», а у тебя замечание; жёлтым — наоборот.</div>'}
       ${covHtml}
       <div class="fchips" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${chips.map(c=>`<button class="fchip ${f===c[0]?"on":""}" data-pmf="${esc(c[0])}">${esc(c[1])}</button>`).join("")}</div>
       ${addForm}
@@ -3318,23 +3373,46 @@ function pmCollect(k){ // значения формы из DOM (или из че
   for (let j=0;j<9;j++){ const x = g(j); if (x !== null) v.cats[j] = x; }
   return { c, v };
 }
-async function pmSave(k, send){
-  const got = pmCollect(k); if (!got) { toast("Карточка не найдена — обнови", true); return; }
+// v6.1: сохранение без «отправки» — смотрящий видит запись сразу. auto=true — тихое автосохранение во время набора.
+async function pmSave(k, auto){
+  const got = pmCollect(k); if (!got) { if (!auto) toast("Карточка не найдена — обнови", true); return; }
   const { c, v } = got;
-  const p = { action:"pmsave", nick: v.nick, opname: v.opname, model: v.model, links: v.links, comment: v.comment, cats: v.cats };
+  const p = { action:"pmsave", nick: v.nick, opname: v.opname, model: v.model, links: v.links, comment: v.comment, cats: v.cats.slice() };
   if (c.it && c.it.id){ p.id = c.it.id; p.rev = c.it.rev; }
   else { p.base = c.baseKey; p.city = c.br ? c.br.city : ""; }
-  if (send) p.send = 1;
-  if (send && !v.cats.some(x=>String(x||"").trim())){ toast("Сначала заполни хотя бы одну категорию", true); return; }
+  const sent = JSON.stringify(pmGetEdit(k));
+  const msg = document.getElementById("pmas" + strHash(k));
   try {
-    toast(send ? "📤 Отправляю…" : "💾 Сохраняю…");
+    if (!auto) toast("💾 Сохраняю…"); else if (msg) msg.textContent = "сохраняю…";
     const r = await wp(p, 45000);
-    pmSetEdit(k, null);
-    if (!c.it || !c.it.id){ state.pmOpen = state.pmOpen || {}; if (state.pmOpen[k]){ delete state.pmOpen[k]; state.pmOpen[r.id] = true; } }
-    toast(send ? "📤 Отправлено смотрящему ✓" : "💾 Сохранено ✓");
-    await loadPM();
+    // запись в памяти — без перезагрузки списка, чтобы не мешать набору
+    const pm = state.pm; pm.items = pm.items || [];
+    let it = c.it && c.it.id ? pm.items.find(x=>x.id===c.it.id) : null;
+    if (!it){ it = { id: r.id, base: r.base || "", city: r.city || "", week: r.week || pm.week, producer: r.producer || "", note: "", created: r.updated }; pm.items.push(it); }
+    Object.assign(it, { nick: v.nick, opName: v.opname, model: v.model, linksTxt: v.links, comment: v.comment, cats: v.cats.slice(), rev: r.rev, status: r.status, updated: r.updated, who: r.who || it.who });
+    if (JSON.stringify(pmGetEdit(k)) === sent) pmSetEdit(k, null); // пока сохраняли, продолжили печатать — черновик оставляем
+    if (msg) msg.textContent = pmDirty(k) ? "есть несохранённое — сохранится само" : "✓ сохранено " + new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}) + " · смотрящий видит";
+    if (!auto){ toast("💾 Сохранено — смотрящий уже видит ✓"); }
+    softRender();
     return r;
-  } catch(e){ toast("Не сохранилось: " + e.message + " (текст остался в черновике)", true); }
+  } catch(e){
+    if (msg) msg.textContent = "⚠ не сохранилось: " + e.message;
+    if (/уже изменил/.test(e.message)) state.pmNoAuto = Object.assign(state.pmNoAuto||{}, { [k]: true });
+    if (!auto || /уже изменил|нет доступа|принята/.test(e.message)) toast("Не сохранилось: " + e.message + " (текст остался в черновике)", true);
+  }
+}
+// автосохранение продюсера: через 2,5 с тишины после ввода; по одной отправке на карточку
+const _pmAutoT = {}, _pmBusy = {}, _pmAgain = {};
+function pmAutoSave(k){
+  if (!AUTH.prod || viewAsActive() || (state.pmNoAuto||{})[k]) return;
+  clearTimeout(_pmAutoT[k]);
+  _pmAutoT[k] = setTimeout(async function run(){
+    if (_pmBusy[k]){ _pmAgain[k] = true; return; }
+    if (!pmDirty(k)) return;
+    _pmBusy[k] = true;
+    try { await pmSave(k, true); } finally { _pmBusy[k] = false; }
+    if (_pmAgain[k]){ _pmAgain[k] = false; run(); }
+  }, 2500);
 }
 async function pmEnsureId(k){ // для скрина нужна запись — новую карточку сначала сохраняем
   const c = pmFindCard(k); if (!c) return null;
@@ -3385,6 +3463,7 @@ function pmBind(){
       const saved = pmFormVals(k, got.c.it, got.c.br); state.pmEdits[k] = keep;
       const same = ["nick","opname","model","links","comment"].every(f=>String(saved[f]||"")===String(d[f]||"")) && saved.cats.every((x,j)=>String(x||"")===String(d["f"+j]||""));
       pmSetEdit(k, same ? null : d);
+      if (!same && card.querySelector("[data-pmsave]") && AUTH.prod) pmAutoSave(k); // v6.1: сохраняется само
     });
     card.addEventListener("paste", ev=>{
       const items = (ev.clipboardData && ev.clipboardData.items) ? [...ev.clipboardData.items] : [];
@@ -3400,8 +3479,7 @@ function pmBind(){
   const ws = document.getElementById("pm-week"); if (ws) ws.onchange = ()=>{ state.pmOpen = {}; loadPM({ week: ws.value }); };
   const ps = document.getElementById("pm-prod"); if (ps) ps.onchange = ()=>{ state.pmProd = ps.value; render(); };
   const rl = document.getElementById("pm-reload"); if (rl) rl.onclick = ()=>loadPM();
-  box.querySelectorAll("[data-pmsave]").forEach(b=>b.onclick=()=>pmSave(b.dataset.pmsave, false));
-  box.querySelectorAll("[data-pmsend]").forEach(b=>b.onclick=()=>pmSave(b.dataset.pmsend, true));
+  box.querySelectorAll("[data-pmsave]").forEach(b=>b.onclick=()=>{ clearTimeout(_pmAutoT[b.dataset.pmsave]); pmSave(b.dataset.pmsave, false); });
   box.querySelectorAll("[data-pmhide]").forEach(b=>b.onclick=async ()=>{
     const c = pmFindCard(b.dataset.pmhide); if (!c) return;
     const del = !!b.dataset.del;
@@ -3479,13 +3557,17 @@ function pmBlockFor(r){
   if (!it) return "";
   const d = pmDiff(it.cats, rowStats(r).st);
   const nd = d.miss.length + d.strict.length;
-  return `<div class="drow"><b>📋 Мониторинг продюсера</b><span><span class="ptag ${PM_ST_CLS[it.status]||""}">${esc(PM_ST_LBL[it.status]||it.status)}</span> ${nd ? `<span class="ptag pt-bad">≠ ${nd}: ${esc(d.miss.concat(d.strict).map(j=>CATS[j]).join(", "))}</span>` : (pmChecked(it) ? '<span class="ptag pt-ok">оценки совпадают</span>' : "")} <button class="abtn2" data-pmgo="${esc(it.id)}">открыть</button></span></div>`;
+  const txt = CATS.map((n,j)=>{ const t = String((it.cats||[])[j]||"").trim(); if (!t) return ""; const st = catState(t); const m = d.miss.includes(j) ? ' style="color:var(--bad)"' : d.strict.includes(j) ? ' style="color:var(--warn)"' : "";
+    return `<div${m}><b>${st==="ok"?"✅":st==="bad"?"❌":"·"} ${esc(n)}:</b> <span class="utext">${esc(t)}</span></div>`; }).join("") + (String(it.comment||"").trim() ? `<div><b>💬</b> <span class="utext">${esc(it.comment)}</span></div>` : "");
+  const nScr = ((state.pm.screens||{})["PM|" + it.id] || []).length;
+  return `<div class="drow"><b>📋 Мониторинг продюсера${it.who ? " · " + esc(it.who) : ""}${it.updated ? " · " + esc(fmtDay(it.updated)) : ""}</b><span>${txt ? `<div style="font-size:12.5px;margin-bottom:6px">${txt}</div>` : ""}${nScr ? `<span style="color:var(--faint);font-size:11.5px">📸 скринов: ${nScr} · </span>` : ""}<span class="ptag ${PM_ST_CLS[it.status]||""}">${esc(pmStLbl(it.status))}</span> ${nd ? `<span class="ptag pt-bad">≠ ${nd}: ${esc(d.miss.concat(d.strict).map(j=>CATS[j]).join(", "))}</span>` : (pmChecked(it) ? '<span class="ptag pt-ok">оценки совпадают</span>' : "")} <button class="abtn2" data-pmgo="${esc(it.id)}">открыть</button></span></div>`;
 }
 document.addEventListener("click", ev=>{
   const b = ev.target && ev.target.closest ? ev.target.closest("[data-pmgo]") : null;
   if (!b) return;
   ev.stopPropagation();
-  state.pmOpen = state.pmOpen || {}; state.pmOpen[b.dataset.pmgo] = true; state.pmFilter = "all"; state.pmProd = "";
+  const it0 = ((state.pm||{}).items||[]).find(x=>x.id===b.dataset.pmgo);
+  state.pmOpen = state.pmOpen || {}; state.pmOpen[it0 ? pmCardKey(it0) : b.dataset.pmgo] = true; state.pmFilter = "all"; state.pmProd = "";
   switchTab(PM_TAB_ED);
 }, true);
 // общий кодировщик скрина (тот же, что у основной загрузки): оригинал до 2560 px и < 5,5 МБ + мини 480 px
