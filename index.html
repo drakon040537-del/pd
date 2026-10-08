@@ -831,7 +831,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-08.69"
+  VER: "2026-10-08.70"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -941,6 +941,8 @@ function normNeg(s){
 // кнопка ❌: пометить поле замечанием (текст сохраняется, «✅ всё хорошо» убирается)
 function markBad(v){ const t = String(v||"").replace(/^\s*✅\s*(всё хорошо|все хорошо)?\s*/i, "").replace(/^\s*❌\s*/, ""); return "❌ " + t; }
 function focusEnd(ta){ try { ta.focus(); const n = ta.value.length; ta.setSelectionRange(n, n); } catch(e){} }
+// v6.9: продюсеру название компании не показываем нигде — только смотрящему и директору
+function coLbl(c){ return AUTH.prod ? "" : clabel(c); }
 function catState(t){
   const s = normNeg((t||"").trim());
   if (!s) return null;
@@ -1588,7 +1590,7 @@ function renderMain(){
     <div style="color:var(--faint);font-size:11.5px;margin-top:4px">прогресс проверки: ${checkedN} из ${rows.length} (${Math.round(checkedN/rows.length*100)}%)</div>` : "";
 
   const prods = [...new Set(rows.map(r=>r.producer).filter(Boolean))].sort();
-  const sel = `<select id="f-prod"><option value="">все продюсеры</option>${prods.map(p=>`<option ${state.producer===p?"selected":""}>${esc(p)}</option>`).join("")}</select>`;
+  const sel = `<select id="f-prod"${AUTH.prod ? ' style="display:none"' : ""}><option value="">все продюсеры</option>${prods.map(p=>`<option ${state.producer===p?"selected":""}>${esc(p)}</option>`).join("")}</select>`;
 
   // динамика плиток против предыдущей недели (когда выбрана конкретная неделя)
   let tileDelta = {};
@@ -1937,7 +1939,7 @@ function renderMain(){
         </div>
         <div class="aibox" id="aibox${key}" style="display:none"></div>`
         : roNote + teamTools + `<div class="dgrid">${readDet}${pmBlk}</div>`;
-      const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(clabel(x.r.city))}${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
+      const cityCell = (state.tab==="Обзор"||state.search) && !AUTH.prod ? `<td style="color:var(--dim)">${esc(clabel(x.r.city))}${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
         ? `<div class="score-cell"><span class="num ${scoreCls(x.s.score)}">${x.s.score}/${MAX_SCORE}</span><div class="sbar"><div class="sfill ${scoreFill(x.s.score)}" style="width:${(x.s.score*100/MAX_SCORE).toFixed(1)}%"></div></div></div>`
@@ -1950,18 +1952,18 @@ function renderMain(){
       })();
       const mk = markOf(x.r);
       return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"${mk && mk.c ? ` style="box-shadow:inset 4px 0 0 ${esc(mk.c)}"` : ""}><td>${teamBadges(x.r)}${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${canEdit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns"><span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
-      <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?9:8}"><div class="detail-in">${inner}</div></td></tr>`;
+      <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search) && !AUTH.prod?9:8}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}" style="border-left:4px solid ${esc(state.colors[g.producer]||"#566070")}">
       <div class="phead" data-g="${gkeyEsc}">
         <span class="cdot" data-prod="${esc(g.producer)}" style="background:${esc(state.colors[g.producer]||"#566070")}"></span>
         <span class="arrow">${open?"▾":"▸"}</span><b>${esc(g.producer)}</b>
         <div class="gauge" title="нормально: ${g.ok} · есть замечания: ${g.warn} · критично: ${g.bad}${g.none?" · не проверено: "+g.none:""}">${g.ok?`<i style="width:${Math.round(g.ok*100/g.items.length)}%;background:var(--ok)"></i>`:""}${g.warn?`<i style="width:${Math.round(g.warn*100/g.items.length)}%;background:var(--warn)"></i>`:""}${g.bad?`<i style="width:${Math.round(g.bad*100/g.items.length)}%;background:var(--bad)"></i>`:""}</div>
-        ${(state.tab==="Обзор"||state.search)?`<span style="color:var(--faint);font-size:11.5px">${esc(clabel(g.city))}</span>`:""}
+        ${(state.tab==="Обзор"||state.search) && !AUTH.prod?`<span style="color:var(--faint);font-size:11.5px">${esc(clabel(g.city))}</span>`:""}
         <span class="tag">${g.ok?`<span class="ptag pt-ok">🟢 ${g.ok}</span>`:""}${g.warn?`<span class="ptag pt-warn">🟡 ${g.warn}</span>`:""}${g.bad?`<span class="ptag pt-bad">🔴 ${g.bad}</span>`:""}${g.none?`<span style="color:var(--faint);font-size:11px">не проверено: ${g.none}</span>`:""}</span>
         ${AUTH.edit?`<button class="gbtn planbtn" data-plan="${gkeyEsc}" title="план работ">📝 план</button><button class="gbtn addg" data-addg="${gkeyEsc}" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":"title=\"добавить мониторинг этому продюсеру (неделя "+esc(openWeekName())+")\""}>＋ мониторинг</button><button class="gbtn delbtn" data-del="${gkeyEsc}" ${weekPinned()?"disabled title=\"сначала выбери конкретную неделю\"":"title=\"удалить команду (неделя "+esc(openWeekName())+")\""}>🗑 удалить</button>`:""}
       </div>
-      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search)?"<th>Компания</th>":""}<th>Ссылки</th><th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      <div class="pbody"><table><thead><tr><th>Опер</th><th>Модель</th>${(state.tab==="Обзор"||state.search) && !AUTH.prod?"<th>Компания</th>":""}<th>Ссылки</th><th>Оценка</th><th>Вердикт</th><th class="pcol">Проверено</th><th>Статус</th><th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
   }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "")
     : `<div class="empty">${esc(emptyReason())}</div>`;
@@ -2796,7 +2798,7 @@ function renderMyTasks(){
   const rowHtml = t=>`<div class="card" style="margin-bottom:10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
       <b>${esc(t.nick||"—")} / ${esc(t.model||"—")}</b>
-      <span style="color:var(--faint);font-size:11.5px">${esc(clabel(t.city||""))} · ${esc(t.producer||"—")}</span>
+      ${AUTH.prod ? "" : `<span style="color:var(--faint);font-size:11.5px">${esc(clabel(t.city||""))} · ${esc(t.producer||"—")}</span>`}
       <span class="ptag ${t.status==="сделана"?"pt-ok":"pt-warn"}">${t.status==="сделана"?"✅ сделано "+esc(t.done||""):"📌 в работе"}</span>
     </div>
     <div style="white-space:pre-wrap;font-size:13px;margin:4px 0 8px">${esc(t.text)}</div>
@@ -3383,7 +3385,7 @@ function renderProdReviews(rows){
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <b>${teamBadges(r)}${esc(r.opName||r.opNick||"—")} / ${esc(r.model||"—")}</b>
-        <span style="color:var(--faint);font-size:11.5px">${esc(clabel(r.city))}${r.week?" · "+esc(r.week):""}</span>
+        <span style="color:var(--faint);font-size:11.5px">${[coLbl(r.city), r.week || ""].filter(Boolean).map(esc).join(" · ")}</span>
         ${s.verdict?`<span class="ptag ${vcls}">${esc(VLBL[s.verdict]||s.verdict)}</span>`:`<span class="ptag">не проверено</span>`}
         ${s.score!==null?`<span style="font-size:12px;color:var(--dim)">${s.score}/${MAX_SCORE}</span>`:""}
         <span style="margin-left:auto;color:var(--faint);font-size:11.5px">${r.updated?"проверено: "+esc(fmtDay(r.updated)):"ещё не проверялась"}</span>
@@ -3538,7 +3540,7 @@ function pmCardHtml(c, canEdit, isEd){
   const title = (v.opname || v.nick || "—") + " / " + (v.model || "—");
   const scr = it && it.id ? ((state.pm.screens||{})["PM|" + it.id] || []) : [];
   const fillTag = it && it.status === "скрыта" ? '<span class="ptag">скрыта</span>' : pmFillTag(v.cats);
-  const sub = esc(clabel((it && it.city) || (br && br.city) || "")) + (isEd && it ? " · " + esc(it.producer) : "") + (!c.baseKey && !(it && it.base) ? " · ＋ своя" : "");
+  const sub = [coLbl((it && it.city) || (br && br.city) || ""), isEd && it ? it.producer : "", !c.baseKey && !(it && it.base) ? "＋ своя команда" : ""].filter(Boolean).map(esc).join(" · ");
   // v6.8: строка как в таблице смотрящего — отдельные колонки, клик раскрывает разбор под строкой
   const head = `<div class="pmhead pmrow${open ? " on" : ""}" data-pmk="${esc(k)}" title="${open ? "свернуть" : "открыть разбор"}">
       <span class="pmc-car">${open ? "▾" : "▸"}</span>
@@ -3659,7 +3661,8 @@ function renderPM(){
   const prodSel = isEd ? `<select id="pm-prod" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px"><option value="">все продюсеры</option>${[...new Set(items.map(i=>i.producer))].sort().map(p=>`<option ${state.pmProd===p?"selected":""}>${esc(p)}</option>`).join("")}</select>` : "";
   const addForm = canWrite ? `<details id="pm-add" style="margin-top:8px"><summary style="cursor:pointer">＋ добавить команду</summary>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <select id="pma-city" style="background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px">${(AUTH.cities.includes("all") ? CITY_ORDER : AUTH.cities.filter(c=>CITY_ORDER.includes(c))).map(c=>`<option value="${esc(c)}">${esc(clabel(c))}</option>`).join("")}</select>
+        ${(()=>{ const cs = AUTH.cities.includes("all") ? CITY_ORDER : AUTH.cities.filter(c=>CITY_ORDER.includes(c)); /* одна компания — выбирать нечего, поле скрыто */
+          return `<select id="pma-city" style="${cs.length < 2 ? "display:none;" : ""}background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px">${cs.map((c,i)=>`<option value="${esc(c)}">${esc(AUTH.prod ? "компания " + (i + 1) : clabel(c))}</option>`).join("")}</select>`; })()}
         <input id="pma-nick" placeholder="ник опера" style="flex:1;min-width:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
         <input id="pma-op" placeholder="опер" style="flex:1;min-width:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
         <input id="pma-model" placeholder="модель" style="flex:1;min-width:110px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px">
@@ -4432,7 +4435,7 @@ async function askSend(baseKey, text){
 function asksHtml(list, forEditor){
   if (!list || !list.length) return "";
   return list.map(a=>`<div class="drow" style="align-items:flex-start"><b>${a.status==="сделано"?"✅":"👀"} ${esc(a.nick||"—")} / ${esc(a.model||"—")}</b>
-    <span><span style="color:var(--faint);font-size:11.5px">${esc(clabel(a.city))}${forEditor ? " · " + esc(a.producer) : ""} · ${esc(a.when)}</span><br><span class="utext">${esc(a.text)}</span>
+    <span><span style="color:var(--faint);font-size:11.5px">${[coLbl(a.city), forEditor ? a.producer : "", a.when].filter(Boolean).map(esc).join(" · ")}</span><br><span class="utext">${esc(a.text)}</span>
     ${a.answer ? `<div style="margin-top:4px;color:var(--ok)">↩ ${esc(a.by||"смотрящий")}: <span class="utext">${esc(a.answer)}</span></div>` : ""}
     ${forEditor && a.status !== "сделано" ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="abtn2" data-askgo="${esc(a.key)}">открыть команду</button><input data-askans="${esc(a.id)}" style="flex:1;min-width:160px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px" placeholder="ответ продюсеру (необязательно)"><button class="abtn2" data-askdone="${esc(a.id)}">✅ посмотрел</button></div>` : ""}</span></div>`).join("");
 }
@@ -4531,7 +4534,7 @@ function renderNotes(kind){
     const col = state.colors[r.producer] || "#566070";
     const nid = "n" + (kind==="check"?"c":"r") + Math.abs([...key].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7));
     return `<div class="card" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="cdot" style="background:${esc(col)}"></span><b>${esc(r.producer)}</b><span style="color:var(--faint);font-size:11.5px">${esc(clabel(r.city))}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="cdot" style="background:${esc(col)}"></span><b>${esc(r.producer)}</b>${AUTH.prod ? "" : `<span style="color:var(--faint);font-size:11.5px">${esc(clabel(r.city))}</span>`}</div>
       ${AUTH.edit
         ? `<textarea id="${nid}" data-orig="${esc(val)}" style="width:100%;min-height:120px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:13px;box-sizing:border-box" placeholder="${kind==="check"?"план повышения чека для команды…":"общие рекомендации для команды…"}">${esc(val)}</textarea>
            <button class="abtn2 notebtn" data-nid="${nid}" data-sheet="${sheetName}" data-key="${esc(key)}" data-kind="${kind}" style="margin-top:6px">💾 Сохранить</button>`
