@@ -1,7 +1,7 @@
 // Обновление 6 (10): service worker — кэширует ТОЛЬКО статическую оболочку сайта.
 // Ответы API (script.google.com / googleusercontent), токены, POST и любые запросы с параметрами не кэшируются никогда.
 // Пути относительные — работает на GitHub Pages под /pd/.
-const SHELL_VER = "shell-2026-10-08.62";
+const SHELL_VER = "shell-2026-10-08.65";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(SHELL_VER).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

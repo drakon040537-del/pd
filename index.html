@@ -599,7 +599,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-08.62"
+  VER: "2026-10-08.65"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -607,14 +607,17 @@ try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше �
 
 // Пароль больше нигде не хранится и не пересылается: при входе сервер выдаёт токен сессии,
 // дальше все запросы ходят с token. Токен живёт 7 дней, продлевается при активности.
+// v6.5: чтение localStorage не должно ронять весь сайт (приватный режим/запрет хранилища во встроенных браузерах)
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsJson(k, def){ try { const v = JSON.parse(lsGet(k) || "null"); return v == null ? def : v; } catch(e){ return def; } }
 const AUTH = {
-  user: localStorage.getItem("dash_user") || "",
-  token: localStorage.getItem("dash_token") || "",
-  name: localStorage.getItem("dash_name") || "",
-  edit: localStorage.getItem("dash_edit") === "1",
-  cities: JSON.parse(localStorage.getItem("dash_cities") || "null") || [],
-  prod: localStorage.getItem("dash_prod") === "1",
-  admin: localStorage.getItem("dash_admin") === "1", // Обновление 6: админ (ADMIN_LOGINS на сервере) — только для показа меню; права проверяет сервер
+  user: lsGet("dash_user") || "",
+  token: lsGet("dash_token") || "",
+  name: lsGet("dash_name") || "",
+  edit: lsGet("dash_edit") === "1",
+  cities: lsJson("dash_cities", []),
+  prod: lsGet("dash_prod") === "1",
+  admin: lsGet("dash_admin") === "1", // Обновление 6: админ (ADMIN_LOGINS на сервере) — только для показа меню; права проверяет сервер
   ok(){ return !!(this.user && this.token); },
   set(u,tok,edit,cities,name){ this.user=u; this.token=tok; this.edit=edit; this.cities=cities; this.name=name||u;
     try{ localStorage.setItem("dash_user",u); localStorage.setItem("dash_token",tok);
@@ -829,7 +832,21 @@ function rk(r){ return skey(r) + "#" + r._row; }
 const dKey = r => "draft2:" + rk(r);
 const dKeyOld = r => "draft:" + r._sheet + ":" + r._row; // формат до v41 (без ключа команды)
 let _dc = null; // кэш черновиков на одну перерисовку (F3)
-function draftCacheReset(){ _dc = null; }
+let _dcIdx = null; // v6.5: ключи черновиков «draft2:<команда>#…» — одним проходом по localStorage на перерисовку (раньше — проход на КАЖДУЮ строку)
+function draftCacheReset(){ _dc = null; _dcIdx = null; }
+function draftIndex(){
+  if (_dcIdx) return _dcIdx;
+  _dcIdx = {};
+  try {
+    for (let i=0;i<localStorage.length;i++){
+      const kk = localStorage.key(i); if (!kk || kk.indexOf("draft2:") !== 0) continue;
+      const p = kk.lastIndexOf("#"); if (p < 0) continue;
+      const sk = kk.slice(7, p);
+      (_dcIdx[sk] = _dcIdx[sk] || []).push(kk);
+    }
+  } catch(e){}
+  return _dcIdx;
+}
 function getDraft(r){
   const k = rk(r);
   if (_dc && k in _dc) return _dc[k];
@@ -841,9 +858,7 @@ function getDraft(r){
       const old = localStorage.getItem(dKeyOld(r));
       if (old){ const x = JSON.parse(old); if (x){ x.__legacy = 1; d = x; } }
       else {
-        const pref = "draft2:" + skey(r) + "#";
-        const cand = [];
-        for (let i=0;i<localStorage.length;i++){ const kk = localStorage.key(i); if (kk && kk.indexOf(pref) === 0) cand.push(kk); }
+        const cand = (draftIndex()[skey(r)] || []).filter(kk=>kk !== dKey(r));
         if (cand.length === 1 && realRows().filter(x=>skey(x)===skey(r)).length === 1){
           const x = JSON.parse(localStorage.getItem(cand[0]) || "null");
           if (x && (!x.u || x.u === AUTH.user)){ localStorage.setItem(dKey(r), JSON.stringify(x)); localStorage.removeItem(cand[0]); d = x; }
@@ -2790,7 +2805,8 @@ function renderStatus(){
     ${!d ? '<div class="empty">загружаю…</div>' : `
     <div class="aidgrid">
       <div class="aidcol"><h3>Сегодня (приблизительно, кэш ≤ 6 ч)</h3><table class="shtable">
-        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}${kv("автообновлений без изменений (v6)", d.counters.readsame||0)}
+        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}${kv("автообновлений без изменений (v6)", d.counters.readsame||0)}${kv("снимок: собран / поправлен", (d.counters.snapbuild||0) + " / " + (d.counters.snappatch||0))}${kv("миниатюр из кэша сервера", d.counters.thumbhit||0)}${kv("ускорение (снимок)", d.snap ? (d.snap.on ? "включено" : "выключено (SNAP_OFF)") + (d.snap.warm === true ? " · прогрев раз в минуту" : d.snap.warm === false ? " · прогрев не включён" : "") : "—")}
+        ${Object.keys(d.times||{}).length ? `<tr><td colspan="2" style="padding-top:8px;color:var(--faint)">⏱ среднее время ответа сервера сегодня</td></tr>` + Object.keys(d.times).map(k=>kv({"read:snap":"чтение из снимка","read:build":"чтение со сборкой","read:same":"автообновление «без изменений»","snapbuild":"сборка снимка","save":"сохранение разбора","touch":"«проверено сегодня»","upload":"загрузка скрина","thumbs":"миниатюры","pmsave":"мониторинг продюсера: сохранение","pmread":"мониторинг продюсера: чтение","pmupload":"мониторинг продюсера: скрин","ping":"уведомления","auth":"вход"}[k]||k, (d.times[k].avg/1000).toFixed(2) + " с · " + d.times[k].n + " раз")).join("") : ""}
         ${kv("вызовов ИИ", d.counters.ai)}${kv("UrlFetch (ИИ + Drive)", d.counters.urlfetch + " из ~20 000/сутки")}${kv("провайдер ИИ", esc(d.aiProvider))}${kv("сессий", d.sessions)}
         ${kv("Script Properties", d.propsSizeKB + " КБ из " + d.propsLimitKB + " КБ")}${kv("USERS_JSON", d.usersSize + " симв. из ~9000" + (d.userChunks?" + кусков: "+d.userChunks:""))}</table></div>
       <div class="aidcol"><h3>Свойства скрипта (только наличие)</h3><table class="shtable">${Object.keys(d.props).map(k=>kv(k, yes(d.props[k]))).join("")}</table>
@@ -3171,7 +3187,7 @@ async function loadPM(opts){
   const week = opts.week !== undefined ? opts.week : (pm.week || "");
   pm.loading = wp({ action:"pmread", week: week }, 60000).then(r=>{
     pm.week = r.week; pm.latest = r.latest; pm.weeks = r.weeks || []; pm.items = r.items || []; pm.screens = r.screens || {};
-    pm.editable = !!r.editable; pm.err = ""; pm.at = Date.now();
+    pm.editable = !!r.editable; pm.err = ""; pm.at = Date.now(); state.pmNoAuto = {}; // свежие данные — автосохранение снова можно
     pmBadgeFromItems();
   }).catch(e=>{ pm.err = e.message; }).finally(()=>{ pm.loading = null; if (!opts.quiet || pmIsTab(state.tab)) softRender(); });
   return pm.loading;
@@ -3398,23 +3414,28 @@ async function pmSave(k, auto){
     if (!auto || /уже изменил|нет доступа|принята/.test(e.message)) toast("Не сохранилось: " + e.message + " (текст остался в черновике)", true);
   }
 }
-// автосохранение продюсера: через 2,5 с тишины после ввода; по одной отправке на карточку
+// автосохранение продюсера: через 2,5 с тишины после ввода. ВСЕ сохранения карточки (авто, кнопка, перед скрином)
+// идут строго по очереди — иначе два запроса с одной версией записи дают ложный конфликт или двойное создание.
 const _pmAutoT = {}, _pmBusy = {}, _pmAgain = {};
+function pmSaveQueued(k, auto){ // → Promise ответа последнего сохранения
+  clearTimeout(_pmAutoT[k]);
+  const prev = _pmBusy[k] || Promise.resolve();
+  const next = prev.catch(()=>{}).then(()=> (auto && !pmDirty(k)) ? null : pmSave(k, auto));
+  _pmBusy[k] = next;
+  next.finally(()=>{ if (_pmBusy[k] === next) delete _pmBusy[k]; });
+  return next;
+}
 function pmAutoSave(k){
   if (!AUTH.prod || viewAsActive() || (state.pmNoAuto||{})[k]) return;
   clearTimeout(_pmAutoT[k]);
-  _pmAutoT[k] = setTimeout(async function run(){
-    if (_pmBusy[k]){ _pmAgain[k] = true; return; }
-    if (!pmDirty(k)) return;
-    _pmBusy[k] = true;
-    try { await pmSave(k, true); } finally { _pmBusy[k] = false; }
-    if (_pmAgain[k]){ _pmAgain[k] = false; run(); }
-  }, 2500);
+  _pmAutoT[k] = setTimeout(()=>{ pmSaveQueued(k, true); }, 2500);
 }
-async function pmEnsureId(k){ // для скрина нужна запись — новую карточку сначала сохраняем
+function pmPending(){ return Object.keys(_pmBusy).length + Object.keys(state.pmEdits||{}).filter(k=>state.pmEdits[k]).length; }
+async function pmEnsureId(k){ // для скрина нужна запись — новую карточку сначала сохраняем (в общей очереди сохранений)
+  if (_pmBusy[k]) await _pmBusy[k].catch(()=>{});
   const c = pmFindCard(k); if (!c) return null;
   if (c.it && c.it.id) return c.it.id;
-  const r = await pmSave(k, false);
+  const r = await pmSaveQueued(k, false);
   return r && r.id;
 }
 // v6.2: скрины мониторинга идут через то же окно «📷 Фото», что и у смотрящего (Ctrl+V, перетаскивание пачкой, камера, разметка)
@@ -3479,7 +3500,7 @@ function pmBind(){
   const ws = document.getElementById("pm-week"); if (ws) ws.onchange = ()=>{ state.pmOpen = {}; loadPM({ week: ws.value }); };
   const ps = document.getElementById("pm-prod"); if (ps) ps.onchange = ()=>{ state.pmProd = ps.value; render(); };
   const rl = document.getElementById("pm-reload"); if (rl) rl.onclick = ()=>loadPM();
-  box.querySelectorAll("[data-pmsave]").forEach(b=>b.onclick=()=>{ clearTimeout(_pmAutoT[b.dataset.pmsave]); pmSave(b.dataset.pmsave, false); });
+  box.querySelectorAll("[data-pmsave]").forEach(b=>b.onclick=()=>{ if (state.pmNoAuto) delete state.pmNoAuto[b.dataset.pmsave]; pmSaveQueued(b.dataset.pmsave, false); });
   box.querySelectorAll("[data-pmhide]").forEach(b=>b.onclick=async ()=>{
     const c = pmFindCard(b.dataset.pmhide); if (!c) return;
     const del = !!b.dataset.del;
@@ -5244,6 +5265,8 @@ async function load(opts){
 window.addEventListener("beforeunload", e=>{
   // D10: предупреждаем и пока отправка не подтверждена сервером (очередь/в пути/упавшие)
   if (pendingWrites()) flushAllSaves();
+  // v6.4: мониторинг продюсера — недописанное сохраняем сразу и предупреждаем, пока запрос в пути
+  try { Object.keys(state.pmEdits||{}).forEach(k=>{ if (state.pmEdits[k] && AUTH.prod && !viewAsActive()) pmSaveQueued(k, true); }); if (typeof pmPending === "function" && pmPending()){ e.preventDefault(); e.returnValue = ""; } } catch(err){}
   if (anyDirty() || pendingWrites() || Object.keys(state.failedSaves||{}).length){ e.preventDefault(); e.returnValue = ""; }
 });
 // сторожевой таймер: заставка не может висеть вечно (мягко, без красной паники)
@@ -5275,7 +5298,7 @@ async function pingNotif(){
       updateSugBadge(r.myAnswers||0);
       // v6: бейдж мониторинга продюсера (продюсеру — возвраты, смотрящему — ждут проверки)
       const nb = AUTH.prod ? (r.pmReturned||0) : (r.pmSent||0);
-      if (nb !== (state.pmBadge||0)){ state.pmBadge = nb; if (pmIsTab(state.tab)) loadPM({ quiet: true }); else softRender(); }
+      if (nb !== (state.pmBadge||0)){ state.pmBadge = nb; softRender(); if (pmIsTab(state.tab)) loadPM({ quiet: true }); } // бейдж — сразу, список — следом
     }
   } catch(e){}
 }
