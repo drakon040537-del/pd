@@ -12,7 +12,9 @@
 <link rel="preconnect" href="https://script.google.com">
 <link rel="dns-prefetch" href="https://script.google.com">
 <title>Мониторинг</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='#6aa6ff'/%3E%3Cstop offset='1' stop-color='#3a63d8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='112' fill='url(#a)'/%3E%3Crect x='112' y='300' width='58' height='104' rx='14' fill='#fff' opacity='.55'/%3E%3Crect x='196' y='236' width='58' height='168' rx='14' fill='#fff' opacity='.75'/%3E%3Crect x='280' y='172' width='58' height='232' rx='14' fill='#fff'/%3E%3Ccircle cx='372' cy='150' r='46' fill='#3ecf8e' stroke='#fff' stroke-width='14'/%3E%3Cpath d='M352 150l14 14 26-28' fill='none' stroke='#fff' stroke-width='13' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="shortcut icon" href="favicon.ico">
 <style>
   :root{
     --bg:#14161a; --panel:#1c1f25; --panel2:#22262d; --line:#2e333c;
@@ -408,6 +410,12 @@
     #tabs .tab>span:first-child,#tabs .ritem>span:first-child{width:22px;height:22px;flex-basis:22px;font-size:12px;border-radius:6px}
     .rsect{display:none} .rghead{margin-top:4px;padding:4px 6px}
   }
+  .aib{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .aib-hint{color:var(--faint);font-size:12px;margin:6px 0}
+  .aib-list{max-height:320px;overflow:auto;display:flex;flex-direction:column;gap:3px;margin-top:6px}
+  .aib-row{display:grid;grid-template-columns:auto minmax(120px,220px) 1fr;gap:10px;align-items:center;font-size:12.5px;padding:4px 0;border-top:1px solid var(--line)}
+  .aib-row.skip{opacity:.6} .aib-row small{display:block;color:var(--faint);font-size:11.5px}
+  @media(max-width:700px){.aib-row{grid-template-columns:auto 1fr}.aib-row span{grid-column:1/-1}}
   .ucities{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
   .ucities label{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;white-space:nowrap}
   .ucities input{width:auto;margin:0}
@@ -823,7 +831,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-08.68"
+  VER: "2026-10-08.69"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -1599,7 +1607,7 @@ function renderMain(){
     }
   }
   document.getElementById("content").innerHTML = `
-    ${(CITY_ORDER.includes(state.tab) && AUTH.edit) ? `<div class="card" style="margin:0 0 10px"><b>🤖 по компании:</b> <button class="abtn2" id="aisum">что горит</button> <button class="abtn2" id="aigrp">сгруппировать замечания недели</button> <button class="abtn2" id="aibatch0">🤖 разобрать все непроверенные</button> <button class="abtn2" id="aibatch1">🤖 разобрать все проверенные</button> <div id="aisumout" style="margin-top:8px"></div></div>` : ""}
+    ${(CITY_ORDER.includes(state.tab) && AUTH.edit) ? `<div class="card" style="margin:0 0 10px"><b>🤖 по компании:</b> <button class="abtn2" id="aibatch0" title="ИИ смотрит скрины непроверенных команд и пишет черновики разбора по 9 категориям — в таблицу попадёт только после «Сохранить»">🤖 разобрать все непроверенные</button> <button class="abtn2" id="aibatch1" title="ИИ перепроверяет вердикт и тон комментария у проверенных команд — тоже черновиками">🤖 перепроверить все проверенные</button> <div id="aisumout" style="margin-top:8px">${aiBatchHtml()}</div></div>` : ""}
     ${state.tab==="Обзор" && AUTH.edit ? `<div class="card" style="margin:0 0 10px"><b>🤖 за неделю:</b> <button class="abtn2" id="aidelta">что изменилось с прошлой недели</button> <div id="aideltaout" style="margin-top:8px"></div></div>` : ""}
     <div class="tiles">
       <div class="tile"><div class="n">${withScore.length}</div><div class="l">команд проверено</div></div>
@@ -1659,86 +1667,58 @@ function renderMain(){
   }
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;state.page=1;render();};
   const fc = document.getElementById("f-compact"); if (fc) fc.onclick = ()=>setCompact(!document.body.classList.contains("compact"));
-  const aisum = document.getElementById("aisum");
-  if (aisum) aisum.onclick = async ()=>{
-    const out = document.getElementById("aisumout");
-    out.textContent = "🤖 ИИ думает… (до минуты)";
-    try {
-      const parts = ["компания: " + clabel(state.tab), "команд: " + rows.length,
-        "проверено: " + st.filter(x=>x.score!==null).length,
-        "норма: " + st.filter(x=>x.verdict==="норма").length,
-        "замечания: " + st.filter(x=>x.verdict==="замечание").length,
-        "критично: " + st.filter(x=>x.verdict==="критично").length,
-        "не проверено: " + st.filter(x=>x.score===null).length];
-      const bads = CATS.map((n,i)=>({n, c: rows.filter(r=>rowStats(r).st[i]==="bad").length})).filter(x=>x.c>0).sort((a,b)=>b.c-a.c).slice(0,5);
-      bads.forEach(b=>parts.push("плохих в «"+b.n+"»: "+b.c));
-      const res = await aiAsk("summary", { text: parts.join("; "), ckey: clabel(state.tab) + "|" + (state.week||"latest") + "|" + strHash(parts.join(";")) });
-      if (res.error) throw new Error(res.error);
-      out.innerHTML = "<ol style=\"margin:6px 0 0 18px\">" + res.lines.map(l=>"<li>"+esc(l)+"</li>").join("") + "</ol>";
-    } catch(e){ out.textContent = "🤖 " + e.message; }
-  };
-  const aigrp = document.getElementById("aigrp");
-  if (aigrp) aigrp.onclick = async ()=>{
-    const out = document.getElementById("aisumout");
-    out.textContent = "🤖 ИИ думает… (до минуты)";
-    try {
-      const lines = rows.map(r=>{ const s=rowStats(r); if (s.verdict!=="замечание"&&s.verdict!=="критично") return ""; 
-        return ((r.opName||r.opNick||"—")+"/"+(r.model||"—")+": "+r.cats.map((c,j)=>c?CATS[j]+" — "+c:"").filter(Boolean).join("; ") || s.verdict).slice(0, 160);
-      }).filter(Boolean).slice(0, 60);
-      if (!lines.length){ out.textContent = "🤖 замечаний за период нет"; return; }
-      const res = await aiAsk("weekgroup", { text: lines.join("\n").slice(0, 10000), ckey: clabel(state.tab) + "|" + (state.week||"latest") + "|" + strHash(lines.join("|")) });
-      if (res.error) throw new Error(res.error);
-      out.innerHTML = res.groups.map(g=>"<div>• <b>"+esc(g.title)+"</b> — "+esc(g.count)+" шт</div>").join("");
-    } catch(e){ out.textContent = "🤖 " + e.message; }
-  };
   // Обновление 7: батч-ИИ по компании. «Непроверенные» — черновик по скрину (если есть скрин); «проверенные» — авто-вердикт + тон комментария.
   // Результат только в черновики (localStorage): в таблицу уходит по «Сохранить». Последовательно, стоп на лимите ИИ (20/час на задачу).
   const runBatchAi = async (checkedOnly)=>{
-    const out = document.getElementById("aisumout");
+    if (state.aiBatch && state.aiBatch.running){ toast("Разбор уже идёт", true); return; }
     const teams = dedupeRows(rows).filter(r => r.opName || r.opNick || r.model);
     const target = teams.filter(r => checkedOnly ? rowStats(r).score !== null : rowStats(r).score === null);
-    if (!target.length){ out.textContent = checkedOnly ? "🤖 проверенных команд нет" : "🤖 непроверенных команд нет"; return; }
-    let done = 0, skip = 0, fail = 0;
+    const B = state.aiBatch = { city: state.tab, kind: checkedOnly ? "проверенные" : "непроверенные", running: true, stop: false, i: 0, n: target.length, items: [], skip: 0, fail: 0, msg: "" };
+    const paint = ()=>{ const o = document.getElementById("aisumout"); if (o) o.innerHTML = aiBatchHtml(); };
+    if (!target.length){ B.running = false; B.msg = checkedOnly ? "проверенных команд нет" : "непроверенных команд нет"; paint(); return; }
     for (let i = 0; i < target.length; i++){
-      const r = target[i];
-      out.textContent = "🤖 " + (checkedOnly ? "разбираю проверенные" : "разбираю непроверенные") + "… " + (i + 1) + " из " + target.length;
+      if (B.stop){ B.msg = "остановлено"; break; }
+      const r = target[i]; B.i = i + 1; paint();
+      const name = (r.opName || r.opNick || "—") + " / " + (r.model || "—"), go = r._sheet + "|" + r._row;
       try {
         if (!checkedOnly){
           const scr = aiPickScreen((state.screens || {})[skey(r)] || []);
           const id = scr ? driveId(scr.link || scr.mini || "") : "";
-          if (!id){ skip++; continue; }
+          if (!id){ B.skip++; B.items.push({ name, go, note: "нет скрина — пропущено", skip: 1 }); continue; }
           const res = await aiAsk("screendraft", { id: id, text: "", ckey: "batch|" + id });
           if (res.error) throw new Error(res.error);
           const d = getDraft(r) || {};
-          let n = 0;
+          const filled = [];
           (res.cats || []).forEach(it => {
             const v = aiDraftMerge(d["f" + it.i] || "", aiDraftText(it));
-            if (v !== (d["f" + it.i] || "").trim()){ d["f" + it.i] = v; n++; }
+            if (v !== (d["f" + it.i] || "").trim()){ d["f" + it.i] = v; filled.push((it.state === "bad" ? "❌ " : it.state === "ok" ? "✅ " : "") + CATS[it.i]); }
           });
-          if (n){ setDraft(r, d); done++; } else skip++;
+          if (filled.length){ setDraft(r, d); B.items.push({ name, go, note: "черновик: " + filled.length + " из 9 категорий", detail: filled.join(" · "), bad: (res.cats||[]).filter(c=>c.state==="bad").length }); }
+          else { B.skip++; B.items.push({ name, go, note: "ИИ ничего не добавил", skip: 1 }); }
         } else {
           const text = CATS.map((n,j)=>{ const v = (r.cats[j] || "").trim(); return v ? n + ": " + v : ""; }).filter(Boolean).join("; ").slice(0, 6000) + (r.obs ? "; доп: " + r.obs.slice(0, 500) : "");
-          if (!text.trim()){ skip++; continue; }
+          if (!text.trim()){ B.skip++; B.items.push({ name, go, note: "нет текста — пропущено", skip: 1 }); continue; }
           const res = await aiAsk("verdict", { text: text, ckey: skey(r) + "|batch|" + strHash(text) });
           if (res.error) throw new Error(res.error);
           const d = getDraft(r) || {};
-          if (["норма","замечание","критично"].includes(res.verdict)) d.verdict = res.verdict;
+          const was = rowStats(r).verdict, notes = [];
+          if (["норма","замечание","критично"].includes(res.verdict)){ d.verdict = res.verdict; notes.push(res.verdict === was ? "вердикт тот же: " + res.verdict : "вердикт: " + was + " → " + res.verdict); }
           if ((r.obs || "").trim()){
             try {
               const t = await aiAsk("tonecheck", { text: ("КОММЕНТАРИЙ: " + r.obs).slice(0, 8000), ckey: skey(r) + "|tone|" + strHash(r.obs) });
-              if (!t.error && t.rewritten) d.comment = t.rewritten;
+              if (!t.error && t.rewritten && t.rewritten.trim() !== r.obs.trim()){ d.comment = t.rewritten; notes.push("комментарий переписан мягче"); }
             } catch(e){}
           }
           setDraft(r, d);
-          done++;
+          B.items.push({ name, go, note: notes.join(" · ") || "без изменений", changed: notes.some(n=>/→|переписан/.test(n)) });
         }
       } catch(e){
         const m = String(e && e.message || e);
-        if (/лимит|исчерпан|429/.test(m)){ out.textContent = "🤖 стоп: " + m + " — обработано " + done + " из " + target.length + " (остальное — через час)"; return; }
-        fail++;
+        if (/лимит|исчерпан|429/.test(m)){ B.msg = "стоп: " + m + " — продолжи позже, уже сделанное сохранено в черновиках"; break; }
+        B.fail++; B.items.push({ name, go, note: "ошибка: " + m.slice(0, 80), skip: 1 });
       }
     }
-    out.innerHTML = "🤖 готово: обработано <b>" + done + "</b>" + (skip ? ", пропущено (нет скрина/текста) " + skip : "") + (fail ? ", ошибок " + fail : "") + ". Всё в черновиках — открой команду и жми «Сохранить в таблицу» (значки 📝 обновятся при следующей перерисовке).";
+    B.running = false; paint(); softRender();
   };
   const aib0 = document.getElementById("aibatch0");
   if (aib0) aib0.onclick = ()=>runBatchAi(false);
@@ -2399,6 +2379,24 @@ document.addEventListener("click", ev=>{
   if (opened && (!ev.target.closest || !ev.target.closest(".aimpop") || ev.target.closest(".aimpop button"))) setTimeout(()=>opened.classList.remove("open"), 0);
 }, true);
 document.addEventListener("keydown", ev=>{ if (ev.key === "Escape"){ const o = document.querySelector(".aimenu.open"); if (o) o.classList.remove("open"); } });
+// v6.9: результат пакетного ИИ-разбора — постоянная панель (переживает автообновление): что сделано по каждой команде
+function aiBatchHtml(){
+  const B = state.aiBatch; if (!B || B.city !== state.tab) return "";
+  const head = B.running ? `🤖 разбираю ${esc(B.kind)}… <b>${B.i} из ${B.n}</b> <button class="gbtn" data-aibstop="1">⏹ остановить</button>`
+    : `🤖 готово (${esc(B.kind)}): черновиков <b>${B.items.filter(x=>!x.skip).length}</b>${B.skip ? ", пропущено " + B.skip : ""}${B.fail ? ", ошибок " + B.fail : ""}${B.msg ? " · " + esc(B.msg) : ""}`;
+  const list = B.items.slice().reverse().map(x=>`<div class="aib-row${x.skip ? " skip" : ""}"><button class="gbtn" data-aibgo="${esc(x.go)}">открыть</button><b>${esc(x.name)}</b><span>${esc(x.note)}${x.detail ? `<small>${esc(x.detail)}</small>` : ""}</span></div>`).join("");
+  return `<div class="aib">${head}${!B.running && B.items.some(x=>!x.skip) ? ` <button class="abtn2" data-aibdrafts="1">📝 показать все черновики в таблице</button>` : ""} <button class="gbtn" data-aibx="1" title="скрыть отчёт (черновики останутся)">✕</button>
+    <div class="aib-hint">Ничего не записано в таблицу: это черновики. Открой команду, проверь и нажми «💾 Сохранить в таблицу».</div>
+    ${list ? `<div class="aib-list">${list}</div>` : ""}</div>`;
+}
+document.addEventListener("click", ev=>{
+  const t = ev.target && ev.target.closest ? ev.target.closest("[data-aibgo],[data-aibstop],[data-aibdrafts],[data-aibx]") : null; if (!t) return;
+  ev.stopPropagation();
+  if (t.dataset.aibgo) gotoRow(t.dataset.aibgo);
+  else if (t.dataset.aibstop){ if (state.aiBatch) state.aiBatch.stop = true; t.disabled = true; t.textContent = "останавливаю…"; }
+  else if (t.dataset.aibdrafts){ state.quick = "draft"; state.page = 1; render(); }
+  else if (t.dataset.aibx){ if (state.aiBatch && !state.aiBatch.running) state.aiBatch = null; render(); }
+});
 function switchTab(t){
   if (state.tab !== t && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
   state.tab = t; state.page = 1;
