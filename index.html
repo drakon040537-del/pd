@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- v6 (исправление 6): CSP — страница может ходить только на сервер дашборда и брать картинки только с Google Диска.
      Даже если в данных окажется вредный код, он не сможет отправить токен на чужой сайт. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://drive.google.com https://*.google.com https://*.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://drive.google.com https://*.google.com https://*.googleusercontent.com; connect-src 'self' https://script.google.com https://script.googleusercontent.com; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#191c21">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -73,6 +73,31 @@
   th{color:var(--faint);text-align:left;font-weight:600;padding:8px;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer;white-space:nowrap}
   td{padding:8px;border-bottom:1px solid var(--line)}
   tr.r:hover td{background:var(--panel2);cursor:pointer}
+  /* v6.6: компактный режим таблицы, метки команд, новички, недавние, презентация */
+  body.compact td{padding:3px 6px;font-size:12.5px}
+  body.compact .marks .mark{width:7px;height:7px}
+  body.compact .chip{padding:1px 7px;font-size:11px}
+  body.compact .phead{padding-top:6px;padding-bottom:6px}
+  .tmark{display:inline-block;border-radius:10px;padding:0 7px;font-size:11px;font-weight:600;margin-right:4px;color:#111;vertical-align:1px}
+  .tpin{margin-right:3px}
+  .tnew{display:inline-block;border-radius:10px;padding:0 6px;font-size:11px;margin-right:4px;background:rgba(62,207,142,.15);color:var(--ok);vertical-align:1px}
+  .mkcol{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);cursor:pointer;margin:2px}.mkcol.on{outline:2px solid var(--accent);border-color:#fff}
+  #healthbar{display:none;background:rgba(229,101,95,.14);border:1px solid rgba(229,101,95,.5);color:var(--ink);border-radius:10px;padding:8px 12px;margin:0 0 10px;font-size:13px}
+  #present{position:fixed;inset:0;z-index:9999;background:var(--bg,#111317);color:var(--ink);display:none;flex-direction:column;padding:3vh 4vw;overflow:auto}
+  #present.show{display:flex}
+  #present h1{font-size:clamp(28px,4vw,52px);margin:0 0 2vh}
+  #present .ptiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:2vw;margin-bottom:3vh}
+  #present .ptile{background:var(--panel);border-radius:16px;padding:2.5vh 1.5vw;text-align:center}
+  #present .ptile b{display:block;font-size:clamp(34px,5vw,72px);line-height:1.1}
+  #present .ptile span{font-size:clamp(14px,1.4vw,20px);color:var(--dim)}
+  #present .pcols{display:grid;grid-template-columns:1fr 1fr;gap:3vw;font-size:clamp(15px,1.5vw,22px)}
+  #present .pcols li{margin:.6vh 0}
+  #present .pnav{margin-top:auto;padding-top:2vh;display:flex;gap:12px;align-items:center;color:var(--faint);font-size:14px}
+  @media(max-width:700px){#present .pcols{grid-template-columns:1fr}}
+  #acbox{position:absolute;z-index:9000;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:420px;font-size:13px;display:none}
+  #acbox div{padding:6px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #acbox div.on,#acbox div:hover{background:rgba(91,157,255,.15)}
+  #acbox .ach{padding:3px 10px;font-size:11px;color:var(--faint);cursor:default;background:none}
   tr.detail td{background:#191c21;padding:0}
   .feedtop{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.feedtop .gbtn.on{border-color:var(--acc,#6aa0ff)}
   .feedc{padding:10px 12px;margin-bottom:8px}.feedc.off{opacity:.55}.feedh{display:flex;justify-content:space-between;gap:8px}
@@ -94,6 +119,7 @@
   mark{background:rgba(229,180,85,.4);color:var(--ink);border-radius:2px;padding:0 1px}
 
   .qbtn{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:12px}
+  .qbtn.qbad{border-color:rgba(229,101,95,.45)} .qbtn.qbad:hover{background:rgba(229,101,95,.15)} .qbtn.qclr{opacity:.75}
   .qbtn:hover{color:var(--ink)}
   .edit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 24px}
   @media(max-width:900px){.edit-grid{grid-template-columns:1fr}}
@@ -355,6 +381,8 @@
   .hm-name{cursor:pointer;white-space:nowrap;padding-right:8px}.hm-name:hover{color:var(--accent)}.hm-sc{color:var(--dim);padding-left:6px;white-space:nowrap}.hm-tot{color:var(--bad);font-weight:400}.hm-key{display:inline-block;width:14px;height:10px;vertical-align:-1px}
   .upq{margin-top:6px;max-height:180px;overflow:auto}.upqi{font-size:12px;color:var(--dim);padding:1px 0}.upqi.err{color:var(--warn)}.upqi.ok{color:var(--ok)}.uplzone.drag{border-color:var(--accent);background:rgba(90,140,255,.08)}
   .annwrap{max-height:76vh;overflow:auto;background:#000;border-radius:8px;text-align:center}#ann-cv{max-width:100%;max-height:74vh;touch-action:none;cursor:crosshair}
+  .sthumb.isvid::after{content:"▶";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-size:20px;text-shadow:0 0 6px #000;pointer-events:none}
+  .sthumb{position:relative}
   .anncol{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);margin:0 2px;cursor:pointer;vertical-align:middle}.anncol.on{border-color:#fff;outline:2px solid var(--accent)}
   .aidgrid{display:flex;gap:12px;flex-wrap:wrap}.aidcol{flex:1;min-width:260px}.aidrow{margin:3px 0;font-size:12.5px;line-height:1.4}
   .shlink{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700;text-decoration:none;color:var(--accent);border:1px solid var(--line);vertical-align:1px}
@@ -393,6 +421,7 @@
   <div class="banner"><span class="dot-off" id="livedot"></span><span id="livetext">Загрузка…</span>
     <button id="resetbell" class="iconbtn" style="display:none" title="уведомления">🔔</button>
     <button id="sugbtn" class="iconbtn" style="display:none" title="предложение или ошибка">💡</button>
+    <button id="presbtn" class="iconbtn" style="display:none" title="режим «презентация» для планёрки: крупно, без лишнего">🖥</button>
     <button id="pwbtn" class="iconbtn" style="display:none" title="сменить мой пароль">🔑</button>
     <span class="spacer"></span>
     <button id="addbtn" class="abtn2" style="display:none">＋ Мониторинг</button>
@@ -407,6 +436,7 @@
   <div class="layout">
     <div class="rail" id="tabs"></div>
     <div class="maincol">
+      <div id="healthbar"></div>
       <div id="pbar" class="pwrap"></div>
       <div id="content"></div>
     </div>
@@ -536,10 +566,31 @@
       <div class="uplzone" id="u-zone">Ctrl+V — вставь скрин(ы) из буфера<br>или перетащи сюда несколько файлов<br><span style="color:var(--faint);font-size:11.5px">скрины встанут в очередь и загрузятся по одному</span></div>
       <button class="abtn" id="u-file">📁 Файлы с ПК</button> <button class="abtn" id="u-cam" title="снять камерой телефона прямо в эту категорию">📷 Камера</button>
       <input type="file" id="u-caminp" accept="image/*" capture="environment" style="display:none">
-      <input type="file" id="u-fileinp" accept="image/*" multiple style="display:none">
-      <label style="display:block;margin-top:8px;font-size:12.5px"><input type="checkbox" id="u-ann"> ✏ разметить перед загрузкой (стрелка, рамка, текст)</label>
+      <input type="file" id="u-fileinp" accept="image/*,video/*" multiple style="display:none">
+      <input type="file" id="u-vidinp" accept="video/*" capture="environment" style="display:none">
+      <button class="abtn" id="u-vid" title="короткое видео 10–20 с (до 10 МБ) — например, шоу">🎬 Видео</button>
+      <label style="display:block;margin-top:8px;font-size:12.5px"><input type="checkbox" id="u-ann"> ✏ обрезать или разметить перед загрузкой (обрезка, карандаш, стрелка, рамка, текст)</label>
       <div id="u-queue" class="upq"></div>
       <div id="u-msg" style="color:var(--dim);font-size:12.5px;margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="modal-ov" id="markmodal">
+    <div class="modal" style="width:min(420px,94vw)">
+      <button class="x" id="mk-x">✕</button>
+      <h3 id="mk-title">🏷 Метка</h3>
+      <div style="color:var(--faint);font-size:12px;margin-bottom:8px">Метку и закрепление видят все (и продюсеры). Команда узнаётся по компании, оператору и модели — метка переходит на следующие недели.</div>
+      <div id="mk-colors" style="margin-bottom:8px"></div>
+      <input id="mk-text" maxlength="30" placeholder="подпись (до 30 знаков), например «VIP» или «на контроле»" style="width:100%;box-sizing:border-box;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px">
+      <label style="display:block;margin:10px 0;font-size:13px"><input type="checkbox" id="mk-pin"> 📌 закрепить наверху списка</label>
+      <button class="savebtn" id="mk-save" style="margin-top:0">Сохранить</button> <button class="abtn2" id="mk-clear">снять метку</button>
+      <div id="mk-msg" style="margin-top:6px;font-size:12.5px;color:var(--warn)"></div>
+    </div>
+  </div>
+  <div class="modal-ov" id="vidmodal">
+    <div class="modal" style="width:min(900px,96vw)">
+      <button class="x" id="vid-x">✕</button>
+      <h3>🎬 Видео</h3>
+      <div id="vid-box" style="text-align:center"></div>
     </div>
   </div>
   <div class="modal-ov" id="annmodal">
@@ -547,7 +598,7 @@
       <button class="x" id="ann-x">✕</button>
       <h3 id="ann-title">✏ Разметка скрина</h3>
       <div class="filters" style="gap:6px;flex-wrap:wrap">
-        <button class="gbtn on" data-anntool="arrow">➜ стрелка</button><button class="gbtn" data-anntool="rect">▭ рамка</button><button class="gbtn" data-anntool="text">T текст</button>
+        <button class="gbtn on" data-anntool="arrow">➜ стрелка</button><button class="gbtn" data-anntool="rect">▭ рамка</button><button class="gbtn" data-anntool="pen">✏ карандаш</button><button class="gbtn" data-anntool="text">T текст</button><button class="gbtn" data-anntool="crop" title="выдели область — всё вне её обрежется">✂ обрезка</button><button class="gbtn" id="ann-uncrop" style="display:none">↺ без обрезки</button>
         <span id="ann-colors"></span>
         <button class="gbtn" id="ann-undo">↶ отменить</button><button class="gbtn" id="ann-clear">очистить</button>
         <label style="font-size:12px"><input type="checkbox" id="ann-keep"> загрузить и оригинал</label>
@@ -591,6 +642,8 @@
   </div>
   <input type="color" id="colorpick" style="position:absolute;left:-200px;top:-200px">
   <div class="toast" id="toast"></div>
+  <div id="present"></div>
+  <div id="acbox"></div>
 
 </div>
 
@@ -599,7 +652,7 @@
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-08.65"
+  VER: "2026-10-08.67"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -706,10 +759,14 @@ function normNeg(s){
   NN_RE.forEach(p=>{ t = t.replace(p[0], p[1]); });
   return t;
 }
+// кнопка ❌: пометить поле замечанием (текст сохраняется, «✅ всё хорошо» убирается)
+function markBad(v){ const t = String(v||"").replace(/^\s*✅\s*(всё хорошо|все хорошо)?\s*/i, "").replace(/^\s*❌\s*/, ""); return "❌ " + t; }
+function focusEnd(ta){ try { ta.focus(); const n = ta.value.length; ta.setSelectionRange(n, n); } catch(e){} }
 function catState(t){
   const s = normNeg((t||"").trim());
   if (!s) return null;
   if (s.charAt(0) === "✅") return "ok";
+  if (s.charAt(0) === "❌") return "bad"; // кнопка ❌ — замечание, даже если дальше «ок»
   if (NEG_RE.test(s)) return "bad"; // «нет …», «не …» — замечание (кроме «нет замечаний» — см. normNeg)
   const m = s.match(OK_RE);
   if (!m) return "bad";
@@ -784,6 +841,23 @@ function openWeekName(){
 function weekOpen_(r){ const w = openWeekName(); return !!w && r.week === w; }
 // строку можно править: редактор, не режим «глазами», строка из открытой недели
 function rowEditable(r){ return AUTH.edit && !viewAsActive() && weekOpen_(r) && !r._lite; } // v6: облегчённую (урезанную) строку править нельзя — сначала полный текст
+// ---------- v6.6: общие метки и закрепление команд (ставит смотрящий, видят все), метка «новичок» ----------
+const MARK_COLORS = ["", "#e5655f", "#e5b455", "#3ecf8e", "#5b9dff", "#b07cff", "#9aa3b2"];
+function markOf(r){ return (r && (state.marks||{})[teamKey(r)]) || null; }
+function newbieOf(r, now){ // → { day, total } пока идёт период адаптации
+  const n = r && (state.newbies||{})[r.city + "|" + String(r.opName||r.opNick||"").trim().toLowerCase()];
+  if (!n) return null;
+  const m = String(n.s||"").match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!m) return null;
+  const start = new Date(+m[1], +m[2]-1, +m[3]); const t = now || new Date();
+  const day = Math.floor((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - start) / 864e5) + 1;
+  return (day >= 1 && day <= n.d) ? { day, total: n.d } : null;
+}
+function teamBadges(r){
+  const m = markOf(r), nb = newbieOf(r);
+  return (m && m.p ? '<span class="tpin" title="закреплена">📌</span>' : "")
+    + (m && (m.t || m.c) ? `<span class="tmark" style="background:${esc(m.c||"#9aa3b2")}" title="метка смотрящего">${esc(m.t || "●")}</span>` : "")
+    + (nb ? `<span class="tnew" title="новый оператор: период адаптации">🌱 ${nb.day}/${nb.total}</span>` : "");
+}
 // недели: «latest» (по умолчанию — сервер отдал только открытую), «all», «__month__» или точное название
 function rowsOf(tab){
   let rs;
@@ -799,14 +873,20 @@ function rowsOf(tab){
 // вкладки, которым нужна вся история (тренды, динамика, сравнение, freshest-строки)
 const HISTORY_TABS = ["Сводка","Сравнение","Операторы","Расписание"];
 let fullWaiters = [];
-function ensureFull(){
+function ensureFull(opts){
+  const silent = !!(opts && opts.silent); // v6.6: фоновая предзагрузка — без всплывающих сообщений
   if (state.fullLoaded || state.fullLoading) {
     return state.fullLoading ? new Promise(res => fullWaiters.push(res)) : Promise.resolve();
   }
   state.fullLoading = true;
-  toast("Грузим все недели…");
-  return wp({ action:"read", week:"all", lite: 1 }, 90000).then(j=>{ // v6: прошлые недели — облегчённо (полный текст по раскрытию)
+  if (!silent) toast("Грузим все недели…");
+  let tries = 0;
+  const get = ()=>{ const s0 = writeSeq; return wp({ action:"read", week:"all", lite: 1 }, 90000).then(j=>{ // v6: прошлые недели — облегчённо (полный текст по раскрытию)
     if (j.error) throw new Error(j.error);
+    if (s0 !== writeSeq && ++tries < 3) return get(); // пока грузили, была запись — ответ устарел, берём свежий
+    return j;
+  }); };
+  return get().then(j=>{
     applyData(j, true);
     state.fullLoaded = true;
     state.fullLoading = false;
@@ -816,11 +896,11 @@ function ensureFull(){
       state.knownWeeks = [...new Set(state.rows.map(r=>r.week).filter(Boolean))].sort((a,b)=>weekKey(a)-weekKey(b));
       try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){}
     }
-    toast("История загружена");
+    if (!silent) toast("История загружена"); else softRender();
     fullWaiters.splice(0).forEach(f=>f());
   }).catch(e=>{
     state.fullLoading = false;
-    toast("История не загрузилась: " + e.message, true);
+    if (!silent) toast("История не загрузилась: " + e.message, true);
     fullWaiters.splice(0).forEach(f=>f());
   });
 }
@@ -988,7 +1068,7 @@ function toast(msg, isErr){
 }
 
 function openModal(id){ document.getElementById(id).classList.add("show"); }
-function closeModal(id){ document.getElementById(id).classList.remove("show"); if (id === "annmodal" && typeof annOnClose === "function"){ const f = annOnClose; annOnClose = null; f(); } }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); if (id === "vidmodal"){ const v = document.querySelector("#vid-box video"); if (v){ try { v.pause(); } catch(e){} } vidSeq++; document.getElementById("vid-box").innerHTML = ""; } if (id === "annmodal" && typeof annOnClose === "function"){ const f = annOnClose; annOnClose = null; f(); } }
 let annOnClose = null; // Обновление 6: закрытие окна разметки фоном/Esc = «не загружать этот скрин», очередь идёт дальше
 document.addEventListener("click", e=>{
   document.querySelectorAll(".modal-ov.show").forEach(ov=>{ if (e.target === ov) closeModal(ov.id); });
@@ -1173,6 +1253,8 @@ function updateLoginBtn(){
   if (wb) wb.style.display = AUTH.edit ? "" : "none";
   const pb = document.getElementById("pwbtn"); // v6.1: смена своего пароля — любому вошедшему, не в режиме «глазами»
   if (pb) pb.style.display = AUTH.ok() && !state.viewAs ? "" : "none";
+  const prb = document.getElementById("presbtn"); // v6.6: презентация — смотрящему и директору
+  if (prb) prb.style.display = AUTH.ok() && !AUTH.prod && (AUTH.edit || AUTH.cities.includes("all")) ? "" : "none";
 }
 document.getElementById("pwbtn").onclick = ()=>{
   ["pw-old","pw-new","pw-new2"].forEach(id=>{ document.getElementById(id).value = ""; });
@@ -1253,15 +1335,19 @@ function renderMain(){
     : "";
   const weekBadge = `<span class="cnt">${esc(weekLabel)}</span>`;
   let railHtml = `<button class="rtoggle" id="railtoggle" title="${state.railMini?"развернуть панель":"свернуть в иконки"}">${state.railMini?"⇥":"⇤"}</button>`;
+  const rec = recentList();
+  const recentBody = rec.map(x=>ritem(`data-recent="${esc(x.k)}"`, "·", x.l, "", false)).join("");
   if (AUTH.prod){ // компактное меню продюсера: его имя, Мои задачи, Рекомендации, Недели
     railHtml += prodTabs.map(tabBtn).join("") + toolTabs.map(tabBtn).join("")
-      + grp("weeks", "🗓", "Недели", weekBody, weekBadge);
+      + grp("weeks", "🗓", "Недели", weekBody, weekBadge)
+      + grp("recent", "🕘", "Недавние", recentBody, rec.length ? `<span class="cnt">${rec.length}</span>` : "");
   } else {
     railHtml += (mainTabs.length ? sect("главное") + mainTabs.map(tabBtn).join("") : "")
       + grp("companies", "🏢", "Компании", cityTabs.map(tabBtn).join(""), critTotal ? `<span class="cnt crit" title="критичных смен: ${critTotal}">${critTotal}</span>` : "")
       + grp("producers", "🧑‍💼", "Продюсеры", prodNames.map(p=>ritem(`data-prodgo="${esc(p)}"`, "👤", p, "", state.tab==="Обзор" && state.producer===p)).join(""), prodNames.length ? `<span class="cnt">${prodNames.length}</span>` : "")
       + grp("tools", "🧰", "Инструменты", toolTabs.map(tabBtn).join(""), "")
-      + grp("weeks", "🗓", "Недели", weekBody, weekBadge);
+      + grp("weeks", "🗓", "Недели", weekBody, weekBadge)
+      + grp("recent", "🕘", "Недавние", recentBody, rec.length ? `<span class="cnt">${rec.length}</span>` : "");
   }
   document.getElementById("tabs").innerHTML = railHtml;
   document.getElementById("tabs").classList.toggle("mini", !!state.railMini);
@@ -1357,7 +1443,7 @@ function renderMain(){
     </div>
     <div class="card">
       <h2>Команды <span style="color:var(--faint);font-size:12px;font-weight:400">— клик по строке: детали${AUTH.edit?" и редактирование":""}</span></h2>
-      <div class="filters">${AUTH.prod && state.tab===prodTabName() ? '<button class="gbtn" id="pr-rev" title="переключить на разборы смотрящего карточками">📝 Разборы</button>' : ""}${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
+      <div class="filters"><button class="gbtn${document.body.classList.contains("compact")?" on":""}" id="f-compact" title="компактная таблица — больше строк на экране">▤</button>${AUTH.prod && state.tab===prodTabName() ? '<button class="gbtn" id="pr-rev" title="переключить на разборы смотрящего карточками">📝 Разборы</button>' : ""}${sel}<input id="f-search" placeholder="поиск по оперу, модели, тексту — по всем компаниям и неделям…" style="width:290px" value="${esc(state.search)}">
         <button class="abtn2" id="aisearch" title="поиск по смыслу (ИИ)" style="${AUTH.edit?"":"display:none"}">🤖 смысл</button>
         <span class="count" id="f-count"></span>
       </div>
@@ -1399,6 +1485,7 @@ function renderMain(){
     cr.querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{ state.quick = state.quick===b.dataset.q ? "" : b.dataset.q; state.page=1; render(); });
   }
   document.getElementById("f-prod").onchange = e=>{state.producer=e.target.value;state.page=1;render();};
+  const fc = document.getElementById("f-compact"); if (fc) fc.onclick = ()=>setCompact(!document.body.classList.contains("compact"));
   const aisum = document.getElementById("aisum");
   if (aisum) aisum.onclick = async ()=>{
     const out = document.getElementById("aisumout");
@@ -1611,7 +1698,8 @@ function renderMain(){
   else if (state.quick==="due") view = view.filter(x=>isDue(x.r));
   else if (state.quick==="draft") view = view.filter(x=>draftIsDirty(x.r));
   if (state.search){ const q=state.search.toLowerCase(); view=view.filter(x=>[x.r.producer,x.r.opName,x.r.opNick,x.r.model,x.r.obs].concat(x.r.cats).join(" ").toLowerCase().includes(q)); }
-  view.sort((a,b)=>(a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score));
+  const pinOf = x=>{ const m = markOf(x.r); return m && m.p ? 0 : 1; }; // v6.6: закреплённые — наверх
+  view.sort((a,b)=>(pinOf(a)-pinOf(b)) || ((a.s.score===null?99:a.s.score)-(b.s.score===null?99:b.s.score)));
   // D2/D8/U1: DOM-ключ строки — стабильный id из «лист|ник|модель#строка», а не индекс в отсортированном виде:
   // после пересортировки/перерисовки кнопки, черновики, ошибки сохранения и ИИ-ответы остаются у СВОЕЙ команды
   const usedIds = {};
@@ -1634,7 +1722,8 @@ function renderMain(){
   });
   let groups = Object.keys(groupsMap).map(k=>Object.assign({key:k}, groupsMap[k]));
   const filterActive = state.search || state.quick;
-  groups.sort((a,b)=>(b.bad*3+b.warn)-(a.bad*3+a.warn));
+  const gPin = g=>g.items.some(it=>pinOf(it.x)) ? 0 : 1; // группа с закреплённой командой — выше
+  groups.sort((a,b)=>(gPin(a)-gPin(b)) || ((b.bad*3+b.warn)-(a.bad*3+a.warn)));
   const PAGE = 12;
   const shown = groups.slice(0, state.page*PAGE);
   const hidden = groups.length - shown.length;
@@ -1665,7 +1754,7 @@ function renderMain(){
       const lv0 = liveEval(CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"")));
       const editDet = `<div class="editlive" id="live${key}">${lv0}</div>` + CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
-        return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn" data-ta="ed${key}_${j}" data-v="">✕</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
+        return `<div class="f"><b>${n}<span><button class="qbtn" data-ta="ed${key}_${j}" data-v="✅ всё хорошо" title="всё хорошо">✅</button> <button class="qbtn qbad" data-ta="ed${key}_${j}" data-bad="1" title="замечание — допиши, что не так">❌</button> <button class="qbtn qclr" data-ta="ed${key}_${j}" data-v="" title="очистить поле">⌫</button></span></b><textarea id="ed${key}_${j}" data-j="${j}">${esc(val)}</textarea><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}<div class="uplrow"><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div></div>`;
       }).join("") + `<div class="f" style="grid-column:1/-1"><b>💬 Доп. комментарий / наблюдение</b><textarea id="ed${key}_comment">${esc(dr && dr.comment !== undefined ? dr.comment : (x.r.obs||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>💡 Рекомендации (их видит команда)</b><textarea id="ed${key}_reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea></div>
         <div class="f" style="grid-column:1/-1"><b>🔗 Ссылки (одна в строке: «Название = URL»; сохраняются кнопкой «Сохранить»)</b><textarea id="lk${key}" style="width:100%;min-height:54px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:12.5px;box-sizing:border-box" placeholder="CB = https://chaturbate.com/... — можно просто вставить ссылку или «Название: ссылка» (одна в строке)">${esc(dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||""))}</textarea></div>
@@ -1675,7 +1764,8 @@ function renderMain(){
       const failBar = canEdit && failInfo ? `<div class="failbar">⚠ Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
       const roNote = (AUTH.edit && !canEdit && !viewAsActive()) ? `<div class="editlive">👁 только просмотр: неделя «${esc(x.r.week||"—")}» не открыта для правок${weekPinned()?" (на «все недели»/«месяц» правки отключены)":""} — выбери её в списке недель</div>` : "";
       const pmBlk = pmBlockFor(x.r); // v6: мониторинг продюсера по этой команде (статус, расхождения)
-      const inner = canEdit ? `${failBar}${pmBlk ? `<div class="dgrid" style="margin-bottom:8px">${pmBlk}</div>` : ""}<div class="edit-grid">${editDet}</div>
+      const teamTools = (AUTH.edit && !viewAsActive()) ? `<div style="margin:0 0 8px;display:flex;gap:6px;flex-wrap:wrap"><button class="abtn2" data-mark="${key}" title="цвет, подпись и закрепление наверху — видят все">🏷 метка / 📌</button><button class="abtn2" data-newbie="${key}" title="новый оператор: метка 🌱 на период адаптации">🌱 ${newbieOf(x.r) ? "снять «новичок»" : "новичок"}</button></div>` : "";
+      const inner = canEdit ? `${failBar}${teamTools}${pmBlk ? `<div class="dgrid" style="margin-bottom:8px">${pmBlk}</div>` : ""}<div class="edit-grid">${editDet}</div>
         <button class="savebtn" id="sv${key}">💾 Сохранить в таблицу</button>
         <button class="abtn2" id="dup${key}" style="margin-left:10px">⧉ Дублировать на другие проверки команды</button>
         <button class="abtn2" id="tc${key}" style="margin-left:10px" title="поставить штамп «Обновлено» без правок">✅ Проверено сегодня</button>
@@ -1686,11 +1776,10 @@ function renderMain(){
         <button class="abtn2" id="aiodv${key}" title="3 совета оператору простыми словами — ничего не отправляет, только копирует">💬 совет оператору</button>
         <button class="abtn2" id="aitone${key}" title="проверка тона общего комментария">🧐 тон комментария</button>
         ${rowScreens.length?`<button class="abtn2" id="aiscr${key}" title="ИИ смотрит скрин и предлагает черновик по 9 категориям — в текст попадает только то, что ты примешь">🤖 черновик по скрину</button>`:""}
-        ${rowScreens.length && AUTH.edit?`<button class="abtn2" id="aiscc${key}" title="сравнить ответы Gemini и Grok на одном скрине">⚖ Gemini/Grok</button>`:""}
         <button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">📌 поручить продюсеру</button>
         <span id="svmsg${key}" style="color:var(--dim);font-size:12.5px;margin-left:12px"></span>
         <div class="aibox" id="aibox${key}" style="display:none"></div>`
-        : roNote + `<div class="dgrid">${readDet}${pmBlk}</div>`;
+        : roNote + teamTools + `<div class="dgrid">${readDet}${pmBlk}</div>`;
       const cityCell = (state.tab==="Обзор"||state.search) ? `<td style="color:var(--dim)">${esc(clabel(x.r.city))}${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const scoreBar = x.s.score!==null
@@ -1702,7 +1791,8 @@ function renderMain(){
         const lab = u.days>=7 ? '<span style="color:var(--bad);font-weight:600">к перепроверке</span>' : u.days>=6 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
         return `<div style="white-space:nowrap;font-size:12px"><b style="font-weight:600">${esc(fmtDay(x.r.updated))}</b><div style="font-size:11px;color:var(--dim)">${lab} · след. ${nx}</div></div>`;
       })();
-      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"><td>${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${canEdit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns"><span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
+      const mk = markOf(x.r);
+      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"${mk && mk.c ? ` style="box-shadow:inset 4px 0 0 ${esc(mk.c)}"` : ""}><td>${teamBadges(x.r)}${hl(x.r.opName||x.r.opNick||"")}</td><td>${hl(x.r.model||"")}${x.r.opNick?` <span style="color:var(--faint);font-size:11px">(${hl(x.r.opNick)})</span>`:""}${marks}</td>${cityCell}<td>${linksCell}</td><td>${scoreBar}</td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]}">${VLBL[x.s.verdict]||x.s.verdict}</span>`:'<span class="chip c-warn" style="opacity:.55">не проверено</span>'}</td><td class="pcol">${updCell}</td><td>${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip c-warn" style="opacity:.55">— —</span>`}</button>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td><td>${canEdit?`<span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель">👥</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену">🗑</button></span>`:`<span class="rowbtns"><span style="color:var(--accent);font-weight:700">✎</span></span>`}</td></tr>
       <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${(state.tab==="Обзор"||state.search)?9:8}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     return `<div class="pgroup ${open?"open":""}" data-g="${gkeyEsc}" style="border-left:4px solid ${esc(state.colors[g.producer]||"#566070")}">
@@ -1859,6 +1949,7 @@ function renderMain(){
     if (d.classList.contains("open") && rowDirty(tr.dataset.i) && !confirm("Есть несохранённые правки (они сохранены в черновик и не пропадут). Закрыть?")) return;
     d.classList.toggle("open");
     if (d.classList.contains("open")) setTimeout(ensureThumbs, 60); // скрины карточки — по раскрытию
+    if (d.classList.contains("open")){ const xr = state.lastView[tr.dataset.i]; if (xr) recentPush(xr.r); } // v6.6: недавние карточки
     // v6: карточка прошлой недели пришла облегчённой — догружаем полный текст и перерисовываем
     if (d.classList.contains("open")){ const xl = state.lastView[tr.dataset.i]; if (xl && xl.r && xl.r._lite){ ensureRowFull(xl.r).then(()=>softRender()).catch(e=>toast("Полный текст не загрузился: " + e.message, true)); } }
     if (d.classList.contains("open")){
@@ -1888,17 +1979,18 @@ function renderMain(){
     if (b.dataset.upl) return; // кнопке фото нужен СВОЙ обработчик: раньше этот блок перезаписывал его — кнопки «не работали»
     b.onclick=(ev)=>{
       ev.stopPropagation();
-      const ta = document.getElementById(b.dataset.ta);
-      ta.value = b.dataset.v;
-      ta.dispatchEvent(new Event("input", {bubbles:true})); // ✅/✕ тоже в истории Ctrl+Z и в черновике
+      const ta = document.getElementById(b.dataset.ta); if (!ta) return;
+      ta.value = b.dataset.bad ? markBad(ta.value) : b.dataset.v;
+      ta.dispatchEvent(new Event("input", {bubbles:true})); // ✅/❌/⌫ тоже в истории Ctrl+Z и в черновике
+      if (b.dataset.bad) focusEnd(ta);
     };
   });
-  document.querySelectorAll(".qchip").forEach(b=>b.onclick=(ev)=>{
+  document.querySelectorAll(".qchip").forEach(b=>{ if (b.classList.contains("myadd")) return; b.onclick=(ev)=>{ // «＋ своя» — свой обработчик выше (раньше этот его затирал — кнопка не работала)
     ev.stopPropagation();
-    const ta = document.getElementById(b.dataset.ta);
+    const ta = document.getElementById(b.dataset.ta); if (!ta) return;
     ta.value = ta.value ? ta.value.replace(/\s+$/,"") + ", " + b.dataset.p : b.dataset.p;
     ta.dispatchEvent(new Event("input"));
-  });
+  }; });
 
   document.querySelectorAll(".detail textarea, .detail input, .detail select").forEach(el=>{
     el.oninput = el.onchange = function(){
@@ -1938,9 +2030,7 @@ function renderMain(){
     // а сам блок переживает перерисовку (state.aiBox). Ничего не сохраняется без «принять»/«заменить».
     const edVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
     const aisc = document.getElementById("aiscr"+key);
-    if (aisc) aisc.onclick = ()=>aiScreenDraft(key, x, false);
-    const aiscc = document.getElementById("aiscc"+key);
-    if (aiscc) aiscc.onclick = ()=>aiScreenDraft(key, x, true);
+    if (aisc) aisc.onclick = ()=>aiScreenDraft(key, x);
     const aiv = document.getElementById("aiv"+key);
     if (aiv) aiv.onclick = async ()=>{
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
@@ -2121,6 +2211,7 @@ function renderMain(){
 function switchTab(t){
   if (state.tab !== t && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
   state.tab = t; state.page = 1;
+  if (pmIsTab(t) && state.pm && state.pm.at && !state.pm.loading && Date.now() - state.pm.at > 3000) loadPM({ quiet: true }); // v6.6: при входе во вкладку — свежие записи
   if (HISTORY_TABS.includes(t) && !state.fullLoaded){ render(); ensureFull().then(render); return; }
   render();
 }
@@ -2368,6 +2459,7 @@ function openRailFly(head){
 function bindRailItems(root){
   root.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>railPickWeek(b.dataset.w));
   root.querySelectorAll("[data-prodgo]").forEach(b=>b.onclick=()=>railPickProducer(b.dataset.prodgo));
+  root.querySelectorAll("[data-recent]").forEach(b=>b.onclick=()=>{ if (root.id === "railfly") closeRailFly(); recentOpen(b.dataset.recent); }); // v6.6
   if (root.id === "railfly") root.querySelectorAll(".tab[data-t]").forEach(b=>b.onclick=()=>{ closeRailFly(); switchTab(b.dataset.t); });
 }
 function bindRail(rail){
@@ -2426,6 +2518,7 @@ function gotoRow(goto){
   const parts = goto.split("|");
   const r = state.rows.find(x=>x._sheet===parts[0] && String(x._row)===parts[1]);
   if (!r){ toast("Мониторинг не найден — обнови данные", true); return; }
+  recentPush(r); // v6.6: переход из поиска, уведомлений и «недавних» — тоже в «Недавние»
   state.tab = r.city; state.week = r.week; state.search = ""; state.quick = ""; state.producer = "";
   state.page = 999;
   state.grpOpen[r.city+"|"+(r.producer||"—")] = true;
@@ -2750,7 +2843,8 @@ function openShiftScreens(key, title){
   document.getElementById("cam-title").textContent = "📷 " + (title || "скрины");
   document.getElementById("cam-ai").style.display = "none";
   document.getElementById("cam-aiout").style.display = "none";
-  const first = arr[0];
+  const first = arr.find(s=>s.type !== "video") || arr[0];
+  if (first.type === "video"){ openVideo(first.link); return; }
   camShow((state.thumbData||{})[first.mini||first.link] || BLANK, !!(state.thumbData||{})[first.mini||first.link]);
   openModal("cammodal");
   // Обновление 5: в большом окне — ОРИГИНАЛ (раньше сюда грузилась мини-копия 480 px — отсюда «мыло»)
@@ -2805,13 +2899,15 @@ function renderStatus(){
     ${!d ? '<div class="empty">загружаю…</div>' : `
     <div class="aidgrid">
       <div class="aidcol"><h3>Сегодня (приблизительно, кэш ≤ 6 ч)</h3><table class="shtable">
-        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}${kv("автообновлений без изменений (v6)", d.counters.readsame||0)}${kv("снимок: собран / поправлен", (d.counters.snapbuild||0) + " / " + (d.counters.snappatch||0))}${kv("миниатюр из кэша сервера", d.counters.thumbhit||0)}${kv("ускорение (снимок)", d.snap ? (d.snap.on ? "включено" : "выключено (SNAP_OFF)") + (d.snap.warm === true ? " · прогрев раз в минуту" : d.snap.warm === false ? " · прогрев не включён" : "") : "—")}
+        ${kv("последнее чтение данных", esc(d.lastRead||"—"))}${kv("запросов", d.counters.req)}${kv("чтение из кэша / с листов", d.counters.readhit + " / " + d.counters.readmiss)}${kv("автообновлений без изменений (v6)", d.counters.readsame||0)}${kv("снимок: собран / поправлен", (d.counters.snapbuild||0) + " / " + (d.counters.snappatch||0))}${kv("миниатюр из кэша сервера", d.counters.thumbhit||0)}${d.saved ? kv("⚡ кэш сэкономил сегодня", "≈ " + (d.saved.ms >= 60000 ? Math.floor(d.saved.ms/60000) + " мин " + Math.round((d.saved.ms%60000)/1000) + " с" : Math.round(d.saved.ms/1000) + " с") + ` <span style="color:var(--faint);font-size:11px">(чтений из снимка ${d.saved.readhit}, без изменений ${d.saved.readsame}, правок снимка ${d.saved.snappatch}, миниатюр ${d.saved.thumbhit}${d.saved.estimated ? "; оценка — замеров сборки сегодня ещё нет" : ""})</span>`) : ""}${kv("ускорение (снимок)", d.snap ? (d.snap.on ? "включено" : "выключено (SNAP_OFF)") + (d.snap.warm === true ? " · прогрев раз в минуту" : d.snap.warm === false ? " · прогрев не включён" : "") : "—")}
         ${Object.keys(d.times||{}).length ? `<tr><td colspan="2" style="padding-top:8px;color:var(--faint)">⏱ среднее время ответа сервера сегодня</td></tr>` + Object.keys(d.times).map(k=>kv({"read:snap":"чтение из снимка","read:build":"чтение со сборкой","read:same":"автообновление «без изменений»","snapbuild":"сборка снимка","save":"сохранение разбора","touch":"«проверено сегодня»","upload":"загрузка скрина","thumbs":"миниатюры","pmsave":"мониторинг продюсера: сохранение","pmread":"мониторинг продюсера: чтение","pmupload":"мониторинг продюсера: скрин","ping":"уведомления","auth":"вход"}[k]||k, (d.times[k].avg/1000).toFixed(2) + " с · " + d.times[k].n + " раз")).join("") : ""}
         ${kv("вызовов ИИ", d.counters.ai)}${kv("UrlFetch (ИИ + Drive)", d.counters.urlfetch + " из ~20 000/сутки")}${kv("провайдер ИИ", esc(d.aiProvider))}${kv("сессий", d.sessions)}
         ${kv("Script Properties", d.propsSizeKB + " КБ из " + d.propsLimitKB + " КБ")}${kv("USERS_JSON", d.usersSize + " симв. из ~9000" + (d.userChunks?" + кусков: "+d.userChunks:""))}</table></div>
       <div class="aidcol"><h3>Свойства скрипта (только наличие)</h3><table class="shtable">${Object.keys(d.props).map(k=>kv(k, yes(d.props[k]))).join("")}</table>
         ${Object.keys(d.sched||{}).length?`<h3>Расписания</h3><table class="shtable">${Object.keys(d.sched).map(k=>kv(k, esc(d.sched[k]))).join("")}</table>`:""}</div>
     </div>
+    <h3>🩺 Самопроверка <button class="gbtn" id="stp-self">проверить сейчас</button></h3>
+    ${d.health ? `<div style="font-size:13px;margin-bottom:8px">${d.health.ok ? '<span style="color:var(--ok)">✅ всё в порядке</span>' : '<span style="color:var(--bad)">⚠ есть проблемы</span>'} · ${esc(d.health.t||"")}${(d.health.problems||[]).length ? `<ul style="margin:4px 0 0 18px">${d.health.problems.map(x=>`<li style="color:var(--bad)">${esc(x)}</li>`).join("")}</ul>` : ""}${(d.health.info||[]).length ? `<details style="margin-top:4px"><summary style="cursor:pointer;color:var(--faint)">подробно</summary><ul style="margin:4px 0 0 18px;color:var(--dim)">${d.health.info.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}</div>` : '<div style="color:var(--faint);font-size:12.5px;margin-bottom:8px">ещё не запускалась — включи в таблице «🔧 Дашборд → Самопроверка» или нажми «проверить сейчас»</div>'}
     <h3>Последние ошибки (${d.errors.length})</h3>
     ${d.errors.length?`<table class="shtable"><thead><tr><th>когда</th><th>действие</th><th>текст</th></tr></thead><tbody>${d.errors.map(e=>`<tr><td style="white-space:nowrap">${esc(e.t)}</td><td>${esc(e.a)}</td><td>${esc(e.m)}</td></tr>`).join("")}</tbody></table>`:'<div class="empty">ошибок нет</div>'}`}
   </div>`;
@@ -2819,6 +2915,7 @@ function renderStatus(){
   if (!d && !st.loading && !st.err) load(false);
   document.getElementById("stp-ref").onclick = ()=>{ st.d = null; load(false); renderStatus(); };
   document.getElementById("stp-deep").onclick = ()=>{ load(true); toast("проверяю доступ…"); };
+  const sc = document.getElementById("stp-self"); if (sc) sc.onclick = async ()=>{ sc.disabled = true; toast("🩺 проверяю сервер… (до минуты)"); try { const r = await wp({ action:"selfcheck" }, 120000); healthShow(r); st.d = null; load(false); toast(r.ok ? "✅ Всё в порядке" : "⚠ Найдены проблемы", !r.ok); } catch(e){ toast(e.message, true); } finally { sc.disabled = false; } };
 }
 // ===== Обновление 6: управление пользователями (админ). Хэши сервер не отдаёт; временный пароль показывается один раз =====
 const CO_LABEL = { "Томск":"ArtLife", "Новосибирск":"VVCAM", "Онлайн":"DIAMOND" };
@@ -2848,7 +2945,10 @@ function renderUsers(){
       <input id="u-prod" placeholder="имя продюсера как в таблице" style="width:190px">
       ${CITY_ORDER.map(c=>`<label style="font-size:12px"><input type="checkbox" class="u-city" value="${c}"> ${CO_LABEL[c]}</label>`).join(" ")}
       <button class="savebtn" id="u-add">➕ добавить</button> <button class="abtn2" id="u-save">💾 сохранить изменения</button>
-    </div></div>`;
+    </div>
+    <h3 style="margin:16px 0 6px">📒 Журнал входов <button class="gbtn" id="u-loglist">показать последние 300</button></h3>
+    <div style="color:var(--faint);font-size:12px;margin-bottom:6px">Кто, когда и с какого устройства входил (и неудачные попытки). IP-адреса Google Apps Script не передаёт — видно тип устройства и браузер.</div>
+    <div id="u-logbox"></div></div>`;
   if (!st.list && !st.loading){
     st.loading = true;
     wp({ action:"users" }).then(r=>{ st.list = r.list || []; st.err = r.adminsConfigured ? "" : "ADMIN_LOGINS не задан"; if (r.sizeMain > r.chunkLimit * 0.85) st.err = "USERS_JSON близок к лимиту — следующие записи уйдут в USERS_JSON_1…"; })
@@ -2867,6 +2967,7 @@ function renderUsers(){
   document.getElementById("u-add").onclick = ()=>{ const f = form(); if (f.prod === "" && document.getElementById("u-role").value==="prod") return toast("укажи имя продюсера", true); run(Object.assign({ op:"add" }, f), "пользователь добавлен"); };
   document.getElementById("u-save").onclick = ()=>{ const f = form(); if (!f.login) return toast("выбери пользователя (✎)", true); run(Object.assign({ op:"set" }, f), "сохранено — пользователю нужно войти заново"); };
   const tx = document.getElementById("u-tempx"); if (tx) tx.onclick = ()=>{ st.temp = null; renderUsers(); };
+  const ll = document.getElementById("u-loglist"); if (ll) ll.onclick = ()=>loginLogLoad(document.getElementById("u-logbox")); // v6.6
   const cp = document.getElementById("u-copy"); if (cp) cp.onclick = ()=>{ try{ navigator.clipboard.writeText(st.temp.p); toast("скопировано"); }catch(e){} };
   box.querySelectorAll("[data-uedit]").forEach(b=>b.onclick=()=>{
     const x = (st.list||[]).find(q=>q.u===b.dataset.uedit); if (!x) return;
@@ -3092,7 +3193,7 @@ function renderProdReviews(rows){
       + (r.reco ? `<div class="drow"><b>💡 Рекомендации</b><span class="utext">${esc(r.reco)}</span></div>` : "");
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <b>${esc(r.opName||r.opNick||"—")} / ${esc(r.model||"—")}</b>
+        <b>${teamBadges(r)}${esc(r.opName||r.opNick||"—")} / ${esc(r.model||"—")}</b>
         <span style="color:var(--faint);font-size:11.5px">${esc(clabel(r.city))}${r.week?" · "+esc(r.week):""}</span>
         ${s.verdict?`<span class="ptag ${vcls}">${esc(VLBL[s.verdict]||s.verdict)}</span>`:`<span class="ptag">не проверено</span>`}
         ${s.score!==null?`<span style="font-size:12px;color:var(--dim)">${s.score}/${MAX_SCORE}</span>`:""}
@@ -3144,6 +3245,18 @@ function pmCanUse(){ return AUTH.prod || AUTH.edit; }
 function pmCardKey(it, baseKey){ const b = baseKey || (it && it.base) || ""; return b ? "b:" + b : (it && it.id) || ""; } // v6.1: ключ не меняется после первого сохранения
 // чистая: есть ли в записи хоть одна заполненная категория
 function pmChecked(it){ return !!(it && it.status !== "скрыта" && (it.cats||[]).some(c=>String(c||"").trim())); }
+// чистая: полнота разбора — сколько из 9 категорий заполнено и каких не хватает
+function pmFill(cats){
+  const miss = [];
+  for (let j = 0; j < 9; j++) if (!String((cats||[])[j]||"").trim()) miss.push(CATS[j] || ("№" + (j+1)));
+  return { n: 9 - miss.length, miss, full: miss.length === 0 };
+}
+function pmFillTag(cats){
+  const f = pmFill(cats);
+  if (!f.n) return '<span class="ptag">не проверено</span>';
+  if (f.full) return '<span class="ptag pt-ok" title="заполнены все 9 категорий">✅ полный разбор</span>';
+  return `<span class="ptag pt-warn" title="не заполнено: ${esc(f.miss.join(", "))}">⏳ не доделано ${f.n}/9</span>`;
+}
 // чистая: расхождения продюсера со смотрящим по 9 категориям (оба поставили оценку, и она разная)
 //   miss — продюсер «ок», смотрящий «замечание» (продюсер недосмотрел); strict — наоборот
 function pmDiff(pmCats, mineSt){
@@ -3186,7 +3299,7 @@ async function loadPM(opts){
   if (pm.loading) return pm.loading;
   const week = opts.week !== undefined ? opts.week : (pm.week || "");
   pm.loading = wp({ action:"pmread", week: week }, 60000).then(r=>{
-    pm.week = r.week; pm.latest = r.latest; pm.weeks = r.weeks || []; pm.items = r.items || []; pm.screens = r.screens || {};
+    pm.week = r.week; pm.latest = r.latest; pm.weeks = r.weeks || []; pm.items = r.items || []; pm.screens = r.screens || {}; pm.asks = r.asks || [];
     pm.editable = !!r.editable; pm.err = ""; pm.at = Date.now(); state.pmNoAuto = {}; // свежие данные — автосохранение снова можно
     pmBadgeFromItems();
   }).catch(e=>{ pm.err = e.message; }).finally(()=>{ pm.loading = null; if (!opts.quiet || pmIsTab(state.tab)) softRender(); });
@@ -3235,12 +3348,11 @@ function pmCardHtml(c, canEdit, isEd){
   const open = !!(state.pmOpen||{})[k];
   const title = (v.opname || v.nick || "—") + " / " + (v.model || "—");
   const scr = it && it.id ? ((state.pm.screens||{})["PM|" + it.id] || []) : [];
-  const checked = pmChecked(it || { cats: v.cats });
   const head = `<div class="pmhead" data-pmk="${esc(k)}" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer">
-      <b>${esc(title)}</b>
+      <b>${(br || mine) ? teamBadges(br || mine) : ""}${esc(title)}</b>
       <span style="color:var(--faint);font-size:11.5px">${esc(clabel((it && it.city) || (br && br.city) || ""))}${isEd && it ? " · " + esc(it.producer) : ""}${!c.baseKey && !(it && it.base) ? " · ＋ добавлена продюсером" : ""}</span>
       <span class="ptag ${PM_ST_CLS[st]||""}">${esc(pmStLbl(st))}</span>
-      ${checked ? "" : '<span class="ptag">не проверено</span>'}
+      ${it && it.status === "скрыта" ? "" : pmFillTag(v.cats)}
       ${nDif ? `<span class="ptag pt-bad" title="категорий, где оценки продюсера и смотрящего разные">≠ ${nDif}</span>` : ""}
       ${pmDirty(k) ? '<span class="ptag pt-warn" title="есть несохранённые правки (они в черновике)">✎ не сохранено</span>' : ""}
       <span style="margin-left:auto;color:var(--faint);font-size:11.5px">${it && it.updated ? esc(fmtDay(it.updated)) + (it.who ? " · " + esc(it.who) : "") : ""} ${open ? "▴" : "▾"}</span>
@@ -3256,7 +3368,7 @@ function pmCardHtml(c, canEdit, isEd){
     const bg = miss ? "background:rgba(220,70,70,.12);border-color:rgba(220,70,70,.5)" : strict ? "background:rgba(230,170,40,.12);border-color:rgba(230,170,40,.5)" : "";
     const hint = mine && hisS ? `<span class="hint">смотрящий: ${hisS==="ok"?"✅":"❌"}${miss?" · продюсер пропустил":strict?" · продюсер строже":""}</span>` : "";
     const sc = scr.filter(s=>String(s.cat)===n);
-    return `<div class="f" style="${bg}"><div class="pmcat-h"><span class="nm">${myS==="ok"?"✅ ":myS==="bad"?"❌ ":""}${esc(n)}${hint}</span>${canEdit?`<span class="btns"><button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="✅ всё хорошо">✅</button> <button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="">✕</button></span>`:""}</div>
+    return `<div class="f" style="${bg}"><div class="pmcat-h"><span class="nm">${myS==="ok"?"✅ ":myS==="bad"?"❌ ":""}${esc(n)}${hint}</span>${canEdit?`<span class="btns"><button class="qbtn pmq" data-pmta="pm${kid}_${j}" data-v="✅ всё хорошо" title="всё хорошо">✅</button> <button class="qbtn pmq qbad" data-pmta="pm${kid}_${j}" data-bad="1" title="замечание — допиши, что не так">❌</button> <button class="qbtn pmq qclr" data-pmta="pm${kid}_${j}" data-v="" title="очистить поле">⌫</button></span>`:""}</div>
       ${ta("pm"+kid+"_"+j, v.cats[j]||"", "что увидел")}
       ${pmThumbs(sc, it, canEdit)}${canEdit ? `<div style="margin-top:6px"><button class="qbtn" data-pmupl="${esc(k)}" data-pmc="${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div>` : ""}</div>`;
   }).join("");
@@ -3266,6 +3378,7 @@ function pmCardHtml(c, canEdit, isEd){
       <button class="abtn2" data-pmsave="${esc(k)}">💾 Сохранить</button>
       <span id="pmas${esc(strHash(k))}" style="color:var(--faint);font-size:11.5px">${pmDirty(k) ? "есть несохранённое — сохранится само через пару секунд" : "сохраняется автоматически"}</span>
       <span style="flex:1"></span>
+      ${!isAdded && c.baseKey ? `<button class="abtn2" data-pmask="${esc(k)}" title="попросить смотрящего посмотреть эту команду">👀 попросить посмотреть</button>` : ""}
       ${isAdded ? `<button class="abtn2" data-pmhide="${esc(k)}" data-del="1">🗑 Удалить команду</button>` : `<button class="abtn2" data-pmhide="${esc(k)}">🙈 Убрать из моего мониторинга</button>`}` : "";
   const unhide = it && it.status === "скрыта" && AUTH.prod && !viewAsActive() && state.pm.week === state.pm.latest ? `<button class="abtn2" data-pmunhide="${esc(it.id)}">↩ Вернуть в мой мониторинг</button>` : "";
   const edBtns = isEd && AUTH.edit && !viewAsActive() && it && it.status !== "скрыта" ? `
@@ -3273,7 +3386,7 @@ function pmCardHtml(c, canEdit, isEd){
       ${it.status !== "принято" ? `<button class="abtn2" data-pmacc="${esc(it.id)}">✅ Принять</button>` : `<button class="abtn2" data-pmreopen="${esc(it.id)}">🔓 Открыть снова</button>`}
       <button class="abtn2" data-pmret="${esc(it.id)}">↩ Вернуть с замечанием</button>
       ${mine ? `<button class="abtn2" data-pmtake="${esc(k)}" title="перенести оценки продюсера в ТВОЙ разбор этой команды как черновик (в таблицу — только по «Сохранить»)">📝 Взять в мой разбор</button>` : ""}` : "";
-  const retBox = isEd && it ? `<div id="pmret${esc(it.id)}" style="display:none;margin-top:8px">${ta("pmretta"+strHash(it.id), it.note||"", "что исправить — продюсер увидит это у себя", 54)}<button class="abtn2" data-pmretgo="${esc(it.id)}" style="margin-top:6px">↩ Отправить возврат</button></div>` : "";
+  const retBox = isEd && it ? `<div id="pmret${esc(it.id)}" style="display:${pmBoxOpen("ret"+it.id)?"":"none"};margin-top:8px">${ta("pmretta"+strHash(it.id), pmBoxVal("ret"+it.id, it.note||""), "что исправить — продюсер увидит это у себя", 54).replace("<textarea ", '<textarea data-pmbox="ret' + esc(it.id) + '" ')}<button class="abtn2" data-pmretgo="${esc(it.id)}" style="margin-top:6px">↩ Отправить возврат</button></div>` : "";
   return `<div class="card pmcard" data-pmcard="${esc(k)}" style="margin-bottom:10px">${head}
     ${note}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px">${inp("pm"+kid+"_nick", v.nick, "ник опера")}${inp("pm"+kid+"_opname", v.opname, "опер")}${inp("pm"+kid+"_model", v.model, "модель")}</div>
@@ -3283,9 +3396,14 @@ function pmCardHtml(c, canEdit, isEd){
     ${pmThumbs(scr.filter(s=>!CATS.includes(String(s.cat))), it, canEdit)}
     ${canEdit ? `<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="abtn2" data-pmupl="${esc(k)}" data-pmc="G">📷 общее фото</button><span style="color:var(--faint);font-size:11.5px">или Ctrl+V прямо в поле категории — скрин встанет в неё</span></div>` : ""}
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${prodBtns}${edBtns}${unhide}</div>
+    ${AUTH.prod && c.baseKey ? `<div id="pmaskbox${esc(kid)}" style="display:${pmBoxOpen("ask"+kid)?"":"none"};margin-top:8px"><textarea id="pmaskta${esc(kid)}" data-pmbox="ask${esc(kid)}" placeholder="на что посмотреть — например «проверь шоу вечером, модель жалуется»" style="width:100%;min-height:46px;box-sizing:border-box;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px">${esc(pmBoxVal("ask"+kid, ""))}</textarea><button class="abtn2" data-pmasksend="${esc(k)}" style="margin-top:6px">👀 отправить смотрящему</button></div>` : ""}
     ${retBox}
   </div>`;
 }
+// v6.6: открытые поля «попросить посмотреть» и «вернуть с замечанием» с текстом переживают автообновление
+function pmBoxOpen(k){ return !!(state.pmBox && k in state.pmBox); }
+function pmBoxVal(k, def){ return state.pmBox && typeof state.pmBox[k] === "string" ? state.pmBox[k] : def; }
+function pmBoxToggle(k, el){ state.pmBox = state.pmBox || {}; if (k in state.pmBox) delete state.pmBox[k]; else state.pmBox[k] = null; if (el) el.style.display = k in state.pmBox ? "" : "none"; }
 function pmThumbs(list, it, canEdit){
   if (!list || !list.length) return "";
   return `<div class="scrow">${list.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || BLANK)}" data-tk="${esc(s.mini||s.link)}" data-full="${esc(s.link)}" data-cat="${esc(s.cat||"скрин")}" alt="скрин">${canEdit && it ? `<span class="sqx" data-pmdel="${esc(it.id)}" data-link="${esc(s.link)}" title="удалить скрин">✕</span>` : ""}</span>`).join("")}</div>`;
@@ -3319,11 +3437,13 @@ function renderPM(){
   const statusOf = c => c.it ? c.it.status : "не начат";
   const filt = c => f === "all" ? statusOf(c) !== "скрыта"
     : f === "todo" ? !pmChecked(c.it) && statusOf(c) !== "скрыта"
+    : f === "part" ? statusOf(c) !== "скрыта" && (()=>{ const x = pmFill(pmFormVals(c.k, c.it, c.br).cats); return x.n > 0 && !x.full; })()
+    : f === "full" ? statusOf(c) !== "скрыта" && pmFill(pmFormVals(c.k, c.it, c.br).cats).full
     : f === "diff" ? (()=>{ const m = pmMineRow(c.baseKey || (c.it && c.it.base)); if (!m) return false; const d = pmDiff(pmFormVals(c.k, c.it, c.br).cats, rowStats(m).st); return d.miss.length + d.strict.length > 0; })()
     : statusOf(c) === f;
   const shown = cards.filter(filt);
   const cnt = s => cards.filter(c=>statusOf(c)===s).length;
-  const chips = [["all","все"],["todo","не проверены"],["отправлено",(AUTH.prod ? "видно смотрящему · " : "🆕 новые · ")+cnt("отправлено")],["возврат","возврат · "+cnt("возврат")],["принято","принято · "+cnt("принято")],["diff","есть расхождения"],["скрыта","скрытые · "+cnt("скрыта")]];
+  const chips = [["all","все"],["todo","не проверены"],["part","⏳ не доделаны"],["full","✅ полные"],["отправлено",(AUTH.prod ? "видно смотрящему · " : "🆕 новые · ")+cnt("отправлено")],["возврат","возврат · "+cnt("возврат")],["принято","принято · "+cnt("принято")],["diff","есть расхождения"],["скрыта","скрытые · "+cnt("скрыта")]];
   // покрытие
   let covHtml = "";
   if (AUTH.prod){
@@ -3332,12 +3452,14 @@ function renderPM(){
     covHtml = `<div style="margin-top:8px"><div class="pbar-track"><div class="pbar-fill" style="width:${pc}%"></div></div><div style="color:var(--faint);font-size:12px;margin-top:4px">проверено мной: <b>${cv.done} из ${cv.total}</b> команд за неделю (${pc}%)</div></div>`;
   } else {
     const prods = [...new Set(pmBaseTeams(pm.week).map(b=>b.r.producer).concat(items.map(i=>i.producer)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru"));
-    covHtml = `<div style="overflow:auto;margin-top:8px"><table class="mini" style="width:100%;font-size:12.5px;border-collapse:collapse"><tr style="color:var(--faint);text-align:left"><th>продюсер</th><th>проверено</th><th>новые</th><th>возврат</th><th>расхождений</th></tr>` +
+    covHtml = `<div style="overflow:auto;margin-top:8px"><table class="mini" style="width:100%;font-size:12.5px;border-collapse:collapse"><tr style="color:var(--faint);text-align:left"><th>продюсер</th><th>проверено</th><th title="заполнены все 9 категорий">полных</th><th title="заполнена часть категорий">не доделано</th><th>новые</th><th>возврат</th><th>расхождений</th></tr>` +
       prods.map(p=>{
         const its = items.filter(i=>i.producer===p);
         const cv = pmCoverage(pmBaseTeams(pm.week, p), its);
         const nd = its.reduce((a,i)=>{ const m = pmMineRow(i.base); if (!m) return a; const d = pmDiff(i.cats, rowStats(m).st); return a + d.miss.length + d.strict.length; }, 0);
-        return `<tr data-pmprod="${esc(p)}" style="cursor:pointer;border-top:1px solid var(--line)"><td><b>${esc(p)}</b></td><td>${cv.done} из ${cv.total}</td><td>${its.filter(i=>i.status==="отправлено").length||""}</td><td>${its.filter(i=>i.status==="возврат").length||""}</td><td>${nd||""}</td></tr>`;
+        const live = its.filter(i=>i.status!=="скрыта").map(i=>pmFill(i.cats));
+        const nFull = live.filter(x=>x.full).length, nPart = live.filter(x=>x.n && !x.full).length;
+        return `<tr data-pmprod="${esc(p)}" style="cursor:pointer;border-top:1px solid var(--line)"><td><b>${esc(p)}</b></td><td>${cv.done} из ${cv.total}</td><td style="color:var(--ok)">${nFull||""}</td><td style="color:var(--warn)">${nPart||""}</td><td>${its.filter(i=>i.status==="отправлено").length||""}</td><td>${its.filter(i=>i.status==="возврат").length||""}</td><td>${nd||""}</td></tr>`;
       }).join("") + `</table></div>`;
   }
   const weeks = (pm.weeks||[]).slice().reverse();
@@ -3363,6 +3485,7 @@ function renderPM(){
       ${AUTH.prod ? '<div style="color:var(--faint);font-size:12px;margin-top:6px">Это твой мониторинг: разборы смотрящего он не меняет. Пиши по категориям и прикладывай скрины — всё сохраняется само, и смотрящий сразу это видит.</div>' : '<div style="color:var(--faint);font-size:12px;margin-top:6px">Мониторинг, который ведут сами продюсеры: видно сразу, как они пишут. Красным — где продюсер поставил «ок», а у тебя замечание; жёлтым — наоборот.</div>'}
       ${covHtml}
       <div class="fchips" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${chips.map(c=>`<button class="fchip ${f===c[0]?"on":""}" data-pmf="${esc(c[0])}">${esc(c[1])}</button>`).join("")}</div>
+      ${(pm.asks||[]).length ? `<details style="margin-top:8px" ${isEd ? "open" : ""}><summary style="cursor:pointer">👀 ${AUTH.prod ? "Мои просьбы смотрящему" : "Просьбы продюсеров посмотреть команду"} · ${(pm.asks||[]).filter(a=>a.status!=="сделано").length} открыт.</summary>${asksHtml(pm.asks, isEd && AUTH.edit && !viewAsActive())}</details>` : ""}
       ${addForm}
     </div>
     ${shown.length ? shown.map(c=>pmCardHtml(c, pmCardCanEdit(c, canWrite), isEd)).join("")
@@ -3398,6 +3521,7 @@ async function pmSave(k, auto){
   try {
     if (!auto) toast("💾 Сохраняю…"); else if (msg) msg.textContent = "сохраняю…";
     const r = await wp(p, 45000);
+    if (!auto) v.cats.forEach((t,j)=>acLearn(j, t)); // v6.6: свои формулировки — в автоподсказки
     // запись в памяти — без перезагрузки списка, чтобы не мешать набору
     const pm = state.pm; pm.items = pm.items || [];
     let it = c.it && c.it.id ? pm.items.find(x=>x.id===c.it.id) : null;
@@ -3447,14 +3571,16 @@ function pmOpenUpload(k, catIdx){
 }
 async function pmUploadOne(blob, k, catIdx){ // → true | текст ошибки (для общей очереди загрузки)
   try {
-    if (blob && blob.type && !/^image\//.test(blob.type)) return "не картинка";
+    const isVid = isVideoBlob(blob);
+    if (!isVid && blob && blob.type && !/^image\//.test(blob.type)) return "не картинка";
     const id = await pmEnsureId(k); if (!id) return "сначала сохрани мониторинг";
-    const enc = await shotEncode(blob);
-    const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, cat: catIdx === undefined || catIdx === null ? "" : CATS[catIdx] }, 90000);
+    const enc = isVid ? await videoEncode(blob) : await shotEncode(blob);
+    const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, kind: isVid ? "video" : "", cat: catIdx === undefined || catIdx === null ? "" : CATS[catIdx] }, isVid ? 180000 : 90000);
     const key = r.key || ("PM|" + id);
     state.pm.screens = state.pm.screens || {};
     const arr = state.pm.screens[key] = state.pm.screens[key] || [];
-    if (!arr.some(x=>x.link===r.link)) arr.push({ cat: r.cat||"", link: r.link, mini: r.mini||"", ts: r.ts||"" });
+    const item = { cat: r.cat||"", link: r.link, mini: r.mini||"", ts: r.ts||"" }; if (r.type === "video") item.type = "video";
+    if (!arr.some(x=>x.link===r.link)) arr.push(item);
     softRender();
     return true;
   } catch(e){ toast("Скрин не загрузился: " + e.message, true); return e.message || "ошибка"; }
@@ -3494,7 +3620,7 @@ function pmBind(){
       toast("📸 Скрин → " + (m ? CATS[+m[1]] : "общее фото"));
     });
   });
-  box.querySelectorAll(".pmq").forEach(b=>b.onclick=()=>{ const ta = document.getElementById(b.dataset.pmta); if (!ta) return; ta.value = b.dataset.v; ta.dispatchEvent(new Event("input", { bubbles: true })); softRender(); });
+  box.querySelectorAll(".pmq").forEach(b=>b.onclick=()=>{ const id = b.dataset.pmta, ta = document.getElementById(id); if (!ta) return; ta.value = b.dataset.bad ? markBad(ta.value) : b.dataset.v; ta.dispatchEvent(new Event("input", { bubbles: true })); softRender(); if (b.dataset.bad){ const t2 = document.getElementById(id); if (t2) focusEnd(t2); } });
   box.querySelectorAll("[data-pmf]").forEach(b=>b.onclick=()=>{ state.pmFilter = b.dataset.pmf; render(); });
   box.querySelectorAll("[data-pmprod]").forEach(tr=>tr.onclick=()=>{ state.pmProd = state.pmProd === tr.dataset.pmprod ? "" : tr.dataset.pmprod; render(); });
   const ws = document.getElementById("pm-week"); if (ws) ws.onchange = ()=>{ state.pmOpen = {}; loadPM({ week: ws.value }); };
@@ -3509,10 +3635,19 @@ function pmBind(){
     try { await wp(c.it ? { action:"pmhide", id: c.it.id } : { action:"pmhide", base: c.baseKey }); pmSetEdit(b.dataset.pmhide, null); toast(del ? "🗑 Удалено" : "🙈 Убрано"); loadPM(); }
     catch(e){ toast("Ошибка: " + e.message, true); }
   });
+  box.querySelectorAll("[data-pmask]").forEach(b=>b.onclick=()=>{ const kid = strHash(b.dataset.pmask), el = document.getElementById("pmaskbox" + kid); if (el){ pmBoxToggle("ask" + kid, el); const t = el.querySelector("textarea"); if (t && el.style.display !== "none") t.focus(); } });
+  box.querySelectorAll("textarea[data-pmbox]").forEach(t=>t.addEventListener("input", ()=>{ state.pmBox = state.pmBox || {}; state.pmBox[t.dataset.pmbox] = t.value; }));
+  box.querySelectorAll("[data-pmasksend]").forEach(b=>b.onclick=async ()=>{
+    const c = pmFindCard(b.dataset.pmasksend); if (!c || !c.baseKey) return;
+    const ta = document.getElementById("pmaskta" + strHash(b.dataset.pmasksend)); const t = ta ? ta.value.trim() : "";
+    if (!t){ toast("Напиши, на что посмотреть", true); return; }
+    try { await askSend(c.baseKey, t); if (state.pmBox) delete state.pmBox["ask" + strHash(b.dataset.pmasksend)]; loadPM(); } catch(e){ toast("Ошибка: " + e.message, true); }
+  });
+  asksBind(box, ()=>loadPM());
   box.querySelectorAll("[data-pmunhide]").forEach(b=>b.onclick=async ()=>{ try { await wp({ action:"pmunhide", id: b.dataset.pmunhide }); toast("↩ Команда вернулась в мониторинг"); state.pmFilter = "all"; loadPM(); } catch(e){ toast("Ошибка: " + e.message, true); } });
   box.querySelectorAll("[data-pmacc]").forEach(b=>b.onclick=()=>pmStatus(b.dataset.pmacc, "accept"));
   box.querySelectorAll("[data-pmreopen]").forEach(b=>b.onclick=()=>pmStatus(b.dataset.pmreopen, "reopen"));
-  box.querySelectorAll("[data-pmret]").forEach(b=>b.onclick=()=>{ const el = document.getElementById("pmret"+b.dataset.pmret); if (el) el.style.display = el.style.display === "none" ? "" : "none"; });
+  box.querySelectorAll("[data-pmret]").forEach(b=>b.onclick=()=>{ const el = document.getElementById("pmret"+b.dataset.pmret); if (el) pmBoxToggle("ret" + b.dataset.pmret, el); });
   box.querySelectorAll("[data-pmretgo]").forEach(b=>b.onclick=()=>{ const ta = document.getElementById("pmretta"+strHash(b.dataset.pmretgo)); pmStatus(b.dataset.pmretgo, "return", ta ? ta.value.trim() : ""); });
   box.querySelectorAll("[data-pmtake]").forEach(b=>b.onclick=()=>pmTake(b.dataset.pmtake));
   box.querySelectorAll("[data-pmupl]").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const c = b.dataset.pmc; pmOpenUpload(b.dataset.pmupl, c === "G" ? undefined : +c); /* ключ карточки сам содержит «|» */ });
@@ -3545,7 +3680,7 @@ function pmBind(){
 async function pmStatus(id, op, note){
   const it = ((state.pm||{}).items||[]).find(x=>x.id===id); if (!it) return;
   if (op === "return" && !note){ toast("Напиши, что исправить", true); return; }
-  try { await wp({ action:"pmstatus", id, op, note: note || "", rev: it.rev }); toast(op==="accept" ? "✅ Принято" : op==="return" ? "↩ Возвращено продюсеру" : "🔓 Открыто снова"); loadPM(); }
+  try { await wp({ action:"pmstatus", id, op, note: note || "", rev: it.rev }); toast(op==="accept" ? "✅ Принято" : op==="return" ? "↩ Возвращено продюсеру" : "🔓 Открыто снова"); if (state.pmBox) delete state.pmBox["ret" + id]; loadPM(); }
   catch(e){ toast("Ошибка: " + e.message, true); }
 }
 // смотрящий: оценки продюсера → в СВОЙ разбор этой команды как черновик (только пустые категории; в таблицу — по «Сохранить»)
@@ -3586,7 +3721,18 @@ document.addEventListener("click", ev=>{
   state.pmOpen = state.pmOpen || {}; state.pmOpen[it0 ? pmCardKey(it0) : b.dataset.pmgo] = true; state.pmFilter = "all"; state.pmProd = "";
   switchTab(PM_TAB_ED);
 }, true);
-// общий кодировщик скрина (тот же, что у основной загрузки): оригинал до 2560 px и < 5,5 МБ + мини 480 px
+// общий кодировщик скрина: оригинал до 2560 px и < 5,5 МБ + мини 480 px.
+// v6.6: WebP там, где браузер умеет его сохранять (Chrome, Android, Edge, новые Safari) — тот же вид при меньшем весе;
+// иначе JPEG как раньше. Сервер проверяет формат по первым байтам.
+let _webpOk = null;
+function canWebp(){
+  if (_webpOk === null){ try { const c = document.createElement("canvas"); c.width = c.height = 2; _webpOk = c.toDataURL("image/webp", 0.8).indexOf("data:image/webp") === 0; } catch(e){ _webpOk = false; } }
+  return _webpOk;
+}
+function canvasData(cv, quality){ // → base64 (без префикса) в WebP или JPEG
+  const fmt = canWebp() ? "image/webp" : "image/jpeg";
+  return cv.toDataURL(fmt, quality).split(",")[1];
+}
 async function shotEncode(blob){
   if (blob && blob.size > 25*1024*1024) throw new Error("файл больше 25 МБ");
   const img = await createImageBitmap(blob);
@@ -3598,15 +3744,363 @@ async function shotEncode(blob){
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
   ctx.drawImage(img, 0, 0, cv.width, cv.height);
   let data = "";
-  for (const qv of [0.92, 0.85, 0.75, 0.65]){ data = cv.toDataURL("image/jpeg", qv).split(",")[1]; if (data.length * 3 / 4 <= FULL_MAX_BYTES) break; }
+  const qs = canWebp() ? [0.86, 0.8, 0.7, 0.6] : [0.92, 0.85, 0.75, 0.65];
+  for (const qv of qs){ data = canvasData(cv, qv); if (data.length * 3 / 4 <= FULL_MAX_BYTES) break; }
   if (data.length * 3 / 4 > 6*1024*1024) throw new Error("скрин слишком большой даже после сжатия");
-  const scale2 = Math.min(1, 480/Math.max(img.width, img.height));
+  return { data, small: miniFrom(img, img.width, img.height) };
+}
+function miniFrom(src, w, h){ // мини-копия 480 px (для картинки или кадра видео)
+  const scale2 = Math.min(1, 480/Math.max(w, h));
   const cv2 = document.createElement("canvas");
-  cv2.width = Math.round(img.width*scale2); cv2.height = Math.round(img.height*scale2);
+  cv2.width = Math.max(1, Math.round(w*scale2)); cv2.height = Math.max(1, Math.round(h*scale2));
   const ctx2 = cv2.getContext("2d");
-  ctx2.fillStyle = "#fff"; ctx2.fillRect(0, 0, cv2.width, cv2.height);
-  ctx2.drawImage(img, 0, 0, cv2.width, cv2.height);
-  return { data, small: cv2.toDataURL("image/jpeg", 0.8).split(",")[1] };
+  ctx2.fillStyle = "#000"; ctx2.fillRect(0, 0, cv2.width, cv2.height);
+  ctx2.drawImage(src, 0, 0, cv2.width, cv2.height);
+  return canvasData(cv2, 0.8);
+}
+// ---------- v6.6: короткое видео (10–20 с, до 10 МБ) ----------
+const VIDEO_MAX_BYTES = 10*1024*1024, VIDEO_MAX_SEC = 25;
+function isVideoBlob(b){ return !!(b && /^video\//.test(b.type || "")); }
+function blobB64(blob){ return new Promise((res, rej)=>{ const r = new FileReader(); r.onload = ()=>res(String(r.result).split(",")[1] || ""); r.onerror = ()=>rej(new Error("файл не читается")); r.readAsDataURL(blob); }); }
+async function videoEncode(blob){
+  if (blob.size > VIDEO_MAX_BYTES) throw new Error("видео " + (blob.size/1048576).toFixed(1) + " МБ — максимум 10 МБ: сними 10–20 с или в качестве 720p");
+  const url = URL.createObjectURL(blob);
+  try {
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    await new Promise((res, rej)=>{ v.onloadedmetadata = res; v.onerror = ()=>rej(new Error("браузер не может открыть это видео — нужен MP4/MOV/WebM")); setTimeout(()=>rej(new Error("видео долго открывается")), 15000); });
+    if (v.duration && isFinite(v.duration) && v.duration > VIDEO_MAX_SEC) throw new Error("видео " + Math.round(v.duration) + " с — нужно не длиннее " + VIDEO_MAX_SEC + " с");
+    v.currentTime = Math.min(0.5, (v.duration || 1) / 3);
+    await new Promise((res)=>{ v.onseeked = res; setTimeout(res, 4000); });
+    const w = v.videoWidth || 640, h = v.videoHeight || 360;
+    const small = miniFrom(v, w, h); // обложка-кадр
+    return { data: await blobB64(blob), small };
+  } finally { URL.revokeObjectURL(url); }
+}
+// видео приватные: проигрываем через сервер (проверка доступа как у скринов)
+const videoLinks = new Set();
+function noteVideos(list){ (list||[]).forEach(s=>{ if (s && s.type === "video" && s.link) videoLinks.add(s.link); }); }
+function isVideoLink(lk){ return videoLinks.has(String(lk||"")); }
+let vidUrl = "", vidSeq = 0;
+function b64Bytes(d){ const bin = atob(d); const arr = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i); return arr; }
+async function openVideo(link){
+  const id = driveId(link), my = ++vidSeq;
+  const box = document.getElementById("vid-box");
+  box.innerHTML = '<div class="empty">загружаю видео…</div>';
+  openModal("vidmodal");
+  const alive = ()=> my === vidSeq && document.getElementById("vidmodal").classList.contains("show"); // окно закрыли или открыли другое — ответ не нужен
+  try {
+    const parts = []; let r = null, part = 0;
+    do { // сервер отдаёт по 4 МБ
+      r = await wp({ action:"video", id, part }, 120000);
+      if (!alive()) return;
+      parts.push(b64Bytes(r.d)); part++;
+      if (r.parts > 1) box.innerHTML = '<div class="empty">загружаю видео… ' + Math.round(part * 100 / r.parts) + '%</div>';
+    } while (part < (r.parts || 1) && part < 8);
+    if (vidUrl) URL.revokeObjectURL(vidUrl);
+    vidUrl = URL.createObjectURL(new Blob(parts, { type: r.mime || "video/mp4" }));
+    box.innerHTML = '<video controls autoplay playsinline style="max-width:100%;max-height:76vh;border-radius:8px;background:#000"></video>';
+    box.querySelector("video").src = vidUrl;
+  } catch(e){ if (alive()) box.innerHTML = '<div class="empty">⚠ ' + esc(e.message) + '</div>'; }
+}
+// клик по миниатюре видео — плеер вместо просмотра скрина (перехватываем раньше обработчиков картинок)
+document.addEventListener("click", ev=>{
+  const im = ev.target && ev.target.closest ? ev.target.closest("img[data-full]") : null;
+  if (!im || !isVideoLink(im.getAttribute("data-full"))) return;
+  ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
+  openVideo(im.getAttribute("data-full"));
+}, true);
+// в фоне помечаем миниатюры видео значком ▶
+function markVideoThumbs(){
+  document.querySelectorAll(".sthumb img[data-full]").forEach(im=>{ const sp = im.parentElement; if (sp) sp.classList.toggle("isvid", isVideoLink(im.getAttribute("data-full"))); });
+}
+// данные миниатюры: тип по первым байтам (JPEG/WebP/PNG)
+function b64Img(d){ const h = String(d||"").slice(0, 8); return "data:" + (h.indexOf("UklGR") === 0 ? "image/webp" : h.indexOf("iVBOR") === 0 ? "image/png" : "image/jpeg") + ";base64," + d; }
+
+// ===================== v6.6: УДОБСТВО — метки, новички, недавние, компактный режим, презентация, автоподсказки, просьбы, журнал входов =====================
+// ---------- компактный режим таблицы (запоминается в браузере) ----------
+function setCompact(on){
+  document.body.classList.toggle("compact", !!on);
+  try { localStorage.setItem("dash_compact", on ? "1" : "0"); } catch(e){}
+  const b = document.getElementById("f-compact"); if (b) b.classList.toggle("on", !!on);
+}
+try { if (lsGet("dash_compact") === "1") document.body.classList.add("compact"); } catch(e){}
+
+// ---------- метка / закрепление (смотрящий) ----------
+let markTarget = null;
+function openMarkModal(r){
+  markTarget = r;
+  const m = markOf(r) || { c: "", t: "", p: 0 };
+  document.getElementById("mk-title").textContent = "🏷 " + (r.opName || r.opNick || "—") + " / " + (r.model || "—");
+  document.getElementById("mk-colors").innerHTML = MARK_COLORS.map(c=>`<button class="mkcol${c===(m.c||"")?" on":""}" data-mkc="${c}" style="background:${c||"transparent"}" title="${c?"цвет":"без цвета"}">${c?"":"✕"}</button>`).join("");
+  document.getElementById("mk-text").value = m.t || "";
+  document.getElementById("mk-pin").checked = !!m.p;
+  document.getElementById("mk-msg").textContent = "";
+  document.querySelectorAll("[data-mkc]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-mkc]").forEach(z=>z.classList.toggle("on", z===b)); });
+  openModal("markmodal");
+}
+async function saveMark(clear){
+  const r = markTarget; if (!r) return;
+  const on = document.querySelector("[data-mkc].on");
+  const body = clear ? { color: "", text: "", pin: 0 } : { color: on ? on.dataset.mkc : "", text: document.getElementById("mk-text").value.trim().slice(0, 30), pin: document.getElementById("mk-pin").checked ? 1 : 0 };
+  const tk = teamKey(r);
+  try {
+    const res = await wp(Object.assign({ action:"mark", tkey: tk }, body));
+    state.marks = state.marks || {};
+    const k = res.key || tk;
+    if (!body.color && !body.text && !body.pin) delete state.marks[k]; else state.marks[k] = { c: body.color, t: body.text, p: body.pin };
+    if (realData && realData !== state) { /* в режиме «глазами» метки не меняются */ }
+    closeModal("markmodal"); toast(clear || (!body.color && !body.text && !body.pin) ? "Метка снята" : "🏷 Метка сохранена — видят все"); render();
+  } catch(e){ document.getElementById("mk-msg").textContent = "⚠ " + e.message; }
+}
+async function toggleNewbie(r){
+  const nb = newbieOf(r);
+  const op = String(r.opName || r.opNick || "").trim();
+  if (!op){ toast("У команды не указан оператор", true); return; }
+  try {
+    if (nb){
+      if (!confirm("Снять метку «новичок» с оператора «" + op + "»?")) return;
+      await wp({ action:"newbie", city: r.city, op: op, off: 1 });
+      delete (state.newbies||{})[r.city + "|" + op.toLowerCase()];
+      toast("Метка «новичок» снята");
+    } else {
+      const d = prompt("Новый оператор «" + op + "»: сколько дней длится адаптация?", "14");
+      if (d === null) return;
+      const days = Math.max(1, Math.min(90, parseInt(d, 10) || 14));
+      const res = await wp({ action:"newbie", city: r.city, op: op, days: days });
+      state.newbies = state.newbies || {}; state.newbies[res.key || (r.city + "|" + op.toLowerCase())] = { s: res.s, d: res.d };
+      toast("🌱 Отмечен новичком на " + days + " дн.");
+    }
+    render();
+  } catch(e){ toast("Ошибка: " + e.message, true); }
+}
+document.addEventListener("click", ev=>{
+  const b = ev.target && ev.target.closest ? ev.target.closest("[data-mark],[data-newbie]") : null;
+  if (!b) return;
+  ev.stopPropagation();
+  const x = state.lastView[b.dataset.mark || b.dataset.newbie]; if (!x) return;
+  if (b.dataset.mark) openMarkModal(x.r); else toggleNewbie(x.r);
+}, true);
+
+// ---------- недавние карточки (свои, в этом браузере) ----------
+function recentKey(){ return "dash_recent:" + (AUTH.user || ""); }
+function recentList(){ return lsJson(recentKey(), []).filter(x=>x && x.k).slice(0, 12); }
+function recentPush(r){
+  if (!r) return;
+  const it = { k: skey(r), w: r.week || "", c: r.city || "", l: (r.opName || r.opNick || "—") + " / " + (r.model || "—"), t: Date.now() };
+  const L = [it].concat(recentList().filter(x=>!(x.k === it.k))).slice(0, 12);
+  try { localStorage.setItem(recentKey(), JSON.stringify(L)); } catch(e){}
+}
+function recentOpen(k){
+  const it = recentList().find(x=>x.k===k);
+  const parts = String(k).split("|");
+  const src = realRows();
+  // та же команда: сначала точная строка недели, затем эта команда в последней неделе (по оператору и модели)
+  let r = src.find(x=>skey(x)===k);
+  if (!r && it){ const lw = latestWeekName(); r = src.find(x=>x.city===it.c && x.week===lw && String(x.opNick||"").trim()===parts[1] && String(x.model||"").trim()===parts[2]); }
+  if (!r){ toast("Команда не найдена в загруженных неделях — выбери «все недели»", true); return; }
+  gotoRow(r._sheet + "|" + r._row);
+}
+
+// ---------- режим «презентация» для планёрки ----------
+let presIdx = 0;
+function presSlides(){ return ["Обзор"].concat(CITY_ORDER.filter(c=>AUTH.cities.includes("all") || AUTH.cities.includes(c))); }
+function presOpen(){ presIdx = 0; document.getElementById("present").classList.add("show"); presRender(); try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(()=>{}); } catch(e){} }
+document.addEventListener("fullscreenchange", ()=>{ if (!document.fullscreenElement){ const p = document.getElementById("present"); if (p && p.classList.contains("show")) presClose(); } });
+function presClose(){ document.getElementById("present").classList.remove("show"); try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){} }
+function presRender(){
+  const slides = presSlides(); presIdx = (presIdx + slides.length) % slides.length;
+  const tab = slides[presIdx];
+  let rows = dedupeRows(state.rows.filter(r=>r.week === (latestWeekName() || r.week)));
+  if (tab !== "Обзор") rows = rows.filter(r=>r.city===tab);
+  const st = rows.map(rowStats), ws = st.filter(x=>x.score!==null);
+  const n = v=>ws.filter(x=>x.verdict===v).length;
+  const avg = ws.length ? pct(ws.reduce((a,x)=>a+x.score,0)/ws.length) + "%" : "–";
+  const cats = CATS.map((c,i)=>({ c, n: st.filter(s=>s.st[i]==="bad").length })).filter(x=>x.n).sort((a,b)=>b.n-a.n).slice(0, 5);
+  const crit = rows.map((r,i)=>({ r, s: st[i] })).filter(x=>x.s.verdict==="критично").slice(0, 8);
+  document.getElementById("present").innerHTML = `
+    <h1>${tab==="Обзор" ? "📊 Все компании" : esc(clabel(tab))} <span style="font-size:.45em;color:var(--faint);font-weight:400">неделя ${esc(latestWeekName()||"—")}</span></h1>
+    <div class="ptiles">
+      <div class="ptile"><b>${ws.length}<span style="font-size:.4em"> / ${rows.length}</span></b><span>проверено</span></div>
+      <div class="ptile"><b style="color:var(--ok)">${n("норма")}</b><span>нормально</span></div>
+      <div class="ptile"><b style="color:var(--warn)">${n("замечание")}</b><span>есть замечания</span></div>
+      <div class="ptile"><b style="color:var(--bad)">${n("критично")}</b><span>критично</span></div>
+      <div class="ptile"><b>${avg}</b><span>средняя оценка</span></div>
+    </div>
+    <div class="pcols">
+      <div><h2 style="font-size:1.1em">Топ проблем</h2><ol>${cats.length ? cats.map(x=>`<li>${esc(x.c)} — <b>${x.n}</b></li>`).join("") : "<li>замечаний нет 🎉</li>"}</ol></div>
+      <div><h2 style="font-size:1.1em">Критичные команды</h2><ol>${crit.length ? crit.map(x=>`<li>${esc(x.r.opName||x.r.opNick||"—")} / ${esc(x.r.model||"—")} <span style="color:var(--faint)">· ${esc(x.r.producer||"")}</span></li>`).join("") : "<li>критичных нет 🎉</li>"}</ol></div>
+    </div>
+    <div class="pnav"><button class="gbtn" id="pr-prev">←</button><span>${presIdx+1} из ${slides.length}</span><button class="gbtn" id="pr-next">→</button><span style="flex:1"></span><span>← → листать · Esc — выйти</span><button class="gbtn" id="pr-x">✕ выйти</button></div>`;
+  document.getElementById("pr-prev").onclick = ()=>{ presIdx--; presRender(); };
+  document.getElementById("pr-next").onclick = ()=>{ presIdx++; presRender(); };
+  document.getElementById("pr-x").onclick = presClose;
+}
+document.addEventListener("keydown", e=>{
+  const p = document.getElementById("present"); if (!p || !p.classList.contains("show")) return;
+  if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); presClose(); }
+  else if (e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); presIdx++; presRender(); }
+  else if (e.key === "ArrowLeft"){ e.preventDefault(); presIdx--; presRender(); }
+}, true);
+
+// ---------- автоподсказка формулировки (из прошлых замечаний этой категории) ----------
+// Словарь: тексты категории во всех загруженных неделях + шаблоны + свои сохранённые формулировки (в браузере).
+// Показываем, когда начал фразу (от 2 букв): ↑↓ — выбор, Tab — вставить, Esc — закрыть.
+const AC_MAX_OWN = 300;
+let acDict = null, acDictSig = "", acState = null;
+function acOwnKey(){ return "acown:" + (AUTH.user || ""); }
+function acLearn(j, text){ // запомнить свои формулировки после сохранения
+  const parts = acSplit(text); if (!parts.length) return;
+  const own = lsJson(acOwnKey(), {});
+  const L = (own[j] || []).filter(x=>!parts.includes(x));
+  own[j] = parts.concat(L).slice(0, AC_MAX_OWN);
+  try { localStorage.setItem(acOwnKey(), JSON.stringify(own)); } catch(e){}
+  acDict = null;
+}
+function acSplit(text){ // чистая: текст → отдельные формулировки
+  return String(text||"").split(/[\n;]+|\.\s+/).map(x=>x.trim().replace(/[.,;]+$/, "")).filter(x=>x.length >= 4 && x.length <= 90 && x.charAt(0) !== "✅");
+}
+function acBuild(){
+  const src = realRows().concat(((state.pm||{}).items)||[]);
+  const sig = src.length + "|" + (state.dataFp||"") + "|" + (((state.pm||{}).at)||0);
+  if (acDict && sig === acDictSig) return acDict;
+  const d = []; for (let j=0;j<9;j++) d.push({});
+  const add = (j, t, w)=>{ const k = t.toLowerCase(); const o = d[j][k] || (d[j][k] = { t, n: 0 }); o.n += w; };
+  src.forEach(r=>{ (r.cats||[]).forEach((t,j)=>{ if (j < 9 && !r._lite) acSplit(t).forEach(x=>add(j, x, 1)); }); });
+  const own = lsJson(acOwnKey(), {});
+  for (let j=0;j<9;j++){ (own[j]||[]).forEach(x=>add(j, x, 3)); (PH[FIELDCODES[j]]||[]).forEach(x=>add(j, x, 1)); try { getPhrases(FIELDCODES[j]).forEach(x=>add(j, x, 2)); } catch(e){} }
+  acDict = d.map(o=>Object.values(o).sort((a,b)=>b.n-a.n)); acDictSig = sig;
+  return acDict;
+}
+function acFragment(val, pos){ // чистая: начало текущей фразы до курсора
+  const before = String(val||"").slice(0, pos);
+  const m = before.match(/(?:^|[\n;,.]\s*)([^\n;,.]*)$/);
+  const frag = m ? m[1] : before;
+  return { frag: frag.replace(/^\s+/, ""), start: pos - frag.replace(/^\s+/, "").length };
+}
+function acMatch(list, frag){ // чистая: подходящие формулировки (по началу фразы или слова), до 6
+  const f = frag.toLowerCase().trim(); if (f.length < 2) return [];
+  const out = [];
+  for (const o of list){
+    const t = o.t.toLowerCase();
+    if (t === f) continue;
+    if (t.indexOf(f) === 0 || t.indexOf(" " + f) >= 0) out.push(o.t);
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+function acCatOf(el){ const m = el && el.id && el.id.match(/^(?:ed[\w]+|pm[a-z0-9]+)_(\d)$/); return m ? +m[1] : null; }
+function acHide(){ const b = document.getElementById("acbox"); if (b) b.style.display = "none"; acState = null; }
+function acShow(el, items, start){
+  const box = document.getElementById("acbox"); if (!box) return;
+  if (!items.length){ acHide(); return; }
+  acState = { el, items, start, i: 0 };
+  box.innerHTML = '<div class="ach">из прошлых замечаний · Tab — вставить</div>' + items.map((t,i)=>`<div data-aci="${i}" class="${i===0?"on":""}">${esc(t)}</div>`).join("");
+  const r = el.getBoundingClientRect();
+  box.style.left = (window.scrollX + r.left) + "px"; box.style.top = (window.scrollY + r.bottom + 2) + "px"; box.style.minWidth = Math.min(r.width, 420) + "px";
+  box.style.display = "block";
+}
+function acAccept(i){
+  const a = acState; if (!a) return;
+  const el = a.el, t = a.items[i == null ? a.i : i]; if (!t) return;
+  const pos = el.selectionStart || el.value.length;
+  el.value = el.value.slice(0, a.start) + t + el.value.slice(pos);
+  const np = a.start + t.length; try { el.setSelectionRange(np, np); } catch(e){}
+  acHide();
+  acSkip = el; // своё событие input — без новой подсказки (следующий Tab переведёт фокус дальше)
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+let acSkip = null;
+document.addEventListener("input", ev=>{
+  const el = ev.target; if (acSkip === el){ acSkip = null; return; } acSkip = null;
+  const j = acCatOf(el);
+  if (j === null || el.disabled){ if (acState) acHide(); return; }
+  const f = acFragment(el.value, el.selectionStart || 0);
+  acShow(el, acMatch(acBuild()[j] || [], f.frag), f.start);
+});
+document.addEventListener("keydown", ev=>{
+  if (!acState || ev.target !== acState.el) return;
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp"){
+    ev.preventDefault();
+    acState.i = (acState.i + (ev.key === "ArrowDown" ? 1 : -1) + acState.items.length) % acState.items.length;
+    document.querySelectorAll("#acbox [data-aci]").forEach((d,i)=>d.classList.toggle("on", i===acState.i));
+  } else if (ev.key === "Tab" && !ev.shiftKey){ ev.preventDefault(); acAccept(); }
+  else if (ev.key === "Escape"){ ev.preventDefault(); ev.stopPropagation(); acHide(); }
+}, true);
+document.addEventListener("mousedown", ev=>{
+  const d = ev.target && ev.target.closest ? ev.target.closest("#acbox [data-aci]") : null;
+  if (d){ ev.preventDefault(); acAccept(+d.dataset.aci); return; }
+  if (acState && !(ev.target && ev.target.closest && ev.target.closest("#acbox"))) acHide();
+}, true);
+document.addEventListener("focusout", ev=>{ if (acState && ev.target === acState.el) setTimeout(()=>{ if (acState && document.activeElement !== acState.el) acHide(); }, 150); });
+
+// ---------- просьбы «посмотри эту команду» ----------
+async function askSend(baseKey, text){
+  const r = await wp({ action:"askadd", skey: baseKey, text: text });
+  toast("👀 Просьба отправлена смотрящему");
+  return r;
+}
+function asksHtml(list, forEditor){
+  if (!list || !list.length) return "";
+  return list.map(a=>`<div class="drow" style="align-items:flex-start"><b>${a.status==="сделано"?"✅":"👀"} ${esc(a.nick||"—")} / ${esc(a.model||"—")}</b>
+    <span><span style="color:var(--faint);font-size:11.5px">${esc(clabel(a.city))}${forEditor ? " · " + esc(a.producer) : ""} · ${esc(a.when)}</span><br><span class="utext">${esc(a.text)}</span>
+    ${a.answer ? `<div style="margin-top:4px;color:var(--ok)">↩ ${esc(a.by||"смотрящий")}: <span class="utext">${esc(a.answer)}</span></div>` : ""}
+    ${forEditor && a.status !== "сделано" ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button class="abtn2" data-askgo="${esc(a.key)}">открыть команду</button><input data-askans="${esc(a.id)}" style="flex:1;min-width:160px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px" placeholder="ответ продюсеру (необязательно)"><button class="abtn2" data-askdone="${esc(a.id)}">✅ посмотрел</button></div>` : ""}</span></div>`).join("");
+}
+function asksBind(root, after){
+  root.querySelectorAll("[data-askgo]").forEach(b=>b.onclick=(ev)=>{
+    ev.stopPropagation();
+    const k = b.dataset.askgo; const r = realRows().find(x=>skey(x)===k);
+    if (!r){ toast("Команда не найдена в загруженной неделе", true); return; }
+    document.querySelectorAll(".modal-ov.show").forEach(ov=>closeModal(ov.id));
+    gotoRow(r._sheet + "|" + r._row);
+  });
+  root.querySelectorAll("[data-askdone]").forEach(b=>b.onclick=async (ev)=>{
+    ev.stopPropagation();
+    const inp = root.querySelector(`[data-askans="${b.dataset.askdone}"]`);
+    try { await wp({ action:"askdone", id: b.dataset.askdone, answer: inp ? inp.value.trim() : "" }); toast("✅ Отмечено"); if (after) after(); }
+    catch(e){ toast("Ошибка: " + e.message, true); }
+  });
+}
+
+// ---------- журнал входов (админ, вкладка «Пользователи») ----------
+async function loginLogLoad(box){
+  box.innerHTML = '<div class="empty">загружаю…</div>';
+  try {
+    const r = await wp({ action:"loginlog" });
+    const L = r.list || [];
+    box.innerHTML = L.length ? `<div style="overflow:auto;max-height:420px"><table class="shtable"><thead><tr><th>когда</th><th>логин</th><th>результат</th><th>устройство</th></tr></thead><tbody>${L.map(x=>`<tr><td style="white-space:nowrap">${esc(x.t)}</td><td>${esc(x.u)}</td><td style="color:${x.r==="вход"?"var(--ok)":"var(--warn)"}">${esc(x.r)}</td><td>${esc(x.d)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">записей пока нет</div>';
+  } catch(e){ box.innerHTML = '<div class="empty">⚠ ' + esc(e.message) + '</div>'; }
+}
+function devName(){ // «Windows · Chrome 129 · ПК» — без точных данных устройства
+  const ua = navigator.userAgent || "";
+  const os = /Android/i.test(ua) ? "Android" : /iPhone|iPad|iPod/i.test(ua) ? "iOS" : /Windows/i.test(ua) ? "Windows" : /Mac OS X/i.test(ua) ? "macOS" : /Linux/i.test(ua) ? "Linux" : "?";
+  const br = (ua.match(/(Edg|OPR|YaBrowser|Chrome|Firefox|Version)\/(\d+)/) || []);
+  const name = { Edg: "Edge", OPR: "Opera", YaBrowser: "Яндекс", Chrome: "Chrome", Firefox: "Firefox", Version: "Safari" }[br[1]] || "браузер";
+  const mob = /Mobi|Android|iPhone/i.test(ua) ? "телефон" : "ПК";
+  return os + " · " + name + (br[2] ? " " + br[2] : "") + " · " + mob;
+}
+
+// ---------- предзагрузка истории в фоне (переключение недель без ожидания) ----------
+let prefetchT = null;
+function schedulePrefetch(){
+  clearTimeout(prefetchT);
+  prefetchT = setTimeout(()=>{
+    if (state.fullLoaded || state.fullLoading || !AUTH.ok() || document.visibilityState !== "visible") return;
+    const c = navigator.connection; if (c && (c.saveData || /2g/.test(c.effectiveType || ""))) return; // экономия трафика
+    ensureFull({ silent: true });
+  }, 8000);
+}
+
+// ---------- плашка самопроверки сервера (смотрящему) ----------
+function healthShow(h){
+  state.health = h || null;
+  const bar = document.getElementById("healthbar"); if (!bar) return;
+  if (!AUTH.edit || viewAsActive() || !h || h.ok){ bar.style.display = "none"; return; }
+  bar.style.display = "block";
+  bar.innerHTML = `⚠ <b>Самопроверка сервера (${esc(h.t||"")}) нашла проблему:</b><ul style="margin:4px 0 4px 18px">${(h.problems||[]).map(p=>`<li>${esc(p)}</li>`).join("")}</ul><button class="gbtn" id="hb-run">проверить снова</button> <button class="gbtn" id="hb-st">подробнее в «Состоянии»</button>`;
+  document.getElementById("hb-run").onclick = async ()=>{ try { const r = await wp({ action:"selfcheck" }, 120000); healthShow(r); toast(r.ok ? "✅ Всё в порядке" : "⚠ Проблема осталась", !r.ok); } catch(e){ toast(e.message, true); } };
+  document.getElementById("hb-st").onclick = ()=>switchTab("Состояние");
 }
 
 // ---------- «Итог» — последний итог дня по сверкам (лист «Итог», только чтение) ----------
@@ -3901,7 +4395,8 @@ function postJSON(body, timeoutMs){
   });
 }
 // действия, меняющие таблицу: в режиме «глазами» они запрещены (там чужие права и отфильтрованные данные)
-const WRITE_ACTIONS_FE = ["tpl","useradmin","suggest","resetreq","upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply"];
+const WRITE_ACTIONS_FE = ["tpl","useradmin","suggest","resetreq","upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply","mark","newbie","askadd","askdone","pmsave","pmupload","pmdelscreen","pmhide","pmunhide","pmstatus","chpass"];
+let writeSeq = 0; // v6.6: счётчик записей — фоновое чтение, начатое до записи, не затирает её результат
 let sessionGone = false;
 function sessionExpired(){ // C: сессия истекла/погашена — сразу окно входа (черновики остаются в браузере)
   if (sessionGone) return; sessionGone = true;
@@ -3916,7 +4411,9 @@ function wp(params, timeoutMs){
   const a = String(params && params.action || "");
   if (viewAsActive() && WRITE_ACTIONS_FE.indexOf(a) >= 0) return Promise.reject(new Error("в режиме «глазами …» изменения отключены — выйди из режима"));
   // v6 (исправление 10): в режиме «глазами» запрос помечается — сервер тоже откажет в любой записи
+  const isW = WRITE_ACTIONS_FE.indexOf(a) >= 0 && a !== "tpl"; if (isW) writeSeq++;
   return postJSON(Object.assign({}, params, { token: AUTH.token }, viewAsActive() ? { viewAs: 1 } : {}), timeoutMs)
+    .finally(() => { if (isW) writeSeq++; })
     .then(j => {
       if (j && j.error){
         if (/требуется вход/.test(j.error) && a !== "logout") sessionExpired();
@@ -3952,13 +4449,13 @@ function aiAcceptCat(key, item){
   ta.value = v; ta.dispatchEvent(new Event("input", {bubbles:true}));
   return true;
 }
-async function aiScreenDraft(key, x, compare){
+async function aiScreenDraft(key, x){
   const scr = aiPickScreen((state.screens||{})[skey(x.r)] || []);
   if (!scr){ aiMsg(key, "🤖 у команды нет скринов"); return; }
   const id = driveId(scr.link || scr.mini || "");
-  aiMsg(key, compare ? "⚖ Gemini и Grok смотрят скрин… (до 2 минут)" : "🤖 ИИ смотрит скрин… (до минуты)");
+  aiMsg(key, "🤖 ИИ смотрит скрин… (до минуты)");
   try {
-    const res = await aiAsk("screendraft", { id: id, text: compare ? "compare" : "", ckey: "scr|" + id + (compare ? "|cmp" : "") });
+    const res = await aiAsk("screendraft", { id: id, text: "", ckey: "scr|" + id });
     if (res.error) throw new Error(res.error);
     const icon = s => s==="ok" ? "✅" : s==="bad" ? "❌" : "·";
     const col = (d, tag) => {
@@ -3968,7 +4465,7 @@ async function aiScreenDraft(key, x, compare){
         ${d.cats.map(c=>`<div class="aidrow">${icon(c.state)} <b>${esc(c.cat)}</b> <span>${esc(c.remark||"—")}</span>${aiDraftText(c)?` <button class="qbtn" data-aiacc="${esc(tag)}|${c.i}">принять</button>`:""}</div>`).join("")}
         <button class="abtn2" data-aiall="${esc(tag)}">✅ принять всё (${d.cats.filter(c=>aiDraftText(c)).length})</button></div>`;
     };
-    const drafts = res.compare ? { "Gemini": res.gemini, "Grok": res.grok } : { "ИИ": res };
+    const drafts = { "ИИ": res };
     aiShow(key, box=>{
       box.innerHTML = `<div style="color:var(--faint);font-size:11.5px;margin-bottom:4px">🤖 черновик по скрину${scr.cat?" «"+esc(scr.cat)+"»":""} — ничего не сохранено; «принять» вписывает текст в поле, в таблицу — только «Сохранить»</div>
         <div class="aidgrid">${Object.keys(drafts).map(t=>col(drafts[t], t)).join("")}</div> <button class="abtn2" data-aiclose="1">✕ закрыть</button>`;
@@ -4017,6 +4514,12 @@ function thumbVisible(im){
 let thumbScrollT = null;
 window.addEventListener("scroll", ()=>{ clearTimeout(thumbScrollT); thumbScrollT = setTimeout(ensureThumbs, 250); }, { passive: true });
 function ensureThumbs(){ // миниатюры через сервер: приватные файлы, доступ только своим
+  try { // v6.6: какие из ссылок — видео (значок ▶ и плеер по клику)
+    Object.values(state.screens||{}).forEach(noteVideos);
+    if (realData && realData.screens) Object.values(realData.screens).forEach(noteVideos);
+    if (state.pm && state.pm.screens) Object.values(state.pm.screens).forEach(noteVideos);
+    markVideoThumbs();
+  } catch(e){}
   // D: одна пачка до 30 миниатюр на запрос вместо запроса на каждую картинку
   const need = {};
   document.querySelectorAll("img[data-tk]").forEach(im=>{
@@ -4038,7 +4541,7 @@ function ensureThumbs(){ // миниатюры через сервер: прив
         delete thumbBusy[id];
         if (!d[id]) return; // нет доступа/не влезло — попробуем при следующей отрисовке
         const lk = need[id];
-        state.thumbData[lk] = "data:image/jpeg;base64," + d[id];
+        state.thumbData[lk] = b64Img(d[id]);
         document.querySelectorAll("img[data-tk]").forEach(x=>{ if (x.getAttribute("data-tk") === lk) x.src = state.thumbData[lk]; });
       });
     }).catch(()=>{ part.forEach(id=>{ delete thumbBusy[id]; }); });
@@ -4162,6 +4665,7 @@ async function saveRow(x, key){
   const linksNew = lkEl ? normLinks(lkEl.value) : "";
   if (lkEl && linksNew !== normLinks(x.r.linksTxt||"")) changes.push(["links", linksNew]);
   if (!changes.length){ toast("Изменений нет", true); return; }
+  changes.forEach(c=>{ const j = FIELDCODES.indexOf(c[0]); if (j >= 0) acLearn(j, c[1]); }); // v6.6: свои формулировки — в автоподсказки
   // оптимистично: значения применяем сразу, «Сохранено» показываем сразу, отправка — фоном пачкой
   changes.forEach(c=>{
     const j = FIELDCODES.indexOf(c[0]);
@@ -4322,6 +4826,11 @@ document.getElementById("d-one").onclick = ()=>doDelTeam(false);
 document.getElementById("d-all").onclick = ()=>doDelTeam(true);
 document.getElementById("op-x").onclick = ()=>closeModal("opmodal");
 document.getElementById("cam-x").onclick = ()=>closeModal("cammodal");
+document.getElementById("vid-x").onclick = ()=>closeModal("vidmodal");
+document.getElementById("mk-x").onclick = ()=>closeModal("markmodal");
+document.getElementById("mk-save").onclick = ()=>saveMark(false);
+document.getElementById("mk-clear").onclick = ()=>saveMark(true);
+document.getElementById("presbtn").onclick = ()=>presOpen();
 // Обновление 5: просмотр скрина — заглушка-миниатюра, затем оригинал полного размера; клик — 1:1 / вписать
 let camSeq = 0;
 function camShow(src, isMini){
@@ -4344,7 +4853,7 @@ function camLoadFull(id){
     if (!res || res.error || !res.d){ if (q) q.textContent = "скрин недоступен — показана миниатюра"; return; }
     const im = document.getElementById("cam-img");
     im.onload = ()=>{ if (my === camSeq && q) q.textContent = im.naturalWidth ? (im.naturalWidth + "×" + im.naturalHeight) : ""; im.onload = null; };
-    im.src = "data:image/jpeg;base64," + res.d;
+    im.src = b64Img(res.d);
   }).catch(()=>{ const q = document.getElementById("cam-q"); if (my === camSeq && q) q.textContent = "нет связи — показана миниатюра"; });
 }
 function camLoadOrig(){
@@ -4356,7 +4865,7 @@ function camLoadOrig(){
     if (!res || res.error || !res.d){ if (q) q.textContent = "оригинал недоступен"; return; }
     const im = document.getElementById("cam-img");
     im.onload = ()=>{ if (q) q.textContent = im.naturalWidth ? ("оригинал " + im.naturalWidth + "×" + im.naturalHeight) : ""; im.onload = null; };
-    im.src = "data:image/jpeg;base64," + res.d;
+    im.src = b64Img(res.d);
   }).catch(()=>{ const ob2 = document.getElementById("cam-orig"); if (ob2) ob2.disabled = false; if (q) q.textContent = "нет связи — оригинал не загрузился"; });
 }
 document.getElementById("cam-wrap").onclick = ()=>document.getElementById("cam-wrap").classList.toggle("zoom");
@@ -4385,6 +4894,7 @@ function annDraw(ctx, img, shapes, W){
   shapes.forEach(s=>{
     ctx.strokeStyle = ctx.fillStyle = s.c; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
     if (s.t === "rect"){ ctx.strokeRect(Math.min(s.x1,s.x2), Math.min(s.y1,s.y2), Math.abs(s.x2-s.x1), Math.abs(s.y2-s.y1)); }
+    else if (s.t === "pen"){ const p = s.pts || []; if (p.length > 1){ ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y); for (let i=1;i<p.length;i++) ctx.lineTo(p[i].x, p[i].y); ctx.stroke(); } }
     else if (s.t === "arrow"){
       ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
       const h = annArrowHead(s.x1, s.y1, s.x2, s.y2, lw * 5);
@@ -4396,9 +4906,25 @@ function annDraw(ctx, img, shapes, W){
     }
   });
 }
+// v6.6: обрезка — чистая функция прямоугольника (в координатах картинки, в пределах холста, не меньше 16 px)
+function cropRect(c, W, H){
+  if (!c) return null;
+  const x = Math.max(0, Math.min(c.x1, c.x2)), y = Math.max(0, Math.min(c.y1, c.y2));
+  const w = Math.min(W, Math.max(c.x1, c.x2)) - x, h = Math.min(H, Math.max(c.y1, c.y2)) - y;
+  return (w >= 16 && h >= 16) ? { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) } : null;
+}
+function annCropOverlay(ctx, c, W, H){ // затемнение всего, что будет обрезано
+  const r = cropRect(c, W, H); if (!r) return;
+  ctx.save(); ctx.fillStyle = "rgba(0,0,0,.55)";
+  ctx.fillRect(0, 0, W, r.y); ctx.fillRect(0, r.y + r.h, W, H - r.y - r.h); ctx.fillRect(0, r.y, r.x, r.h); ctx.fillRect(r.x + r.w, r.y, W - r.x - r.w, r.h);
+  ctx.strokeStyle = "#fff"; ctx.setLineDash([10, 6]); ctx.lineWidth = Math.max(2, W / 600); ctx.strokeRect(r.x, r.y, r.w, r.h); ctx.restore();
+}
 // очередь файлов на разметку: каждый — по очереди через окно; на выходе — размеченный JPEG (+ оригинал по галочке)
 function annotateGate(files, enqueue){
   const on = document.getElementById("u-ann") && document.getElementById("u-ann").checked;
+  const vids = files.filter(isVideoBlob); if (vids.length) enqueue(vids); // видео — без разметки
+  files = files.filter(f=>!isVideoBlob(f));
+  if (!files.length) return;
   if (!on){ enqueue(files); return; }
   const rest = files.slice();
   const next = async ()=>{
@@ -4418,8 +4944,15 @@ function annotateOne(file, left){
     const MAX = 2560, k = Math.min(1, MAX / Math.max(img.width, img.height));
     const cv = document.getElementById("ann-cv"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
     const ctx = cv.getContext("2d");
-    const shapes = []; let tool = "arrow", color = ANN_COLORS[0], cur = null;
-    const redraw = ()=>{ annDraw(ctx, img, cur ? shapes.concat([cur]) : shapes, cv.width); };
+    const shapes = []; let tool = "arrow", color = ANN_COLORS[0], cur = null, crop = null;
+    document.querySelectorAll("[data-anntool]").forEach(b=>b.classList.toggle("on", b.dataset.anntool === "arrow")); // новый скрин — снова «стрелка»
+    const unc = document.getElementById("ann-uncrop");
+    const redraw = ()=>{
+      annDraw(ctx, img, cur && cur.t !== "crop" ? shapes.concat([cur]) : shapes, cv.width);
+      annCropOverlay(ctx, cur && cur.t === "crop" ? cur : crop, cv.width, cv.height);
+      if (unc) unc.style.display = crop ? "" : "none";
+    };
+    if (unc) unc.onclick = ()=>{ crop = null; redraw(); };
     document.getElementById("ann-colors").innerHTML = ANN_COLORS.map(c=>`<button class="anncol${c===color?" on":""}" data-annc="${c}" style="background:${c}"></button>`).join("");
     document.querySelectorAll("[data-annc]").forEach(b=>b.onclick=()=>{ color = b.dataset.annc; document.querySelectorAll("[data-annc]").forEach(z=>z.classList.toggle("on", z===b)); });
     document.querySelectorAll("[data-anntool]").forEach(b=>b.onclick=()=>{ tool = b.dataset.anntool; document.querySelectorAll("[data-anntool]").forEach(z=>z.classList.toggle("on", z===b)); });
@@ -4429,19 +4962,28 @@ function annotateOne(file, left){
     cv.onpointerdown = ev=>{
       ev.preventDefault(); const a = pt(ev);
       if (tool === "text"){ const t = prompt("Текст на скрине:"); if (t && t.trim()){ shapes.push({ t:"text", c:color, x1:a.x, y1:a.y, text:t.trim().slice(0,80) }); redraw(); } return; }
-      cur = { t: tool, c: color, x1: a.x, y1: a.y, x2: a.x, y2: a.y }; try { cv.setPointerCapture(ev.pointerId); } catch(e){}
+      cur = { t: tool, c: color, x1: a.x, y1: a.y, x2: a.x, y2: a.y }; if (tool === "pen") cur.pts = [a]; try { cv.setPointerCapture(ev.pointerId); } catch(e){}
     };
-    cv.onpointermove = ev=>{ if (!cur) return; const a = pt(ev); cur.x2 = a.x; cur.y2 = a.y; redraw(); };
-    cv.onpointerup = ()=>{ if (!cur) return; if (Math.hypot(cur.x2-cur.x1, cur.y2-cur.y1) > 6) shapes.push(cur); cur = null; redraw(); };
-    document.getElementById("ann-undo").onclick = ()=>{ shapes.pop(); redraw(); };
-    document.getElementById("ann-clear").onclick = ()=>{ shapes.length = 0; redraw(); };
+    cv.onpointermove = ev=>{ if (!cur) return; const a = pt(ev); cur.x2 = a.x; cur.y2 = a.y; if (cur.pts) cur.pts.push(a); redraw(); };
+    cv.onpointerup = ()=>{
+      if (!cur) return;
+      if (cur.t === "crop") crop = cropRect(cur, cv.width, cv.height) ? cur : crop;
+      else if (cur.t === "pen" ? (cur.pts && cur.pts.length > 2) : Math.hypot(cur.x2-cur.x1, cur.y2-cur.y1) > 6) shapes.push(cur);
+      cur = null; redraw();
+    };
+    document.getElementById("ann-undo").onclick = ()=>{ if (shapes.length) shapes.pop(); else crop = null; redraw(); };
+    document.getElementById("ann-clear").onclick = ()=>{ shapes.length = 0; crop = null; redraw(); };
     let done = false;
     annOnClose = ()=>finish(null);
     const finish = (val)=>{ if (done) return; done = true; annOnClose = null; closeModal("annmodal"); cv.onpointerdown = cv.onpointermove = cv.onpointerup = null; resolve(val); };
     document.getElementById("ann-ok").onclick = ()=>{
-      if (!shapes.length){ finish({ blob: file, marked: false }); return; }
+      const cr = cropRect(crop, cv.width, cv.height);
+      if (!shapes.length && !cr){ finish({ blob: file, marked: false }); return; }
       const keep = document.getElementById("ann-keep").checked;
-      cv.toBlob(b=>finish({ blob: b || file, marked: !!b, keepOrig: keep }), "image/jpeg", 0.92);
+      annDraw(ctx, img, shapes, cv.width); // без затемнения обрезки
+      let outCv = cv;
+      if (cr){ outCv = document.createElement("canvas"); outCv.width = cr.w; outCv.height = cr.h; outCv.getContext("2d").drawImage(cv, cr.x, cr.y, cr.w, cr.h, 0, 0, cr.w, cr.h); }
+      outCv.toBlob(b=>finish({ blob: b || file, marked: !!b, keepOrig: keep }), "image/jpeg", 0.95);
     };
     document.getElementById("ann-skip").onclick = ()=>finish({ blob: file, marked: false });
     document.getElementById("ann-x").onclick = ()=>finish(null); // закрыть — этот скрин не загружать
@@ -4451,12 +4993,12 @@ function annotateOne(file, left){
 // Обновление 6 (5): очередь загрузки — несколько скринов из буфера/перетаскивания/выбора, по одному, с прогрессом.
 // Лимиты JPEG прежние (сжатие в uploadScreen). Окно можно закрыть — очередь догрузится, итог придёт тостом.
 const uplQueue = { items: [], running: false };
-function uplImagesFrom(list){ // чистая: из FileList/DataTransferItemList — только картинки, не больше 20
+function uplImagesFrom(list){ // чистая: из FileList/DataTransferItemList — картинки и (v6.6) короткие видео, не больше 20
   const out = [];
   for (let i = 0; i < (list ? list.length : 0); i++){
     const it = list[i]; if (!it) continue;
-    const f = (typeof it.getAsFile === "function") ? (it.kind === "file" || /^image\//.test(it.type||"") ? it.getAsFile() : null) : it;
-    if (f && (!f.type || /^image\//.test(f.type))) out.push(f);
+    const f = (typeof it.getAsFile === "function") ? (it.kind === "file" || /^(image|video)\//.test(it.type||"") ? it.getAsFile() : null) : it;
+    if (f && (!f.type || /^(image|video)\//.test(f.type))) out.push(f);
     if (out.length >= 20) break;
   }
   return out;
@@ -4503,6 +5045,8 @@ document.getElementById("u-file").onclick = ()=>{ document.getElementById("u-fil
 document.getElementById("u-zone").onclick = ()=>{ document.getElementById("u-fileinp").click(); };
 // Обновление 6 (11): камера телефона → (разметка) → очередь в ту же категорию
 document.getElementById("u-cam").onclick = ()=>{ document.getElementById("u-caminp").click(); };
+document.getElementById("u-vid").onclick = ()=>{ document.getElementById("u-vidinp").click(); }; // v6.6: снять/выбрать видео
+document.getElementById("u-vidinp").onchange = function(){ const f = uplImagesFrom(this.files); if (f.length) doUpload(f); this.value = ""; };
 document.getElementById("u-caminp").onchange = function(){ const f = uplImagesFrom(this.files); if (f.length) doUpload(f); this.value = ""; };
 document.getElementById("u-fileinp").onchange = function(){ const f = uplImagesFrom(this.files); if (f.length) doUpload(f); this.value = ""; };
 (function(){ // перетаскивание нескольких файлов в окно фото
@@ -4570,13 +5114,16 @@ document.getElementById("resetbell").onclick = async ()=>{
   try {
     const parts = await Promise.all([
       wp({ action:"resetlist" }).catch(()=>({list:[]})),
-      wp({ action:"suggestlist" }).catch(()=>({list:[]}))
+      wp({ action:"suggestlist" }).catch(()=>({list:[]})),
+      wp({ action:"asklist" }).catch(()=>({list:[]}))
     ]);
     const rq = parts[0].list || [], sg = parts[1].list || [];
+    const asks = (parts[2].list || []).filter(a=>a.status !== "сделано"); // v6.6: просьбы продюсеров «посмотри команду»
     const sgMeta = {}; sg.forEach(r=>{ sgMeta[r.row] = { who: r.who, when: r.when }; }); // сервер сверяет автора+время строки
-    updateResetBell(rq.length); // предложения теперь прочитаны — на колокольчике остаются только заявки
-    if (!rq.length && !sg.length){ list.innerHTML = '<div class="empty">Новых заявок и предложений нет</div>'; return; }
+    updateResetBell(rq.length + asks.length); // предложения теперь прочитаны — на колокольчике остаются заявки и просьбы
+    if (!rq.length && !sg.length && !asks.length){ list.innerHTML = '<div class="empty">Новых заявок, просьб и предложений нет</div>'; return; }
     let html = "";
+    if (asks.length) html += '<div style="color:var(--faint);font-size:12px;margin:4px 0">👀 просьбы продюсеров посмотреть команду</div>' + asksHtml(asks, true);
     if (rq.length){
       html += '<div style="color:var(--faint);font-size:12px;margin:4px 0">заявки на смену пароля</div>';
       html += rq.map(r=>`<div class="drow" style="align-items:center"><b>${esc(r.login)}</b><span style="color:var(--faint);font-size:11.5px">${esc(r.created)}</span><span><button class="abtn2 rsq-ok" data-row="${r.row}" data-login="${esc(r.login)}">✅ Разрешить</button> <button class="abtn2 rsq-no" data-row="${r.row}" data-login="${esc(r.login)}" title="отклонить">✕</button></span></div>`).join("");
@@ -4586,6 +5133,7 @@ document.getElementById("resetbell").onclick = async ()=>{
       html += sg.map(r=>`<div class="drow" style="align-items:flex-start"><b>${r.unread?"🆕 ":""}${esc(r.who)}</b><span style="white-space:pre-wrap"><button class="qbtn sg-kind" data-row="${r.row}" data-kind="${esc(r.kind||"")}" title="поменять пометку баг/идея">[${esc(r.kind||"—")}]</button> ${r.title ? "<b>"+esc(r.title)+"</b> — " : ""}${esc(r.when)}: ${esc(r.text)} <button class="qbtn sg-title" data-row="${r.row}" data-kind="${esc(r.kind||"")}" data-title="${esc(r.title||"")}" title="поменять заголовок">✏️</button><div class="sg-ans" style="${r.answer?"":"display:none;"}margin-top:4px;padding:5px 8px;background:var(--panel2);border-radius:6px;font-size:12px"><span style="color:var(--dim)">↩ ${esc(r.answeredBy||"")}${r.answeredAt?" · "+esc(fmtDay(r.answeredAt)):""}:</span> <span class="utext sg-anstext">${esc(r.answer||"")}</span></div><button class="qbtn sg-reply" data-row="${r.row}" title="${r.hasLogin?"ответ увидит автор":"старое предложение без логина автора — ответ сохранится, но автор его не увидит"}">↩ ${r.answer?"изменить ответ":"ответить"}${r.hasLogin?"":" ⚠"}</button><div class="sg-rbox" style="display:none;margin-top:4px"><textarea class="sg-rtext" style="width:100%;min-height:60px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px;font:inherit;font-size:12.5px;box-sizing:border-box">${esc(r.answer||"")}</textarea><button class="abtn2 sg-rsend" data-row="${r.row}">Отправить ответ</button></div></span><span><button class="abtn2 sg-del" data-row="${r.row}" title="убрать из списка">✕</button></span></div>`).join("");
     }
     list.innerHTML = html;
+    asksBind(list, ()=>document.getElementById("resetbell").onclick());
     list.querySelectorAll(".rsq-ok").forEach(b=>b.onclick=async (ev)=>{
       ev.stopPropagation();
       try {
@@ -4878,7 +5426,7 @@ async function doLogin(){
   if (!u || !p){ msgEl.textContent = "Введи логин и пароль"; return; }
   msgEl.textContent = "Проверяю…";
   try {
-    const res = await postJSON({ action:"auth", user:u, pass:p }, 45000);
+    const res = await postJSON({ action:"auth", user:u, pass:p, dev: devName() }, 45000);
     if (res.error || !res.token){
       msgEl.textContent = res.error || "Неверный логин или пароль";
       return;
@@ -5037,46 +5585,28 @@ document.addEventListener("paste", function(e){
 async function uploadScreen(blob, x, catIdx, quiet){ // → true | текст ошибки
   try {
     if (!rowEditable(x.r)){ toast("Скрины добавляются только в открытой неделе", true); return "неделя закрыта"; }
-    if (blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return "больше 25 МБ"; }
-    if (blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка", true); return "не картинка"; }
-    toast("📸 Скрин"+(catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":"")+": сжимаю…");
-    const img = await createImageBitmap(blob);
-    // Обновление 5: оригинал до 2560 px по длинной стороне (было 1600), качество 0.92 → 0.85 → 0.75 → 0.65, пока < 5,5 МБ
-    const FULL_MAX_DIM = 2560, FULL_MAX_BYTES = 5.5*1024*1024;
-    const scale = Math.min(1, FULL_MAX_DIM/Math.max(img.width, img.height));
-    const cv = document.createElement("canvas");
-    cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
-    const ctx = cv.getContext("2d");
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(img, 0, 0, cv.width, cv.height);
-    let data = "";
-    for (const qv of [0.92, 0.85, 0.75, 0.65]){ // D: сервер принимает до 6 МБ — запас на всякий случай
-      data = cv.toDataURL("image/jpeg", qv).split(",")[1];
-      if (data.length * 3 / 4 <= FULL_MAX_BYTES) break;
-    }
-    if (data.length * 3 / 4 > 6*1024*1024){ toast("Скрин слишком большой даже после сжатия", true); return "слишком большой"; }
-    const scale2 = Math.min(1, 480/Math.max(img.width, img.height));
-    const cv2 = document.createElement("canvas");
-    cv2.width = Math.round(img.width*scale2); cv2.height = Math.round(img.height*scale2);
-    const ctx2 = cv2.getContext("2d");
-    ctx2.fillStyle = "#fff"; ctx2.fillRect(0, 0, cv2.width, cv2.height);
-    ctx2.drawImage(img, 0, 0, cv2.width, cv2.height);
-    const small = cv2.toDataURL("image/jpeg", 0.8).split(",")[1];
-    toast("📸 Скрин: загружаю на диск…");
+    const isVid = isVideoBlob(blob);
+    if (!isVid && blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return "больше 25 МБ"; }
+    if (!isVid && blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка и не видео", true); return "не картинка"; }
+    const label = (isVid ? "🎬 Видео" : "📸 Скрин") + (catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":"");
+    toast(label + ": " + (isVid ? "готовлю…" : "сжимаю…"));
+    const enc = isVid ? await videoEncode(blob) : await shotEncode(blob); // v6.6: WebP, где браузер умеет; видео — с обложкой
+    toast(label + ": загружаю на диск…");
     // ответ сервера читаем напрямую — он и есть подтверждение (без опроса action=screens и без полной перезагрузки)
-    const j = await wp(Object.assign({ action:"upload", data: data, small: small,
-        cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" }, rowKeyParams(x.r)), 90000);
+    const j = await wp(Object.assign({ action:"upload", data: enc.data, small: enc.small, kind: isVid ? "video" : "",
+        cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" }, rowKeyParams(x.r)), isVid ? 180000 : 90000);
     if (!j || !j.link) throw new Error("сервер не подтвердил загрузку");
     const k0 = j.key || skey(x.r);
+    const item = { cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" }; if (j.type === "video") item.type = "video";
     state.screens = state.screens || {};
     const arr = state.screens[k0] = state.screens[k0] || [];
-    if (!arr.some(s=>s.link===j.link)) arr.push({ cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" });
-    if (realData && realData.screens && realData.screens !== state.screens){ const ra = realData.screens[k0] = realData.screens[k0] || []; if (!ra.some(s=>s.link===j.link)) ra.push({ cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" }); }
+    if (!arr.some(s=>s.link===j.link)) arr.push(item);
+    if (realData && realData.screens && realData.screens !== state.screens){ const ra = realData.screens[k0] = realData.screens[k0] || []; if (!ra.some(s=>s.link===j.link)) ra.push(item); }
     if (j.stamp){ const cur = rowByRk(rk(x.r)); if (cur) cur.updated = j.stamp; }
-    if (!quiet) toast("📸 Скрин загружен ✓");
+    if (!quiet) toast(label + " загружен ✓");
     softRender(); // U11: вставка скрина не перерисовывает экран посреди набора текста и не перезагружает данные
     return true;
-  } catch(err){ toast("Скрин не загрузился: " + err.message, true); return err.message || "ошибка"; }
+  } catch(err){ toast("Не загрузилось: " + err.message, true); return err.message || "ошибка"; }
 }
 
 function applyData(j, isHistory, mergeWeek){
@@ -5108,6 +5638,7 @@ function applyData(j, isHistory, mergeWeek){
   state.screens = screens;
   if (j.tz) state.serverTz = j.tz;
   state.itog = j.itog || []; // итоги дня по сверкам (лист «Итог», только чтение)
+  state.marks = j.marks || {}; state.newbies = j.newbies || {}; // v6.6
   state.tasks = j.tasks || []; // «Мои задачи» (лист «Задачи»; прод видит только свои — фильтр на сервере)
   if (viewAsActive()){ realData = snapData(); realData.colors = state.colors; }
   filterViewData(); // если включён режим «глазами» — маскируем данные сразу после загрузки
@@ -5227,6 +5758,7 @@ async function load(opts){
       applyData(j, false, merge);
       if (weekReq === "all") state.fullLoaded = true; // вся история уже здесь
       setTimeout(tplSync, 1500); // Обновление 6: шаблоны замечаний с сервера (один раз)
+      if (!state.fullLoaded) schedulePrefetch(); // v6.6: прошлые недели — заранее, в фоне
       state.dataFp = fp;
       try{ sessionStorage.setItem("dash_cache", JSON.stringify({ ver:CONFIG.VER, user:AUTH.user, week:state.week, ts:Date.now(), rows:state.rows, colors:state.colors, plans:state.plans, itog:j.itog||[] })); }catch(e){ try{ sessionStorage.removeItem("dash_cache"); }catch(e2){} } // C: не влезло — старый кэш не оставляем
     }
@@ -5294,7 +5826,8 @@ async function pingNotif(){
     const r = await wp({ action:"ping" }, 20000);
     if (r && !r.error){
       state.lastPing = Date.now();
-      updateResetBell((r.resetPending||0) + (r.suggestions||0));
+      updateResetBell((r.resetPending||0) + (r.suggestions||0) + (r.asks||0));
+      if (AUTH.edit) healthShow(r.health); // v6.6: плашка самопроверки
       updateSugBadge(r.myAnswers||0);
       // v6: бейдж мониторинга продюсера (продюсеру — возвраты, смотрящему — ждут проверки)
       const nb = AUTH.prod ? (r.pmReturned||0) : (r.pmSent||0);
