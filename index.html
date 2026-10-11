@@ -293,6 +293,9 @@
   /* Обновление 4: ничего не вылезает за рельс — подписи с многоточием, в свёрнутом виде только иконка (+подсказка title) */
   #tabs .tab,#tabs .wtab{min-width:0;overflow:hidden;white-space:nowrap}
   #tabs .tab>span:nth-child(2),#tabs .wtab>span:nth-child(2){flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  #tabs .tab[data-city]>span:nth-child(2){flex:0 0 auto} /* v7.1: название компании не обрезаем («DIAMO…») — ужимаются счётчики */
+  #tabs .tab[data-city] .cnt{flex:0 1 auto;min-width:0}
+  #tabs .tab[data-city]{gap:6px} #tabs .tab[data-city] .cnt{padding:1px 5px!important;min-width:0!important} /* v7.1: счётчики компании влезают целиком («5..», «⏰…») */
   #tabs .tab .cnt,#tabs .wtab .cnt{flex:0 1 auto;min-width:0;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #tabs .wtab .cnt{margin-left:auto;opacity:.8;font-size:11px}
   .rail.mini .tab,.rail.mini .wtab{position:relative;width:100%;max-width:44px;margin:0 auto}
@@ -357,7 +360,7 @@
   .aimbtn{border-color:rgba(176,124,255,.45)!important;background:rgba(176,124,255,.10)!important}
   .aimbtn .car{font-size:10px;opacity:.7;margin-left:2px}
   .aimenu.open .aimbtn{background:rgba(176,124,255,.22)!important}
-  .aimpop{display:none;position:fixed;z-index:150;left:0;top:0;width:320px;max-width:86vw;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.55)}
+  .aimpop{display:none;position:fixed;z-index:196;overflow:auto;left:0;top:0;width:320px;max-width:86vw;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.55)}
   .aimenu.open .aimpop{display:flex;flex-direction:column;gap:2px}
   .aimpop button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;background:none;border:none;border-radius:8px;padding:7px 10px;color:var(--ink);font:inherit;cursor:pointer}
   .aimpop button:hover{background:rgba(176,124,255,.12)}
@@ -730,6 +733,8 @@
   html[data-theme="light"] .mark{border-color:rgba(0,0,0,.12)}
   html[data-theme="light"] .hm-ok{background:#5fbf8f} html[data-theme="light"] .hm-bad{background:#e0706a}
   html[data-theme="light"] .stcol .sum{color:var(--ink)}
+  html[data-theme="light"] #present .pchip.on,html[data-theme="light"] #present .gbtn.on,html[data-theme="light"] #present .pdot.on{color:var(--accent);font-weight:600} /* v7.1: в светлой теме — не белым по светлому */
+  html[data-theme="light"] #present .pdot.on span{color:#fff}
   html[data-theme="light"] .aimbtn{border-color:rgba(122,79,208,.45)!important;background:rgba(122,79,208,.08)!important}
 
   /* ---------- модалки, тост ---------- */
@@ -740,7 +745,7 @@
   .modal h3{font-size:17px;font-weight:650}
   .modal .x{width:32px;height:32px;border-radius:8px;top:10px;right:10px}
   .modal .x:hover{background:var(--hover)}
-  .toast{top:auto;bottom:22px;right:22px;border-radius:12px;box-shadow:var(--shadow);transform:translateY(12px);padding:12px 16px 12px 14px}
+  .toast{top:86px;bottom:auto;right:22px;border-radius:12px;box-shadow:var(--shadow);transform:translateY(-8px);padding:12px 16px 12px 14px;pointer-events:none} /* v7.1: под верхней панелью — не закрывает «Сохранить» внизу карточки */
   .toast.show{transform:none}
 
   /* ---------- карточка команды: категории строками ---------- */
@@ -895,8 +900,8 @@
   .ov-at>span{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;color:var(--dim);font-size:12.5px}
   .ov-at em{display:inline-flex;align-items:center;gap:6px;font-style:normal;font-weight:600}
   .ov-at em i{width:8px;height:8px;border-radius:2px;display:block}
-  .ov-open{flex:none;min-height:34px;background:var(--btn);color:var(--on-btn);border:none;border-radius:8px;padding:4px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s}
-  .ov-open:hover{background:var(--btn-h);box-shadow:0 6px 18px rgba(47,111,214,.3)}
+  .ov-open{flex:none;min-height:32px;background:var(--panel2);color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:4px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s,transform .1s} /* v7.1: спокойнее — 4 синие плашки подряд перегружали */
+  .ov-open:hover{background:var(--sel,rgba(91,157,255,.12));border-color:var(--accent)}
   /* плитки */
   .ov-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .tile.ov-tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -2016,6 +2021,10 @@
   /* поиск */
   .tb-search{display:flex;align-items:center;gap:7px;min-height:36px;min-width:260px;max-width:380px;flex:0 1 380px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:0 6px 0 10px;color:var(--faint);transition:border-color .15s,box-shadow .15s}
   .tb-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accbg)}
+  /* v7.1: на ноутбуках 1280–1440 верхняя панель не переносится на 2 строки — поиск и «обновлено» ужимаются */
+  @media(min-width:901px){ .topbar{flex-wrap:nowrap} .tb-search{min-width:170px} .tb-live{flex:0 1 auto} .tb-chip{flex:0 1 auto;min-width:0} }
+  @media(min-width:901px) and (max-width:1380px){ .tb-live #livetext{display:none} }
+  @media(min-width:901px) and (max-width:1180px){ .tb-brand>b{display:none} .tb-profbtn .pn{display:none} }
   .tb-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--ink);font:inherit;font-size:13px}
   .tb-search input::placeholder{color:var(--faint)}
   .tb-search input::-webkit-search-cancel-button{filter:grayscale(1);opacity:.6}
@@ -2055,6 +2064,14 @@
   .v7chips-co .v7chip{flex:1 1 120px}
   .v7chips-pr .v7chip{border-radius:18px;font-weight:500;min-height:32px}
   /* состояния: нет связи / ошибки сохранения */
+  /* v7.1: старые браузеры без color-mix (iOS < 16.2) — те же рамки и подсветки обычными полупрозрачными цветами */
+  @supports not (color: color-mix(in srgb, red, blue)){
+    .edit-grid .f.cat[data-st="bad"],.co-rcat.st-bad,.pmx-cat[data-st="bad"]{border-color:rgba(229,101,95,.55)}
+    .edit-grid .f.cat[data-st="ok"]{border-color:rgba(62,207,142,.35)}
+    .pmx-cat[data-dif="miss"]{background:rgba(229,101,95,.08)} .pmx-cat[data-dif="strict"]{background:rgba(229,180,85,.08)}
+    .mp7-ok{background:rgba(62,207,142,.26)}
+    .aibox,.aib,.ov-aiout{border-color:rgba(91,157,255,.35)} .st7-ban,.v7va{border-color:rgba(229,180,85,.45)} .st7-ban.bad,#healthbar{border-color:rgba(229,101,95,.5)}
+  }
   #healthbar{background:var(--badbg);border:1px solid color-mix(in srgb,var(--bad) 45%,var(--line));border-radius:12px;padding:10px 14px}
   .failbar{border-radius:12px}
   #splash{background:var(--bg)}
@@ -2077,7 +2094,7 @@
     .v7bn-i .bdg:empty{display:none}
     .tb-search{order:9;flex:1 1 100%;max-width:none}
     .tb-weekbtn .tb-car{display:none}
-    .toast{bottom:84px;left:12px;right:12px;max-width:none}
+    .toast{top:112px;bottom:auto;left:12px;right:12px;max-width:none}
     .v7va{margin:0 0 10px}
   }
   @keyframes v7sheet{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
@@ -2457,7 +2474,7 @@ function v7Profile(nm){
 // ---------- категории: состояние, счётчик, авто-высота ----------
 function v7CatSync(ta){
   var f = ta.closest(".f.cat"); if (!f) return;
-  f.dataset.st = v7CatState(ta.value);
+  f.dataset.st = v7CatState(ta.value); v7AriaSeg(f);
   var l = f.querySelector(".ta-len"); if (l) l.textContent = ta.value.length ? ta.value.length + " симв." : "";
   if (!("fieldSizing" in ta.style)){ ta.style.height = "auto"; ta.style.height = Math.min(Math.max(ta.scrollHeight + 2, 56), 300) + "px"; }
 }
@@ -2648,13 +2665,19 @@ function v7BottomNav(){
   const want = AUTH.prod ? [prodTabName(), PM_TAB_PROD, "Мои задачи"] : ["Обзор", "Лента", "Мои задачи", PM_TAB_ED];
   const list = want.filter(t => T.includes(t)).slice(0, 4);
   if (!AUTH.prod && list.length < 4){ const c = T.find(t => CITY_ORDER.includes(t)); if (c && !list.includes(c)) list.splice(1, 0, c); }
-  const cnt = t => { const b = document.querySelector('#tabs .tab[data-t="' + CSS.escape(t) + '"] .cnt'); return b && b.textContent.trim() ? `<span class="bdg">${esc(b.textContent.trim().replace(/[^\d]/g, "") || "")}</span>` : ""; };
+  // v7.1: бейдж — только сигнал «надо сделать» (задачи 📌, возвраты/новые ↩📥, просрочки ⏰), а не общее число команд
+  const cnt = t => { const b = document.querySelector('#tabs .tab[data-t="' + CSS.escape(t) + '"] .cnt.due'); const n = b ? b.textContent.replace(/[^\d]/g, "") : ""; return n && n !== "0" ? `<span class="bdg">${esc(n)}</span>` : ""; };
   nav.innerHTML = list.slice(0, 4).map(t => `<button class="v7bn-i${state.tab === t ? " on" : ""}" data-v7t="${esc(t)}" aria-current="${state.tab === t ? "page" : "false"}">${v7RailIcon(t)}<span>${esc(AUTH.prod && t === prodTabName() ? "Главная" : t === PM_TAB_PROD ? "Мониторинг" : v7TabLabel(t))}</span>${cnt(t)}</button>`).join("")
     + `<button class="v7bn-i" data-v7more="1" aria-label="Все разделы">${v7svg("M5 12h.01M12 12h.01M19 12h.01", 20)}<span>Ещё</span></button>`;
   nav.querySelectorAll("[data-v7t]").forEach(b => b.onclick = ()=>{ v7Sheet(false); switchTab(b.dataset.v7t); window.scrollTo({ top: 0, behavior: "smooth" }); });
   nav.querySelector("[data-v7more]").onclick = ()=>v7Sheet(!document.body.classList.contains("v7rail-open"));
 }
+document.addEventListener("keydown", ev=>{ // v7.1: с клавиатуры — Enter/пробел раскрывают группу продюсера и нажимают плитки
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target && ev.target.matches && ev.target.matches('[role="button"][tabindex]:not(button)')){ ev.preventDefault(); ev.target.click(); }
+});
+function v7AriaSeg(box){ if (!box) return; const st = box.dataset.st; box.querySelectorAll(".qok,.pmx-ok").forEach(b=>b.setAttribute("aria-pressed", st === "ok" ? "true" : "false")); box.querySelectorAll(".qbad").forEach(b=>b.setAttribute("aria-pressed", st === "bad" ? "true" : "false")); }
 function v7Sheet(on){ document.body.classList.toggle("v7rail-open", !!on); }
+document.addEventListener("keydown", ev=>{ if (ev.key === "Escape" && document.body.classList.contains("v7rail-open")) v7Sheet(false); }); // v7.1
 document.getElementById("v7sheet-ov").onclick = ()=>v7Sheet(false);
 document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.closest(".tab, .ritem")) v7Sheet(false); });
 // --- окна: шапка со значком, без эмодзи; компания и продюсер кнопками в «Новом мониторинге» ---
@@ -2702,7 +2725,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-09.71"
+  VER: "2026-10-11.72"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2767,7 +2790,10 @@ function rememberWeeks(){ // список недель держим даже к�
 }
 try{ state.railMini = localStorage.getItem("rail_mini")==="1"; }catch(e){}
 try{ state.cityOrder = JSON.parse(localStorage.getItem("dash_cityorder")||"null"); }catch(e){}
-try{ document.getElementById("tabs").classList.toggle("mini", state.railMini); }catch(e){}
+// v7.1: на телефоне меню — шторка с подписями; свёрнутое «в иконки» с ПК там не применяем
+function railMiniOn(){ try { return !!state.railMini && !window.matchMedia("(max-width:700px)").matches; } catch(e){ return !!state.railMini; } }
+try{ document.getElementById("tabs").classList.toggle("mini", railMiniOn()); }catch(e){}
+try{ window.matchMedia("(max-width:700px)").addEventListener("change", ()=>{ const t = document.getElementById("tabs"); if (t) t.classList.toggle("mini", railMiniOn()); }); }catch(e){}
 
 // у продюсера вкладка называется ЕГО ИМЕНЕМ (а не городом), внутри — его команды
 function prodTabName(){ return (state.viewAs && state.viewAs.type==="prod") ? state.viewAs.name : (AUTH.name || AUTH.user); } // 2b: в «глазами» — имя продюсера, а не смотрящего
@@ -3414,7 +3440,7 @@ function renderMain(){
       + grp("recent", V7I.r.clock, "Недавние", recentBody, rec.length ? `<span class="cnt">${rec.length}</span>` : "");
   }
   document.getElementById("tabs").innerHTML = railHtml;
-  document.getElementById("tabs").classList.toggle("mini", !!state.railMini);
+  document.getElementById("tabs").classList.toggle("mini", railMiniOn());
   if (wdOpen) toggleWeekDrop(); // пересобрать открытый список недель (список мог обновиться после догрузки)
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
   let dragCity = null;
@@ -3552,7 +3578,7 @@ function renderMain(){
   const strip = `<section class="ov-strip">
     <div class="ov-chk"><span>Проверено${curW ? " за неделю" : ""}</span><b>${checkedN} <small>из ${rows.length} ${ovPl(rows.length, "команды", "команд", "команд")}</small></b></div>
     <div class="ov-chkbar"><div class="ov-bar" role="img" aria-label="норма ${nOk}, замечания ${nWarn}, критично ${nBad}, не проверено ${nNone}"><i class="o" style="width:${W(nOk)}"></i><i class="w" style="width:${W(nWarn)}"></i><i class="b" style="width:${W(nBad)}"></i></div>
-      <div class="ov-leg">${qBtn("ok", "", `<b class="ok">${nOk}</b> норма`)}${qBtn("warn", "", `<b class="warn">${nWarn}</b> замечания`)}${qBtn("crit", "", `<b class="bad">${nBad}</b> критично`)}${qBtn("none", "", `<b>${nNone}</b> не проверено`)}${!isOv && topCats.length ? `<span class="ov-top">чаще всего: ${topCats.map(x=>esc(x.n)+" "+x.c).join(" · ")}</span>` : ""}</div></div>
+      <div class="ov-leg">${qBtn("ok", "", `<b class="ok">${nOk}</b> норма`)}${qBtn("warn", "", `<b class="warn">${nWarn}</b> с замечаниями`)}${qBtn("crit", "", `<b class="bad">${nBad}</b> критично`)}${qBtn("none", "", `<b>${nNone}</b> не проверено`)}${!isOv && topCats.length ? `<span class="ov-top">чаще всего: ${topCats.map(x=>esc(x.n)+" "+x.c).join(" · ")}</span>` : ""}</div></div>
   </section>`;
 
   // ---- обзор: «что горит», плитки, «где ошибаются», компании, продюсеры ----
@@ -3592,7 +3618,7 @@ function renderMain(){
     const alertsHtml = alerts.slice(0, 5).map(a=>`<div class="ov-alert"><span class="chip ${a.lv==="bad"?"c-bad":"c-warn"}">${a.lv==="bad"?"критично":"внимание"}</span><div class="ov-at"><b>${esc(a.title)}</b><span>${a.city && coLbl(a.city) ? `<em style="color:${OVC[a.city]||"var(--dim)"}"><i style="background:${OVC[a.city]||"var(--dim)"}"></i>${esc(coLbl(a.city))}</em>` : ""}${esc(a.meta)}</span></div>${a.go >= 0 ? `<button class="ov-open" data-ovgo="${a.go}">Открыть</button>` : ""}</div>`).join("")
       || `<div class="ov-empty">Ничего не горит: критичных команд и долгих задач нет</div>`;
     // плитки
-    const tile = (o) => `<div class="tile ov-tile${o.q ? " click" + (state.quick===o.q ? " on" : "") : ""}${o.tab ? " ov-tlink" : ""}"${o.q ? ` data-q="${o.q}" role="button" tabindex="0" aria-pressed="${state.quick===o.q}"` : ""}${o.tab ? ` data-ovtab="${esc(o.tab)}" role="button" tabindex="0"` : ""}><div class="ov-th"><div class="n" style="color:${o.col}">${o.n}</div>${o.sp}</div><div class="l">${o.l}</div><div class="ov-tdl">${o.d || `<span class="ov-d">${o.sub || "нет данных прошлой недели"}</span>`}${o.d ? ' <span class="ov-dl">к прошлой неделе</span>' : ""}</div></div>`;
+    const tile = (o) => `<div class="tile ov-tile${o.q ? " click" + (state.quick===o.q ? " on" : "") : ""}${o.tab ? " ov-tlink" : ""}"${o.q ? ` data-q="${o.q}" role="button" tabindex="0" aria-pressed="${state.quick===o.q}"` : ""}${o.tab ? ` data-ovtab="${esc(o.tab)}" role="button" tabindex="0"` : ""}><div class="ov-th"><div class="n" style="color:${o.col}">${o.n}</div>${o.sp}</div><div class="l">${o.l}</div><div class="ov-tdl">${o.d || `<span class="ov-d">${o.sub || (state.fullLoaded ? "нет данных прошлой недели" : "загружаю прошлые недели…")}</span>`}${o.d ? ' <span class="ov-dl">к прошлой неделе</span>' : ""}</div></div>`;
     const prevAvg = prevS ? prevS.avg : null;
     const oldN = openTasks.filter(t=>{ const d = taskDays(t); return d!==null && d >= 3; }).length;
     const tilesHtml = [
@@ -3768,7 +3794,7 @@ function renderMain(){
       const cur = wksAll[wksAll.length-1], prev = wksAll[wksAll.length-2];
       if (!cur){ out.textContent = "нет данных за неделю"; return; }
       if (!prev){ out.innerHTML = '<div class="empty">прошлой недели нет — сравнивать не с чем</div>'; return; }
-      out.textContent = "🤖 ИИ думает… (до минуты)";
+      out.innerHTML = v7Think("🤖 ИИ думает… (до минуты)");
       const parts = ["неделя сейчас: " + cur, "неделя раньше: " + prev];
       CITY_ORDER.forEach(c=>{
         const mk = w => {
@@ -3807,7 +3833,7 @@ function renderMain(){
       const ms = [];
       for (let ci=0; ci<chunks.length; ci++){
         const offset = lines.indexOf(chunks[ci][0]);
-        out.textContent = "🤖 ИИ думает… (блок " + (ci+1) + " из " + chunks.length + ", команд всего " + rows.length + ")";
+        out.innerHTML = v7Think("🤖 ИИ думает… (блок " + (ci+1) + " из " + chunks.length + ", команд всего " + rows.length + ")");
         const res = await aiAsk("search", { text: state.search.trim() + "\n" + chunks[ci].join("\n"), ckey: strHash(state.search.trim() + "\n" + chunks[ci].join("\n")) }); // C: кэш по запросу И данным
         if (res.error) throw new Error(res.error);
         (res.matches || []).forEach(m=>{
@@ -3886,10 +3912,10 @@ function renderMain(){
   const showCoCol = (state.tab==="Обзор"||state.search) && !AUTH.prod;
   const ncols = 5 + (showCoCol ? 1 : 0) + (pmOn ? 1 : 0);
   const PMLBL = { "черновик":"начат", "отправлено":"отправлен", "принято":"принят", "возврат":"возврат" };
-  const segRow = (sts, cls) => `<span class="ov-segs ${cls||""}">${sts.map((v,j)=>`<i class="${v==="ok"?"o":v==="bad"?"b":""}" title="${esc(CATS[j])}: ${v==="ok"?"норма":v==="bad"?"замечание":"не отмечено"}"></i>`).join("")}</span>`;
+  const segRow = (sts, cls, texts) => `<span class="ov-segs ${cls||""}">${sts.map((v,j)=>`<i class="${v==="ok"?"o":v==="bad"?"b":""}" title="${esc(CATS[j])}: ${texts && String(texts[j]||"").trim() ? esc(String(texts[j]).trim().slice(0, 240)) : (v==="ok"?"норма":v==="bad"?"замечание":"не отмечено")}"></i>`).join("")}</span>`; // v7.1: при наведении — сам текст замечания
   // крупная оценка в карточке: по текущему тексту полей + ручные оценка/вердикт (как rowStats)
-  const ovScore = (vals, msc, mvd) => {
-    const sts = vals.map(catState), ok = sts.filter(v=>v==="ok").length, bad = sts.filter(v=>v==="bad").length, n = sts.filter(v=>v!==null).length;
+  const ovScore = (vals, msc, mvd, stsIn) => { // stsIn — готовые состояния (у облегчённой строки истории их посчитал сервер по полному тексту)
+    const sts = stsIn || vals.map(catState), ok = sts.filter(v=>v==="ok").length, bad = sts.filter(v=>v==="bad").length, n = sts.filter(v=>v!==null).length;
     let score = n ? ok : null, verdict = n ? (bad===0 ? "норма" : bad<=2 ? "замечание" : "критично") : "";
     const m = String(msc==null ? "" : msc).trim().match(/^(\d+)/);
     if (n && m) score = Math.min(MAX_SCORE, Math.max(0, parseInt(m[1],10)));
@@ -3926,7 +3952,7 @@ function renderMain(){
         + (x.r.reco ? `<div class="drow"><b>Рекомендации команде</b><span class="utext">${hl(x.r.reco)}</span></div>` : "")
         + (plan ? `<div class="drow"><b>План работ</b><span class="utext">${esc(plan)}</span></div>` : "")
         + (rowLinks.length ? `<div class="drow"><b>Ссылки</b><span>${linksCell}</span></div>` : "")
-        + `</div><aside class="co-side">${ovScore(x.r.cats.map(c=>c||""), x.r.scoreM, x.r.verdictM)}<div class="co-hint">${x.r.updated ? "Оценка смотрящего · последняя проверка " + esc(fmtDay(x.r.updated)) : "Смотрящий ещё не проверял"}</div>${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}</aside>`;
+        + `</div><aside class="co-side">${ovScore(x.r.cats.map(c=>c||""), x.r.scoreM, x.r.verdictM, x.r._lite ? rowStats(x.r).st : null)}<div class="co-hint">${x.r.updated ? "Оценка смотрящего · последняя проверка " + esc(fmtDay(x.r.updated)) : "Смотрящий ещё не проверял"}</div>${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}</aside>`;
       // --- редактор ---
       const vals0 = CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||""));
       const lv0 = liveEval(vals0);
@@ -3937,7 +3963,7 @@ function renderMain(){
       const xo = state.ovX || (state.ovX = {});
       const editDet = CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
-        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}"><button class="qbtn qok" data-ta="ed${key}_${j}" data-v="✅ всё хорошо" title="всё хорошо">✓ Норма</button><button class="qbtn qbad" data-ta="ed${key}_${j}" data-bad="1" title="замечание — допиши, что не так">✕ Замечание</button></span><button class="qbtn qclr" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле">⌫</button><span class="sp"></span><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="опиши замечание — поле растёт по мере текста" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}</div>`;
+        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}"><button class="qbtn qok" data-ta="ed${key}_${j}" data-v="✅ всё хорошо" title="всё хорошо" aria-pressed="${v7CatState(val)==="ok"}">✓ Норма</button><button class="qbtn qbad" data-ta="ed${key}_${j}" data-bad="1" title="замечание — допиши, что не так" aria-pressed="${v7CatState(val)==="bad"}">✕ Замечание</button></span><button class="qbtn qclr" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле">⌫</button><span class="sp"></span><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="опиши замечание — поле растёт по мере текста" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip" data-ta="ed${key}_${j}" data-p="${esc(p)}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}</div>`;
       }).join("");
       const failInfo = state.failedSaves[rk(x.r)];
       const failBar = canEdit && failInfo ? `<div class="failbar">Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
@@ -3991,14 +4017,14 @@ function renderMain(){
       const mk = markOf(x.r);
       const op = x.r.opName || x.r.opNick || "";
       const nick = x.r.opName && x.r.opNick ? x.r.opNick : "";
-      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"${mk && mk.c ? ` style="box-shadow:inset 4px 0 0 ${esc(mk.c)}"` : ""}><td class="ov-tc"><div class="ov-team"><span class="ov-car">${ovIc(OVP.car, 12)}</span><b>${hl(op)}${x.r.model ? `<span class="ov-sep"> · </span>${hl(x.r.model)}` : ""}</b>${nick ? `<span class="ov-nick">${hl(nick)}</span>` : ""}${ovBadges(x.r)}${icons}${draftMark}</div>${linksCell ? `<div class="ov-links">${linksCell}</div>` : ""}</td>${cityCell}<td><div class="ov-sc">${segRow(x.s.st)}<b class="${x.s.score===null ? "" : vcls(x.s.verdict)}">${x.s.score===null ? "–" : x.s.score + "/" + MAX_SCORE}</b></div></td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]||""}">${VLX[x.s.verdict]||esc(x.s.verdict)}</span>`:'<span class="chip ov-nochip">не проверено</span>'}</td><td class="pcol">${updCell}</td>${pmOn ? `<td>${pmCell}</td>` : ""}<td class="ov-act">${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip ov-nochip">статус</span>`}</button><span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель" aria-label="сменить оператора или модель">${ovIc(OVP.users, 15)}</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену" aria-label="удалить смену">${ovIc(OVP.trash, 15)}</button></span>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td></tr>
+      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"${mk && mk.c ? ` style="box-shadow:inset 4px 0 0 ${esc(mk.c)}"` : ""}><td class="ov-tc"><div class="ov-team"><span class="ov-car">${ovIc(OVP.car, 12)}</span><b>${hl(op)}${x.r.model ? `<span class="ov-sep"> · </span>${hl(x.r.model)}` : ""}</b>${nick ? `<span class="ov-nick">${hl(nick)}</span>` : ""}${ovBadges(x.r)}${icons}${draftMark}</div>${linksCell ? `<div class="ov-links">${linksCell}</div>` : ""}</td>${cityCell}<td><div class="ov-sc">${segRow(x.s.st, "", x.r.cats)}<b class="${x.s.score===null ? "" : vcls(x.s.verdict)}">${x.s.score===null ? "–" : x.s.score + "/" + MAX_SCORE}</b></div></td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]||""}">${VLX[x.s.verdict]||esc(x.s.verdict)}</span>`:'<span class="chip ov-nochip">не проверено</span>'}</td><td class="pcol">${updCell}</td>${pmOn ? `<td>${pmCell}</td>` : ""}<td class="ov-act">${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip ov-nochip">статус</span>`}</button><span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель" aria-label="сменить оператора или модель">${ovIc(OVP.users, 15)}</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену" aria-label="удалить смену">${ovIc(OVP.trash, 15)}</button></span>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td></tr>
       <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${ncols}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     const pcol = state.colors[g.producer]||"#566070";
     const gsegs = g.items.map(({x})=>`<i class="${vcls(x.s.verdict)}" title="${esc((x.r.opName||x.r.opNick||"—")+" / "+(x.r.model||"—"))}: ${x.s.score===null?"не проверено":x.s.score+"/"+MAX_SCORE}"></i>`).join("");
     const gplan = (state.plans||{})[g.key] || "";
     return `<div class="pgroup ov-grp ${open?"open":""}" data-g="${gkeyEsc}">
-      <div class="phead" data-g="${gkeyEsc}" role="button" aria-expanded="${open?"true":"false"}">
+      <div class="phead" data-g="${gkeyEsc}" role="button" tabindex="0" aria-expanded="${open?"true":"false"}">
         <span class="arrow">${ovIc(OVP.car, 14)}</span>
         <span class="cdot" data-prod="${esc(g.producer)}" style="background:${esc(pcol)}" title="цвет продюсера"></span><b>${esc(g.producer)}</b>
         <span class="ov-gsegs">${gsegs}</span>
@@ -4084,7 +4110,7 @@ function renderMain(){
       const cout = document.getElementById("cam-aiout");
       cai.style.display = ""; cout.style.display = "none"; cout.textContent = "";
       cai.onclick = async ()=>{
-        cout.style.display = ""; cout.textContent = "🤖 ИИ думает… (подсказка по кадру, не оценка)";
+        cout.style.display = ""; cout.innerHTML = v7Think("🤖 ИИ думает… (подсказка по кадру, не оценка)");
         try {
           const fid = camOrigId || driveId(im.getAttribute("data-full") || ""); // после разметки — уже новый файл
           const res = await aiAsk("framedraft", { id: fid, ckey: "frame|" + fid });
@@ -4093,7 +4119,7 @@ function renderMain(){
         } catch(e){ cout.textContent = "🤖 " + e.message; }
       };
       camShow(im.getAttribute("src") || BLANK, true); // сразу миниатюра как заглушка, следом — оригинал
-      document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
+      document.getElementById("cam-title").textContent = (im.getAttribute("data-cat") || "скрин");
       openModal("cammodal");
       const full = im.getAttribute("data-full") || "";
       camLoadFull(driveId(full));
@@ -4433,8 +4459,10 @@ function renderMain(){
 
 function aimPlace(m){ // меню над кнопкой, а если сверху мало места — под ней; по горизонтали не вылезает за экран
   const pop = m.querySelector(".aimpop"); if (!pop) return;
+  const bn = document.getElementById("v7bn"), bnH = bn && getComputedStyle(bn).display !== "none" ? bn.offsetHeight : 0, maxB = innerHeight - bnH; // v7.1: не под нижним меню телефона
+  pop.style.maxHeight = (maxB - 16) + "px";
   const r = m.getBoundingClientRect(), h = pop.offsetHeight, w = pop.offsetWidth;
-  const top = r.top - h - 6 >= 8 ? r.top - h - 6 : Math.min(r.bottom + 6, innerHeight - h - 8);
+  const top = r.top - h - 6 >= 8 ? r.top - h - 6 : Math.min(r.bottom + 6, maxB - h - 8);
   pop.style.top = Math.max(8, top) + "px"; pop.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px";
 }
 window.addEventListener("scroll", ()=>{ const o = document.querySelector(".aimenu.open"); if (o) aimPlace(o); }, true);
@@ -4574,7 +4602,7 @@ function renderOperators(rows, st){
           <div class="op7-dcol"><b class="op7-dh">Провалы по категориям${weeks.length>1?" за "+weeks.length+" "+o7Wk(weeks.length, true):""}</b>${catsTop.length ? catsTop.map(k=>`<div class="op7-kr"><span>${esc(k[0])}</span><span class="op7-kb"><i style="width:${Math.round(k[1]*100/Math.max(1,o.checks))}%"></i></span><b>${k[1]}</b></div>`).join("") : '<span class="op7-tnone">провалов нет</span>'}
             <div class="op7-meta">Продюсеры: ${o.prods.map(esc).join(", ")}${AUTH.prod ? "" : " · Компании: " + o.cities.map(c=>esc(clabel(c))).join(", ")}</div></div>
           <div class="op7-dcol op7-hist"><b class="op7-dh">Проверки (${o.rows.length})</b>${
-            o.rows.map(x=>`<div class="drow"><b${x.s.score!==null?(x.s.score===o.best?' style="color:var(--ok)"':(x.s.score===o.worst&&o.best!==o.worst?' style="color:var(--bad-t)"':"")):""}>${x.r.week?esc(x.r.week)+" · ":""}${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")}${coLbl(x.r.city)?" · "+esc(coLbl(x.r.city)):""} · ${x.s.verdict?(VLBL[x.s.verdict]||x.s.verdict):"не проверено"}${x.s.score!==null?" · "+x.s.score+"/"+MAX_SCORE:""}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
+            o.rows.map(x=>`<div class="drow"><b${x.s.score!==null?(x.s.score===o.best?' style="color:var(--ok)"':(x.s.score===o.worst&&o.best!==o.worst?' style="color:var(--bad-t)"':"")):""}>${x.r.week?esc(x.r.week)+" · ":""}${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")}${coLbl(x.r.city)?" · "+esc(coLbl(x.r.city)):""} · ${x.s.verdict?esc(VLBL[x.s.verdict]||x.s.verdict):"не проверено"}${x.s.score!==null?" · "+x.s.score+"/"+MAX_SCORE:""}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
           }</div></div></td></tr>`;
       }).join("")}</tbody></table></div>` : `<div class="o7-empty">Нет данных</div>`}
     </section>
@@ -4610,7 +4638,7 @@ function schedChip(x){
   return `<div class="schip click ${oldCls} ${vd}" data-goto="${esc(r._sheet)}|${r._row}" title="последняя проверка/правка: ${esc(fmtDay(r.updated)||"—")} — нажми, чтобы открыть правки">
     <div class="sc-top"><b>${esc(r.opName||r.opNick||"—")}</b> / ${esc(r.model||"—")}</div>
     <div class="sc-sub">${esc(r.producer||"—")} · ${esc(clabel(r.city))}</div>
-    <div class="sc-sub">🕐 ${lastTxt}${x.s.verdict?" · "+(VLBL[x.s.verdict]||x.s.verdict):""}</div>
+    <div class="sc-sub">🕐 ${lastTxt}${x.s.verdict?" · "+esc(VLBL[x.s.verdict]||x.s.verdict):""}</div>
     ${AUTH.edit?`<button class="sbtn" data-sch-touch="${esc(r._sheet)}|${r._row}">✅ сегодня</button>`:""}
   </div>`;
 }
@@ -4797,7 +4825,7 @@ function bindRail(rail){
   if (!rail) return;
   rail.querySelectorAll(".rghead").forEach(h=>h.onclick=(ev)=>{
     ev.stopPropagation();
-    if (state.railMini){ openRailFly(h); return; }
+    if (railMiniOn()){ openRailFly(h); return; }
     railGroupToggle(h.dataset.g); render();
   });
   bindRailItems(rail);
@@ -4851,6 +4879,7 @@ function gotoRow(goto){
   if (!r){ toast("Мониторинг не найден — обнови данные", true); return; }
   recentPush(r); // v6.6: переход из поиска, уведомлений и «недавних» — тоже в «Недавние»
   state.tab = r.city; state.week = r.week; state.search = ""; state.quick = ""; state.producer = "";
+  if (AUTH.prod){ state.tab = prodTabName(); state.prodHomeTable = true; try { prodModeSet("overview"); } catch(e){} } // v7.1: у продюсера — таблица его команд, а не главная (иначе карточка не открывалась)
   state.page = 999;
   state.grpOpen[r.city+"|"+(r.producer||"—")] = true;
   render();
@@ -5303,7 +5332,7 @@ function openShMenu(ev, payload){
 function openShiftScreens(key, title){
   const arr = (state.screens||{})[key] || [];
   if (!arr.length){ toast("Скринов у этой команды нет", true); return; }
-  document.getElementById("cam-title").textContent = "📷 " + (title || "скрины");
+  document.getElementById("cam-title").textContent = (title || "скрины");
   document.getElementById("cam-ai").style.display = "none";
   document.getElementById("cam-aiout").style.display = "none";
   const first = arr.find(s=>s.type !== "video") || arr[0];
@@ -5426,7 +5455,7 @@ function userRoleText(x){
   if (x.edit) return "смотрящий/редактор";
   return (x.cities === "all") ? "директор (просмотр)" : "просмотр";
 }
-const O7_ROLES = [["edit","Смотрящий","всё, правки"],["dir","Директор","все компании, просмотр"],["view","Город","своя компания, просмотр"],["prod","Продюсер","только свои команды"]];
+const O7_ROLES = [["edit","Смотрящий","всё, правки"],["dir","Директор","все компании, просмотр"],["view","Компания","своя компания, просмотр"],["prod","Продюсер","только свои команды"]];
 function o7RoleOf(x){ return x.prod ? "prod" : x.edit ? "edit" : x.cities==="all" ? "dir" : "view"; }
 function renderUsers(){
   document.getElementById("pbar").innerHTML = "";
@@ -5759,7 +5788,7 @@ function pmxThumbClicks(sel){
   document.querySelectorAll(sel).forEach(im=>{
     if (im.onclick) return;
     im.onclick = ()=>{
-      document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
+      document.getElementById("cam-title").textContent = (im.getAttribute("data-cat") || "скрин");
       const ai = document.getElementById("cam-ai"); if (ai) ai.style.display = "none";
       const ao = document.getElementById("cam-aiout"); if (ao) ao.style.display = "none";
       camShow(im.getAttribute("src") || BLANK, true);
@@ -5827,7 +5856,7 @@ function renderProdHome(rows){
   if (wl.length === 1 && wi > 0 && avg !== null){
     const pS = dedupeRows((state.rows||[]).filter(r=>r.week===allW[wi-1] && (r.opName||r.opNick||r.model))).map(rowStats).filter(x=>x.score!==null);
     if (pS.length){ const d = avg - pct(pS.reduce((a,x)=>a+x.score,0)/pS.length);
-      delta = d ? `<span class="${d>0?"up":"down"}">${d>0?"▲ +":"▼ −"}${Math.abs(d)}%</span> к прошлой неделе` : "как на прошлой неделе"; }
+      delta = d ? `<span class="${d>0?"up":"down"}">${d>0?"▲ +":"▼ −"}${Math.abs(d)} п.</span> к прошлой неделе` : "как на прошлой неделе"; }
   }
   const nCrit = withS.filter(x=>x.s.verdict==="критично").length, nOk = withS.filter(x=>x.s.verdict==="норма").length, nNone = S.length - withS.length;
   // мой мониторинг: покрытие недели (данные — то же чтение pmread)
@@ -6021,7 +6050,7 @@ function pmxForm(c, v, k, kid, canEdit, mineSt, dif, scr, it){
     const sc = scr.filter(s=>String(s.cat)===n);
     return `<div class="pmx-cat" data-j="${j}" data-st="${myS||""}"${miss ? ' data-dif="miss"' : strict ? ' data-dif="strict"' : ""}>
       <div class="pmx-cat-h"><span class="pmx-num">${j+1}</span><b class="pmx-cname">${esc(n)}${hint}</b>
-      ${canEdit ? `<span class="pmx-segbtn" role="group" aria-label="${esc(n)}"><button class="qbtn pmq pmx-ok" data-pmta="${id}" data-v="✅ всё хорошо" title="всё хорошо">✓ Норма</button><button class="qbtn pmq qbad pmx-bad" data-pmta="${id}" data-bad="1" title="замечание — допиши, что не так">✕ Замечание</button></span><button class="qbtn pmq qclr pmx-clr" data-pmta="${id}" data-v="" title="очистить поле" aria-label="очистить поле">⌫</button>` : `<span class="pmx-ro">${pmxIco(myS)}</span>`}
+      ${canEdit ? `<span class="pmx-segbtn" role="group" aria-label="${esc(n)}"><button class="qbtn pmq pmx-ok" data-pmta="${id}" data-v="✅ всё хорошо" title="всё хорошо" aria-pressed="${myS==="ok"}">✓ Норма</button><button class="qbtn pmq qbad pmx-bad" data-pmta="${id}" data-bad="1" title="замечание — допиши, что не так" aria-pressed="${myS==="bad"}">✕ Замечание</button></span><button class="qbtn pmq qclr pmx-clr" data-pmta="${id}" data-v="" title="очистить поле" aria-label="очистить поле">⌫</button>` : `<span class="pmx-ro">${pmxIco(myS)}</span>`}
       <span class="pmx-sp"></span>
       ${canEdit ? `<button class="pmx-shot" data-pmupl="${esc(k)}" data-pmc="${j}" title="прикрепить скрин к «${esc(n)}»">Скрин</button>` : ""}</div>
       <textarea id="${id}" class="pmx-ta" rows="2" ${dis} placeholder="что увидел — пиши подробно, поле растёт" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea>
@@ -6088,7 +6117,7 @@ function pmCardHtml(c, canEdit, isEd){
   const head = `<div class="pmhead pmx-phead" data-pmk="${esc(k)}" title="${open ? "свернуть" : "открыть"}" aria-expanded="${open}">${PMX_CHEV}<b class="pmx-pname">${badges}${esc(name)}</b>${v.opname && v.nick ? `<span class="pmx-faint">${esc(v.nick)}</span>` : ""}${chip}${isAdded ? '<span class="pmx-faint">своя команда</span>' : ""}${nDif ? `<span class="pmx-dif" title="категорий, где твоя оценка и оценка смотрящего разные">≠ ${nDif}</span>` : ""}${dirty}<span class="pmx-sp"></span><span class="pmx-pfill">${segs}</span></div>`;
   if (!open) return `<section class="pmcard pmx-pcard">${head}</section>`;
   const note = st === "возврат" && it && it.note ? `<div class="pmx-note"><b>↩ Смотрящий вернул:</b> <span class="utext">${esc(it.note)}</span></div>` : "";
-  const prodBtns = canEdit ? `<button class="pmx-pri" data-pmsave="${esc(k)}">${fill.full ? "Отправить смотрящему" : "Отправить смотрящему (" + fill.n + " из 9)"}</button>
+  const prodBtns = canEdit ? `<button class="pmx-pri" data-pmsave="${esc(k)}">${fill.full ? "Сохранить" : "Сохранить (" + fill.n + " из 9)"}</button>
       ${!isAdded && c.baseKey ? `<button class="pmx-sec" data-pmask="${esc(k)}" title="попросить смотрящего посмотреть эту команду">Попросить смотрящего посмотреть</button>` : ""}
       <span class="pmx-save">${PMX_TICK}<span id="pmas${esc(kid)}">${pmDirty(k) ? "есть несохранённое — сохранится само через пару секунд" : "сохраняется само" + (it && it.updated ? " · последнее " + esc(fmtDay(it.updated)) : "")}</span></span>
       <span class="pmx-sp"></span>
@@ -6385,7 +6414,7 @@ function pmBind(){
   const adb = document.getElementById("pmx-addbtn");
   if (adb) adb.onclick = ()=>{ state.pmAddOpen = !state.pmAddOpen; adb.setAttribute("aria-expanded", String(state.pmAddOpen)); const fm = document.getElementById("pm-add"); if (fm){ fm.style.display = state.pmAddOpen ? "" : "none"; if (state.pmAddOpen){ const i = document.getElementById("pma-nick"); if (i) i.focus(); } } };
   box.querySelectorAll("details[data-pmedit]").forEach(d=>d.addEventListener("toggle", ()=>{ state.pmEditOpen = state.pmEditOpen || {}; state.pmEditOpen[d.dataset.pmedit] = d.open; }));
-  box.querySelectorAll(".pmx-cat[data-j] textarea").forEach(t=>t.addEventListener("input", ()=>{ const c = t.closest(".pmx-cat"); if (c) c.dataset.st = v7CatState(t.value); }));
+  box.querySelectorAll(".pmx-cat[data-j] textarea").forEach(t=>t.addEventListener("input", ()=>{ const c = t.closest(".pmx-cat"); if (c) c.dataset.st = v7CatState(t.value); v7AriaSeg(c); }));
   const ag = document.getElementById("pma-go");
   if (ag) ag.onclick = async ()=>{
     const val = id => (document.getElementById(id)||{}).value || "";
@@ -6397,7 +6426,7 @@ function pmBind(){
   // клик по миниатюре — полный размер (как в разборах)
   box.querySelectorAll(".pmcard .sthumb img[data-full]").forEach(im=>{
     im.onclick = ()=>{
-      document.getElementById("cam-title").textContent = "📷 " + (im.getAttribute("data-cat") || "скрин");
+      document.getElementById("cam-title").textContent = (im.getAttribute("data-cat") || "скрин");
       const ai = document.getElementById("cam-ai"); if (ai) ai.style.display = "none";
       const ao = document.getElementById("cam-aiout"); if (ao) ao.style.display = "none";
       camShow(im.getAttribute("src") || BLANK, true);
@@ -7077,7 +7106,7 @@ function renderItog(){
     if (!x){
       const lt = latest[t] && latest[t].dk !== sel ? latest[t].dk : "";
       return `<section class="ig-card"><div class="ig-ch"><h2>${esc(t)}</h2><span class="ig-tag warn">итога нет</span><span class="ig-when">${sel}</span></div>
-        <div class="ig-none">За этот день итога нет — так и показываем, нули не выдумываем.${lt?` <button class="ig-last" data-igday="${lt}">последний итог — ${lt}</button>`:""}</div></section>`;
+        <div class="ig-none">За этот день итога нет.${lt?` <button class="ig-last" data-igday="${lt}">последний итог — ${lt}</button>`:""}</div></section>`;
     }
     const w = String(x.when||"").trim();
     const when = w ? (/^\d{1,2}:\d{2}$/.test(w) ? "записано в " + w + " · " + sel : "записано " + (fmtUpd(w)||w)) : sel;
