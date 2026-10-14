@@ -2125,6 +2125,70 @@
     .edit-grid .f.cat[data-st="warn"],.pmx-cat[data-st="warn"],.co-rcat.st-warn{border-color:rgba(245,165,36,.55)}
     .qchip.lv-bad{border-color:rgba(229,101,95,.6)!important}
   }
+
+  /* v7.3: карточка компактнее + советы по категориям + эффекты */
+  .edit-grid .cat-h .cname{font-size:14px;font-weight:650;letter-spacing:-.005em}
+  .edit-grid .cat-h .cname{min-width:190px}
+  .edit-grid .f.cat[data-st=""] .cname{display:inline-flex;flex-direction:column;align-items:flex-start;text-align:left;line-height:1.25}
+  .edit-grid .f.cat[data-st=""] .cname::after{content:"не отмечено";margin-top:2px;font-size:11px;font-weight:500;color:var(--faint);letter-spacing:0}
+  .cat-h .qbtn.cat-ib{width:32px;min-height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--line);background:none;color:var(--dim);transition:color .18s,border-color .18s,background .18s}
+  .cat-ib svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .cat-h .qbtn.cat-ib:hover{color:var(--ink);border-color:var(--line2);background:var(--hover)}
+  .edit-grid .f.cat[data-st="ok"] .chips>.qchip{display:none}
+  .edit-grid .cat-ta textarea{transition:min-height .22s ease,max-height .22s ease,padding .22s ease,border-color .2s}
+  .edit-grid .f.cat[data-st="ok"] .cat-ta textarea:not(:focus){min-height:38px;max-height:38px;overflow:hidden;padding:8px 12px;resize:none;cursor:text}
+  .edit-grid .f.cat[data-st="ok"] .cat-ta:not(:focus-within) .ta-meta{opacity:0;pointer-events:none}
+  .cat-ta .ta-len{opacity:0;transition:opacity .2s} .cat-ta:focus-within .ta-len{opacity:1}
+  .cat-ta .ta-meta{transition:opacity .2s}
+  .f.cat .sthumb img{width:168px;height:96px;object-fit:contain;background:var(--panel2);transition:transform .18s ease,border-color .18s,box-shadow .18s}
+  .f.cat .sthumb:hover img{transform:translateY(-2px);box-shadow:var(--shadow-s)}
+  .f.cat .qchip{transition:transform .15s ease,border-color .15s,background .15s}
+  .f.cat .qchip:hover{transform:translateY(-1px)}
+  /* советы */
+  .adv-wrap{margin:0 0 0 30px}
+  .f.cat .chips .adv-btn{margin-right:4px}
+  .adv-btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;color:var(--dim);background:none;border:1px dashed var(--line2);border-radius:999px;min-height:28px;padding:2px 12px;cursor:pointer;transition:color .2s,border-color .2s,background .2s,transform .15s}
+  .adv-btn svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+  .adv-btn:hover{color:var(--accent);border-color:var(--accent)} .adv-btn:hover svg{transform:rotate(-12deg) scale(1.12)}
+  .adv-btn .adv-ok{display:none;color:var(--ok);font-weight:700}
+  .adv-btn.has{border-style:solid;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:var(--accbg)} .adv-btn.has .adv-ok{display:inline}
+  .adv-btn.on{color:var(--accent);border-style:solid;border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+  .adv-btn{min-height:24px;padding:1px 10px;font-size:11.5px;flex:none}
+  .adv-box{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .3s cubic-bezier(.2,.7,.2,1),opacity .22s ease}
+  .adv-wrap.open .adv-box{grid-template-rows:1fr;opacity:1}
+  .adv-in{overflow:hidden;min-height:0}
+  .adv-wrap:not(.open) .adv-in{visibility:hidden}
+  .adv-card{margin-top:8px;border-left:3px solid var(--accent);background:var(--accbg);border-radius:4px 10px 10px 4px;padding:8px 10px 10px 12px}
+  .adv-h{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px} .adv-h b{color:var(--accent);font-weight:650} .adv-h>span:not(.sp){color:var(--faint)} .adv-h{flex-wrap:wrap;row-gap:6px} .adv-h .sp{flex:1} .adv-ph svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round} .adv-card .scrow{margin-top:8px;margin-left:0!important}
+  .adv-ai{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--panel);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:7px;min-height:26px;padding:2px 9px;cursor:pointer;transition:background .2s,transform .15s}
+  .adv-ai:hover{background:var(--accbg)} .adv-ai:active{transform:scale(.96)} .adv-ai.busy{opacity:.8;cursor:progress}
+  .adv-ta{display:block;width:100%;min-height:44px;max-height:240px;field-sizing:content;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;line-height:1.5;color:var(--ink)}
+  .adv-ta:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accbg)}
+  .adv-ta.adv-new{animation:advglow 1.2s ease}
+  @keyframes advglow{0%{box-shadow:0 0 0 0 rgba(91,157,255,.55)}100%{box-shadow:0 0 0 9px rgba(91,157,255,0)}}
+  .adv-ro{margin-top:6px;border-left:3px solid var(--accent);background:var(--accbg);border-radius:4px 8px 8px 4px;padding:6px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;grid-column:2/-1}
+  .adv-ro b{color:var(--accent);font-size:12px;font-weight:650} .adv-ro .utext{color:var(--ink)!important;white-space:pre-wrap}
+  .pmx-tm-reco .adv-ro{grid-column:auto}
+  .ov-ico.ov-adv{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
+  @media(max-width:700px){.adv-h>span:not(.sp){display:none}.edit-grid .cat-h .cname{min-width:0}.adv-wrap{margin-left:0}.f.cat .sthumb img{width:140px;height:84px}}
+  /* эффекты */
+  .cat-seg .qbtn,.pmx-segbtn .qbtn{transition:background .2s ease,color .2s ease,transform .12s ease}
+  .cat-seg .qbtn:active,.pmx-segbtn .qbtn:active{transform:scale(.95)}
+  .qbtn.pop{animation:segpop .34s cubic-bezier(.3,1.5,.5,1)}
+  @keyframes segpop{0%{transform:scale(.88)}60%{transform:scale(1.07)}100%{transform:none}}
+  .f.cat.stflash[data-st="ok"]{animation:flok .7s ease} .f.cat.stflash[data-st="warn"]{animation:flwarn .7s ease} .f.cat.stflash[data-st="bad"]{animation:flbad .7s ease}
+  @keyframes flok{0%{box-shadow:0 0 0 0 rgba(62,207,142,.45)}100%{box-shadow:0 0 0 10px rgba(62,207,142,0)}}
+  @keyframes flwarn{0%{box-shadow:0 0 0 0 rgba(245,165,36,.5)}100%{box-shadow:0 0 0 10px rgba(245,165,36,0)}}
+  @keyframes flbad{0%{box-shadow:0 0 0 0 rgba(229,101,95,.5)}100%{box-shadow:0 0 0 10px rgba(229,101,95,0)}}
+  .shake{animation:v7shake .42s ease}
+  .ov-big b.bump{animation:scbump .5s cubic-bezier(.3,1.5,.5,1)}
+  @keyframes scbump{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+  .ov-big b{display:inline-block;transform-origin:left center}
+  .savebtn.saved{animation:savedok 1.2s ease}
+  @keyframes savedok{0%{box-shadow:0 0 0 0 rgba(62,207,142,.6);background:var(--ok)}35%{background:var(--ok)}100%{box-shadow:0 0 0 12px rgba(62,207,142,0)}}
+  tr.detail.open.fresh .f.cat{animation:v7in .34s cubic-bezier(.2,.7,.2,1) both}
+  tr.detail.open.fresh .f.cat:nth-child(2){animation-delay:.03s} tr.detail.open.fresh .f.cat:nth-child(3){animation-delay:.06s} tr.detail.open.fresh .f.cat:nth-child(4){animation-delay:.09s} tr.detail.open.fresh .f.cat:nth-child(5){animation-delay:.12s} tr.detail.open.fresh .f.cat:nth-child(n+6){animation-delay:.15s}
+  tr.detail.open.fresh .co-side{animation:v7in .4s .08s cubic-bezier(.2,.7,.2,1) both}
 </style>
 </head>
 <body>
@@ -2490,8 +2554,10 @@ function v7Profile(nm){
 
 // ---------- категории: состояние, счётчик, авто-высота ----------
 function v7CatSync(ta){
+  if (!/^ed.+_\d$/.test(ta.id || "")) return; // v7.3: поле совета (adv…) не меняет статус категории
   var f = ta.closest(".f.cat"); if (!f) return;
-  f.dataset.st = v7CatState(ta.value); v7AriaSeg(f);
+  var ns = v7CatState(ta.value), changed = f.dataset.st !== ns;
+  f.dataset.st = ns; v7AriaSeg(f); if (changed && ns) fxClass(f, "stflash", 700);
   var l = f.querySelector(".ta-len"); if (l) l.textContent = ta.value.length ? ta.value.length + " симв." : "";
   if (!("fieldSizing" in ta.style)){ ta.style.height = "auto"; ta.style.height = Math.min(Math.max(ta.scrollHeight + 2, 56), 300) + "px"; }
 }
@@ -2742,7 +2808,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-13.73"
+  VER: "2026-10-14.75"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2881,11 +2947,89 @@ function markBad(v){ return markAs(v, "bad"); }
 function markWarn(v){ return markAs(v, "warn"); }
 // текст без метки — есть ли что-то, кроме метки (для «опиши, что не так»)
 function markBody(v){ return String(v||"").replace(MARK_RE, "").trim(); }
+// v7.3: советы по категориям живут в колонке «Рекомендации команде»: сначала общий текст, затем блоки «💡 Категория: совет».
+//   Строки после «💡 Категория:» до следующего «💡 …:» — продолжение этого совета (совет может быть в несколько строк).
+const ADV_RE = new RegExp("^💡\\s*(" + CATS.map(c=>c.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&")).join("|") + ")\\s*:\\s?(.*)$");
+function recoSplit(t){ // чистая
+  const gen = [], adv = CATS.map(()=>""); let cur = -1;
+  String(t||"").replace(/\r\n?/g, "\n").split("\n").forEach(line=>{ const m = line.match(ADV_RE);
+    if (m){ cur = CATS.indexOf(m[1]); adv[cur] = adv[cur] ? adv[cur] + "\n" + m[2] : m[2]; }
+    else if (cur >= 0) adv[cur] += "\n" + line; else gen.push(line); });
+  return { gen: gen.join("\n").replace(/\s+$/, ""), adv: adv.map(a=>a.replace(/\s+$/, "")) };
+}
+function recoJoin(gen, adv){ // чистая
+  const parts = CATS.map((n,j)=>{ const a = String((adv||[])[j]||"").trim(); return a ? "💡 " + n + ": " + a : ""; }).filter(Boolean);
+  return [String(gen||"").replace(/\s+$/, "")].concat(parts).filter(Boolean).join("\n");
+}
+// v7.3: короткие эффекты (перезапуск анимации классом; при «уменьшить движение» CSS их гасит)
+function fxClass(el, cls, ms){ if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); clearTimeout(el["_fx" + cls]); el["_fx" + cls] = setTimeout(()=>el.classList.remove(cls), ms || 600); }
+function fxPop(b){ fxClass(b, "pop", 340); }
+function recoHtml(t){ const sp = recoSplit(t); return (sp.gen ? `<span class="utext">${esc(sp.gen)}</span>` : "") + CATS.map((n,j)=>sp.adv[j] ? `<div class="adv-ro"><b>💡 ${esc(n)}</b><span class="utext">${esc(sp.adv[j])}</span></div>` : "").join(""); }
+// v7.4: фото к совету — обычный скрин строки с категорией «💡 Название категории»
+const ADV_CAT = n => "💡 " + n;
+const isAdvCat = c => String(c||"").indexOf("💡 ") === 0;
+function advCount(t){ return recoSplit(t).adv.filter(Boolean).length; }
+// блок «💡 Совет» под категорией (карточка смотрящего): кнопка + заметка; совет есть — открыта сразу
+function advBtn(key, j, val, nPh){
+  const has = !!String(val||"").trim() || nPh > 0, id = key + "_" + j;
+  return `<button type="button" class="adv-btn${has ? " has on" : ""}" data-adv="${id}" aria-expanded="${has}" aria-controls="advw${id}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Совет<span class="adv-ok" aria-hidden="true">✓</span></button>`;
+}
+function advBlock(key, j, n, val, thumbsHtml){
+  const has = !!String(val||"").trim() || !!thumbsHtml, id = key + "_" + j;
+  return `<div class="adv-wrap${has ? " open" : ""}" id="advw${id}"><div class="adv-box" id="advb${id}"><div class="adv-in"><div class="adv-card"><div class="adv-h"><b>Совет команде</b><span>видит продюсер</span><span class="sp"></span><button type="button" class="adv-ai adv-ph" data-upl="${key}_A${j}" title="прикрепить фото к совету (можно вставить Ctrl+V, перетащить, разметить)" aria-label="фото к совету «${esc(n)}»"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Фото</button><button type="button" class="adv-ai" data-advai="${id}" title="ИИ напишет черновик совета по тексту замечания — его можно поправить">${V7I.spark}ИИ-подсказка</button></div>`
+    + `<textarea id="adv${id}" class="adv-ta" rows="2" placeholder="Что сделать иначе — конкретно и простыми словами" aria-label="Совет команде: ${esc(n)}">${esc(val||"")}</textarea>${thumbsHtml || ""}</div></div></div></div>`;
+}
+// собрать полное значение колонки «Рекомендации» из общего поля и советов (скрытое поле ed…_reco — его читают черновик, сохранение и «есть изменения»)
+function advCompose(key){
+  const h = document.getElementById("ed" + key + "_reco"); if (!h) return;
+  const g = document.getElementById("recg" + key);
+  h.value = recoJoin(g ? g.value : "", CATS.map((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); return a ? a.value : ""; }));
+}
+// разложить полное значение обратно по полям (после «не восстанавливать черновик» и т. п.)
+function advFill(key){
+  const h = document.getElementById("ed" + key + "_reco"); if (!h) return;
+  const sp = recoSplit(h.value), g = document.getElementById("recg" + key); if (g) g.value = sp.gen;
+  CATS.forEach((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); if (a){ a.value = sp.adv[j]; advMark(key + "_" + j); } });
+}
+function advMark(id){ const a = document.getElementById("adv" + id), b = document.querySelector('[data-adv="' + id + '"]'), w = document.getElementById("advw" + id); if (a && b) b.classList.toggle("has", !!a.value.trim() || !!(w && w.querySelector(".sthumb"))); }
+function advToggle(id, force){
+  const w = document.getElementById("advw" + id), b = document.querySelector('[data-adv="' + id + '"]'); if (!w || !b) return;
+  const on = force === undefined ? !w.classList.contains("open") : !!force;
+  w.classList.toggle("open", on); b.classList.toggle("on", on); b.setAttribute("aria-expanded", on ? "true" : "false");
+  if (on){ const a = document.getElementById("adv" + id); if (a) setTimeout(()=>focusEnd(a), 60); }
+}
+// ввод в совет или в общие рекомендации: сначала собираем скрытое поле (фаза захвата — раньше обработчика черновика)
+document.addEventListener("input", ev=>{ const t = ev.target; if (!t || !t.id) return;
+  let m = t.id.match(/^adv(.+_\d)$/); if (m){ advMark(m[1]); advCompose(m[1].replace(/_\d$/, "")); return; }
+  m = t.id.match(/^recg(.+)$/); if (m) advCompose(m[1]); }, true);
+document.addEventListener("click", async ev=>{
+  const b = ev.target && ev.target.closest ? ev.target.closest("[data-adv], [data-advai]") : null; if (!b) return;
+  ev.stopPropagation();
+  if (b.dataset.adv){ advToggle(b.dataset.adv); return; }
+  const id = b.dataset.advai, key = id.replace(/_\d$/, ""), j = +id.slice(id.lastIndexOf("_") + 1);
+  const ta = document.getElementById("ed" + key + "_" + j); let a = document.getElementById("adv" + id); if (!ta || !a) return;
+  const st = catState(ta.value), body = markBody(ta.value);
+  if (!body || st === "ok"){ toast("Сначала отметь «Замечание» или «Плохо» и опиши, что не так — по этому тексту ИИ и подскажет", true); return; }
+  if (b.classList.contains("busy")) return;
+  b.classList.add("busy"); const old = b.innerHTML; b.innerHTML = '<span class="v7spin"></span>думаю…';
+  try {
+    const text = "Категория: " + CATS[j] + ". Уровень: " + (st === "bad" ? "плохо" : "замечание") + ". Что увидел смотрящий: " + body.slice(0, 1500);
+    const res = await aiAsk("catadvice", { text: text, ckey: "adv|" + strHash(text) });
+    if (res.error) throw new Error(res.error);
+    const tip = String(res.tip || "").trim(); if (!tip) throw new Error("ИИ не предложил совет");
+    a = document.getElementById("adv" + id); // экран мог перерисоваться, пока ИИ думал — берём живое поле
+    if (!a){ toast("Карточка обновилась — нажми «ИИ-подсказка» ещё раз", true); return; }
+    advToggle(id, true);
+    a.value = a.value.trim() ? a.value.replace(/\s+$/, "") + "\n" + tip : tip;
+    a.dispatchEvent(new Event("input", { bubbles: true })); a.classList.remove("adv-new"); void a.offsetWidth; a.classList.add("adv-new"); focusEnd(a);
+  } catch(e){ toast("ИИ: " + (e.message || e), true); }
+  finally { const b2 = document.querySelector('[data-advai="' + id + '"]') || b; b2.classList.remove("busy"); if (b2.querySelector(".v7spin")) b2.innerHTML = old; }
+}, true);
 // v7.2: при «Замечании» и «Плохо» текст обязателен — какие категории без пояснения
 function needText(vals){ return (vals||[]).map((v,j)=>{ const st = catState(v); return (st === "warn" || st === "bad") && !markBody(v) ? j : -1; }).filter(j=>j >= 0); }
 function markNeed(tas){
   document.querySelectorAll(".need-text").forEach(el=>{ el.classList.remove("need-text"); const m = el.querySelector(".need-msg"); if (m) m.remove(); });
-  tas.filter(Boolean).forEach((ta, i)=>{ const box = ta.closest(".f.cat, .pmx-cat"); if (!box) return; box.classList.add("need-text");
+  tas.filter(Boolean).forEach((ta, i)=>{ const box = ta.closest(".f.cat, .pmx-cat"); if (!box) return; box.classList.add("need-text"); fxClass(box, "shake", 450);
     if (!box.querySelector(".need-msg")){ const m = document.createElement("div"); m.className = "need-msg"; m.setAttribute("role", "alert"); m.textContent = "Опиши, что именно не так — без текста не сохранится"; const anchor = ta.parentElement && ta.parentElement.classList.contains("cat-ta") ? ta.parentElement : ta; anchor.insertAdjacentElement("afterend", m); }
     if (i === 0){ try { ta.scrollIntoView({ block: "center", behavior: "smooth" }); } catch(e){} focusEnd(ta); } });
 }
@@ -2902,7 +3046,7 @@ document.addEventListener("keydown", ev=>{
   const b = box.querySelectorAll(".cat-seg .qbtn, .pmx-segbtn .qbtn")[k]; if (!b) return;
   ev.preventDefault(); b.click();
 });
-document.addEventListener("input", ev=>{ const t = ev.target; if (!t || t.tagName !== "TEXTAREA") return; const box = t.closest(".need-text"); if (box && (markBody(t.value) || !isDev(catState(t.value)))){ box.classList.remove("need-text"); const m = box.querySelector(".need-msg"); if (m) m.remove(); } });
+document.addEventListener("input", ev=>{ const t = ev.target; if (!t || t.tagName !== "TEXTAREA" || !/^(ed.+_\d|pm.+_\d)$/.test(t.id || "")) return; const box = t.closest(".need-text"); if (box && (markBody(t.value) || !isDev(catState(t.value)))){ box.classList.remove("need-text"); const m = box.querySelector(".need-msg"); if (m) m.remove(); } });
 function focusEnd(ta){ try { ta.focus(); const n = ta.value.length; ta.setSelectionRange(n, n); } catch(e){} }
 // v6.9: продюсеру название компании не показываем нигде — только смотрящему и директору
 function coLbl(c){ return AUTH.prod ? "" : clabel(c); }
@@ -3255,7 +3399,8 @@ function taInfo(el){
   const det = el.closest ? el.closest("tr.detail") : null;
   const x = det ? state.lastView[det.dataset.d] : null;
   if (!x) return null;
-  const field = /^lk/.test(el.id) ? "links" : el.id.slice(el.id.indexOf("_") + 1);
+  const am = el.id.match(/^adv.+_(\d)$/); // v7.3: совет и общие рекомендации — своя история (не путать с категорией)
+  const field = am ? "adv" + am[1] : /^recg/.test(el.id) ? "recg" : /^lk/.test(el.id) ? "links" : el.id.slice(el.id.indexOf("_") + 1);
   return { x: x, field: field, key: rk(x.r) + "\u0000" + field };
 }
 function taHistKey(el){ const i = taInfo(el); return i ? i.key : null; }
@@ -3264,6 +3409,7 @@ function taBaseline(x, field){ // что было в поле при откры�
   if (/^\d+$/.test(field)) return d["f"+field] !== undefined ? d["f"+field] : (x.r.cats[+field]||"");
   if (field === "comment") return d.comment !== undefined ? d.comment : (x.r.obs||"");
   if (field === "reco") return d.reco !== undefined ? d.reco : (x.r.reco||"");
+  if (field === "recg" || /^adv\d$/.test(field)){ const sp = recoSplit(d.reco !== undefined ? d.reco : (x.r.reco||"")); return field === "recg" ? sp.gen : sp.adv[+field.slice(3)]; }
   if (field === "links") return d.lk !== undefined ? d.lk : (x.r.linksTxt||"");
   return "";
 }
@@ -4018,20 +4164,20 @@ function renderMain(){
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"ссылка")}</a>`).join("");
       const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
-      const genScreens = rowScreens.filter(s=>!CATS.includes(String(s.cat)));
+      const genScreens = rowScreens.filter(s=>!CATS.includes(String(s.cat)) && !isAdvCat(s.cat)); // фото советов — в своих заметках
       const plan = (state.plans||{})[x.r.city+"|"+x.r.producer] || "";
       const pmBlk = pmBlockFor(x.r); // v6: мониторинг продюсера по этой команде (статус, расхождения)
       const teamTools = (AUTH.edit && !viewAsActive()) ? `<button class="ov-tbtn" data-mark="${key}" title="цвет, подпись и закрепление наверху — видят все">Метка</button><button class="ov-tbtn${newbieOf(x.r) ? " on" : ""}" data-newbie="${key}" title="новый оператор: метка «новичок» на период адаптации">${newbieOf(x.r) ? "Снять «новичок»" : "Новичок"}</button>` : "";
       // --- только просмотр ---
       const readDet = `<div class="co-main"><div class="co-tools"><span class="co-hint">Разбор смотрящего · только просмотр</span><span class="sp"></span>${teamTools}</div>`
         + CATS.map((n,j)=>{
-          const t = (x.r.cats[j]||"").trim(), s0 = x.s.st[j];
+          const t = (x.r.cats[j]||"").trim(), s0 = x.s.st[j], adv = recoSplit(x.r.reco).adv[j], advScr = rowScreens.filter(s=>String(s.cat)===ADV_CAT(n));
           const scr = rowScreens.filter(s=>String(s.cat)===n);
-          return `<div class="co-rcat ${s0?"st-"+s0:""}"><span class="cnum">${j+1}</span><b>${esc(n)}</b><span class="chip ${s0==="bad"?"c-bad":s0==="warn"?"c-warn":s0==="ok"?"c-ok":"ov-nochip"}">${ST_LBL[s0]||"не отмечено"}</span><span class="utext">${hl(t)}</span>${scrThumbs(scr,n,false)}</div>`;
+          return `<div class="co-rcat ${s0?"st-"+s0:""}"><span class="cnum">${j+1}</span><b>${esc(n)}</b><span class="chip ${s0==="bad"?"c-bad":s0==="warn"?"c-warn":s0==="ok"?"c-ok":"ov-nochip"}">${ST_LBL[s0]||"не отмечено"}</span><span class="utext">${hl(t)}</span>${scrThumbs(scr,n,false)}${adv || advScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${adv ? `<span class="utext">${hl(adv)}</span>` : ""}${scrThumbs(advScr, ADV_CAT(n), false)}</div>` : ""}</div>`;
         }).join("")
         + (genScreens.length ? `<div class="drow"><b>Общее фото / видео</b>${scrThumbs(genScreens,"общее фото",false)}</div>` : "")
         + (x.r.obs ? `<div class="drow"><b>Комментарий / наблюдение</b><span class="utext">${hl(x.r.obs)}</span></div>` : "")
-        + (x.r.reco ? `<div class="drow"><b>Рекомендации команде</b><span class="utext">${hl(x.r.reco)}</span></div>` : "")
+        + (recoSplit(x.r.reco).gen ? `<div class="drow"><b>Рекомендации команде</b><span class="utext">${hl(recoSplit(x.r.reco).gen)}</span></div>` : "")
         + (plan ? `<div class="drow"><b>План работ</b><span class="utext">${esc(plan)}</span></div>` : "")
         + (rowLinks.length ? `<div class="drow"><b>Ссылки</b><span>${linksCell}</span></div>` : "")
         + `</div><aside class="co-side">${ovScore(x.r.cats.map(c=>c||""), x.r.scoreM, x.r.verdictM, x.r._lite ? rowStats(x.r).st : null)}<div class="co-hint">${x.r.updated ? "Оценка смотрящего · последняя проверка " + esc(fmtDay(x.r.updated)) : "Смотрящий ещё не проверял"}</div>${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}</aside>`;
@@ -4043,9 +4189,10 @@ function renderMain(){
       const comV = dr && dr.comment !== undefined ? dr.comment : (x.r.obs||"");
       const lkV = dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||"");
       const xo = state.ovX || (state.ovX = {});
+      const recoV = dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""), rsp = recoSplit(recoV); // v7.3: общие рекомендации + советы по категориям
       const editDet = CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
-        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-ta="ed${key}_${j}"`, v7CatState(val))}</span><button class="qbtn qclr" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле">⌫</button><span class="sp"></span><button class="qbtn" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»">📷 скрин</button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="что увидел — при замечании или «плохо» опиши, что именно" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="ed${key}_${j}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}</div>`;
+        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-ta="ed${key}_${j}"`, v7CatState(val))}</span><span class="sp"></span><button class="qbtn cat-ib" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»" aria-label="прикрепить скрин к «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button class="qbtn qclr cat-ib" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6h11v12H9l-6-6z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg></button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="что увидел — при замечании или «плохо» опиши, что именно" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="ed${key}_${j}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), true))}</div>`;
       }).join("");
       const failInfo = state.failedSaves[rk(x.r)];
       const failBar = canEdit && failInfo ? `<div class="failbar">Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
@@ -4066,7 +4213,7 @@ function renderMain(){
           <div class="co-hint">Считается само: норма — 1 балл, замечание — ½, плохо — 0. Вручную — оценка и вердикт ниже.</div>
           <div class="editlive" id="live${key}" hidden>${lv0}</div>
           ${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}
-          <label class="co-lbl" for="ed${key}_reco">Рекомендации команде (видит продюсер)</label><textarea id="ed${key}_reco" class="co-reco">${esc(dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""))}</textarea>
+          <label class="co-lbl" for="recg${key}">Рекомендации команде (видит продюсер)</label><textarea id="recg${key}" class="co-reco" placeholder="общие рекомендации; советы по категориям — кнопкой «💡 Совет» под категорией">${esc(rsp.gen)}</textarea><textarea id="ed${key}_reco" hidden aria-hidden="true" tabindex="-1">${esc(recoV)}</textarea>
           <div class="co-man"><label>Оценка вручную<select id="ed${key}_score"><option value="">авто</option>${Array.from({length:MAX_SCORE+1},(_,n)=>n).map(n=>`<option ${(scV===String(n))?"selected":""}>${n}</option>`).join("")}</select></label><label>Вердикт вручную<select id="ed${key}_verdict"><option value="">авто</option>${["норма","замечание","критично"].map(v=>`<option ${(vdV===v)?"selected":""}>${v}</option>`).join("")}</select></label></div>
           <button class="savebtn" id="sv${key}">Сохранить в таблицу</button>
           <div class="co-2"><button class="abtn2" id="tc${key}" title="поставить штамп «Обновлено» без правок">Проверено сегодня</button><button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">Поручить продюсеру</button></div>
@@ -4086,7 +4233,7 @@ function renderMain(){
         : roNote + `<div class="co-card ro">${readDet}</div>`;
       const cityCell = showCoCol ? `<td class="ov-cocell"><span style="color:${OVC[x.r.city]||"var(--dim)"}">${esc(clabel(x.r.city))}</span>${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
-      const icons = ((x.r.obs||"").trim() ? `<span class="ov-ico" title="${esc(x.r.obs)}">комм.</span>` : "") + (x.r.reco ? '<span class="ov-ico" title="есть рекомендации">реком.</span>' : "") + (x.r.scoreM ? `<span class="ov-ico" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/${MAX_SCORE}">вручную</span>` : "");
+      const icons = ((x.r.obs||"").trim() ? `<span class="ov-ico" title="${esc(x.r.obs)}">комм.</span>` : "") + (()=>{ const sp = recoSplit(x.r.reco), na = x.r._lite && x.r._advN != null ? +x.r._advN : sp.adv.filter(Boolean).length; /* у облегчённой строки число советов посчитал сервер */ return (sp.gen ? '<span class="ov-ico" title="есть рекомендации">реком.</span>' : "") + (na ? `<span class="ov-ico ov-adv" title="советы по категориям: ${esc(CATS.filter((n,j)=>sp.adv[j]).join(", "))}">советы ${na}</span>` : ""); })() + (x.r.scoreM ? `<span class="ov-ico" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/${MAX_SCORE}">вручную</span>` : "");
       const updCell = (()=>{ const u = dueInfo(x.r); if (!u) return '<span style="color:var(--faint);font-size:11.5px">—</span>';
         const nx = String(u.nextDay).padStart(2,"0")+"."+String(u.nextMonth).padStart(2,"0");
         const lab = u.days>=u.per ? '<span style="color:var(--bad-t);font-weight:600">к перепроверке</span>' : u.days>=u.per-1 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
@@ -4183,6 +4330,7 @@ function renderMain(){
     ev.stopPropagation();
     const parts = b.dataset.upl.split("_");
     const x = state.lastView[parts[0]]; if (!x) return;
+    if (/^A\d$/.test(parts[1])){ const ai = +parts[1].slice(1); openUpload(x, ai, "💡 совет · " + CATS[ai], true); return; } // v7.4: фото к совету
     const catIdx = parts[1]==="G" ? undefined : parseInt(parts[1],10); // G = общее фото без категории
     openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
   });
@@ -4212,6 +4360,7 @@ function renderMain(){
     const dsk = x.dataset.dsk, dlink = x.dataset.dlink; // запоминаем до перерисовки
     // мгновенно убираем с сайта; серверное удаление едет в фоне
     const arr0 = (state.screens||{})[dsk] || [];
+    const was0 = arr0.find(s=>s.link===dlink) || {}; // v7.4: при откате вернуть в ту же категорию / совет
     if (arr0.some(s=>s.link===dlink)) { state.screens[dsk] = arr0.filter(s=>s.link!==dlink); toast("Скрин удалён"); render(); }
     let lastErr = null;
     for (let a=0;a<4;a++){ // Apps Script бывает капризным сразу после загрузки — до 4 фоновых попыток
@@ -4224,7 +4373,7 @@ function renderMain(){
     // сервер так и не подтвердил — возвращаем скрин на место и честно говорим
     state.screens = state.screens || {};
     state.screens[dsk] = state.screens[dsk] || [];
-    if (!state.screens[dsk].some(s=>s.link===dlink)) state.screens[dsk].push({cat:"", link:dlink, ts:"не удалён — попробуй ещё раз"});
+    if (!state.screens[dsk].some(s=>s.link===dlink)) state.screens[dsk].push(Object.assign({}, was0, {cat: was0.cat || "", link:dlink, ts:"не удалён — попробуй ещё раз"}));
     toast("Скрин вернул на место — сервер не подтвердил удаление, попробуй ещё раз", true);
     render();
   });
@@ -4277,6 +4426,7 @@ function renderMain(){
     const d = document.querySelector(`tr.detail[data-d="${tr.dataset.i}"]`);
     if (d.classList.contains("open") && rowDirty(tr.dataset.i) && !confirm("Есть несохранённые правки (они сохранены в черновик и не пропадут). Закрыть?")) return;
     d.classList.toggle("open");
+    if (d.classList.contains("open")){ d.classList.add("fresh"); setTimeout(()=>d.classList.remove("fresh"), 900); } // v7.3: категории появляются по очереди — только при раскрытии, не при автообновлении
     if (d.classList.contains("open")) setTimeout(ensureThumbs, 60); // скрины карточки — по раскрытию
     if (d.classList.contains("open")){ const xr = state.lastView[tr.dataset.i]; if (xr) recentPush(xr.r); } // v6.6: недавние карточки
     // v6: карточка прошлой недели пришла облегчённой — догружаем полный текст и перерисовываем
@@ -4294,7 +4444,7 @@ function renderMain(){
           clearDraft(x0.r); // сбрасываем поля на значения из таблицы
           for (let j=0;j<9;j++){ const el = document.getElementById("ed"+tr.dataset.i+"_"+j); if (el) el.value = x0.r.cats[j]||""; }
           const c = document.getElementById("ed"+tr.dataset.i+"_comment"); if (c) c.value = x0.r.obs||"";
-          const rc = document.getElementById("ed"+tr.dataset.i+"_reco"); if (rc) rc.value = x0.r.reco||"";
+          const rc = document.getElementById("ed"+tr.dataset.i+"_reco"); if (rc){ rc.value = x0.r.reco||""; advFill(tr.dataset.i); }
           const lk = document.getElementById("lk"+tr.dataset.i); if (lk) lk.value = x0.r.linksTxt||"";
           const sc = document.getElementById("ed"+tr.dataset.i+"_score"); if (sc) sc.value = x0.r.scoreM||"";
           const vd = document.getElementById("ed"+tr.dataset.i+"_verdict"); if (vd) vd.value = x0.r.verdictM||"";
@@ -4311,6 +4461,7 @@ function renderMain(){
       const ta = document.getElementById(b.dataset.ta); if (!ta) return;
       ta.value = segApply(ta, b);
       ta.dispatchEvent(new Event("input", {bubbles:true})); // ✅/⚠️/❌/⌫ тоже в истории Ctrl+Z и в черновике
+      fxPop(b);
       if (b.dataset.mk) focusEnd(ta);
     };
   });
@@ -4339,7 +4490,7 @@ function renderMain(){
         for (let j=0;j<9;j++){ const ta=document.getElementById("ed"+det.dataset.d+"_"+j); vals.push(ta?ta.value:""); }
         lv.textContent = liveEval(vals);
         const ovb = document.getElementById("ovsc"+det.dataset.d); // v7: крупная оценка справа — живьём
-        if (ovb){ const sc0 = document.getElementById("ed"+det.dataset.d+"_score"), vd0 = document.getElementById("ed"+det.dataset.d+"_verdict"); ovb.innerHTML = ovScore(vals, sc0 ? sc0.value : "", vd0 ? vd0.value : ""); }
+        if (ovb){ const sc0 = document.getElementById("ed"+det.dataset.d+"_score"), vd0 = document.getElementById("ed"+det.dataset.d+"_verdict"); const was = (ovb.querySelector(".ov-big b")||{}).textContent; ovb.innerHTML = ovScore(vals, sc0 ? sc0.value : "", vd0 ? vd0.value : ""); const nb = ovb.querySelector(".ov-big b"); if (nb && was !== undefined && was !== nb.textContent) fxClass(nb, "bump", 500); }
         const ods = document.getElementById("ovds"+det.dataset.d); if (ods) ods.textContent = "Есть изменения — черновик хранится в браузере";
         const odd = document.getElementById("ovdd"+det.dataset.d); if (odd) odd.className = "w";
       }
@@ -4659,7 +4810,7 @@ function renderOperators(rows, st){
     const pts = pv.map(p=>(3 + p[0]*(58/n)).toFixed(1) + "," + (19 - (p[1]-mn)/sp*16).toFixed(1)).join(" ");
     const up = o.trend > 0.2, dn = o.trend < -0.2;
     const c = up ? "var(--ok)" : dn ? "var(--bad-t)" : "var(--dim)";
-    const t = up ? "▲ +" + o.trend.toFixed(1) : dn ? "▼ " + o.trend.toFixed(1) : (Math.abs(o.trend) < 0.05 ? "— 0" : "— " + (o.trend > 0 ? "+" : "") + o.trend.toFixed(1));
+    const t = up ? "▲ +" + fmtSc(o.trend) : dn ? "▼ " + fmtSc(o.trend) : (Math.abs(o.trend) < 0.05 ? "— 0" : "— " + (o.trend > 0 ? "+" : "") + fmtSc(o.trend));
     return `<svg class="spark" width="64" height="22" viewBox="0 0 64 22" aria-hidden="true"><polyline points="${pts}" style="fill:none;stroke:${c};stroke-width:2;stroke-linecap:round;stroke-linejoin:round"></polyline></svg><span style="color:${c}">${t}</span>`;
   };
   const sub = weeks.length ? "рейтинг за " + weeks.length + " " + o7Wk(weeks.length, true) + " · " + o7Range(weeks) : "рейтинг по проверкам";
@@ -4675,7 +4826,7 @@ function renderOperators(rows, st){
         return `<tr class="op op7-r" data-i="${i}" tabindex="0" aria-expanded="false">
           <td class="op7-n">${i+1}</td>
           <td><div class="op7-who"><b>${esc(o.name)} <span>${esc(o.nick)}</span></b>${AUTH.prod ? "" : `<span class="op7-cos">${o.cities.map(c=>o7CoChip(c, true)).join("")}</span>`}</div></td>
-          <td><div class="op7-sc">${o.avg!==null ? `<span class="op7-bar"><i style="width:${(o.avg*100/MAX_SCORE).toFixed(1)}%;background:${c}"></i></span><b style="color:${c}">${o.avg.toFixed(1)}/${MAX_SCORE}</b><span class="op7-pct">${pct(o.avg)}%</span>` : `<span class="op7-tnone">не проверено</span>`}</div></td>
+          <td><div class="op7-sc">${o.avg!==null ? `<span class="op7-bar"><i style="width:${(o.avg*100/MAX_SCORE).toFixed(1)}%;background:${c}"></i></span><b style="color:${c}">${fmtSc(o.avg)}/${MAX_SCORE}</b><span class="op7-pct">${pct(o.avg)}%</span>` : `<span class="op7-tnone">не проверено</span>`}</div></td>
           <td><div class="op7-tr">${spark(o)}</div></td>
           <td class="op7-weak">${o.weak ? esc(o.weak) : '<span class="op7-tnone">—</span>'}</td>
           <td class="r op7-num">${o.checks}</td>
@@ -5418,7 +5569,7 @@ function openShiftScreens(key, title){
   document.getElementById("cam-title").textContent = (title || "скрины");
   document.getElementById("cam-ai").style.display = "none";
   document.getElementById("cam-aiout").style.display = "none";
-  const first = arr.find(s=>s.type !== "video") || arr[0];
+  const first = arr.find(s=>s.type !== "video" && !isAdvCat(s.cat)) || arr.find(s=>s.type !== "video") || arr[0];
   if (first.type === "video"){ openVideo(first.link); return; }
   camShow((state.thumbData||{})[first.mini||first.link] || BLANK, !!(state.thumbData||{})[first.mini||first.link]);
   openModal("cammodal");
@@ -5888,15 +6039,18 @@ function renderProdReviews(rows){
   const tms = r => { const d = parseUpd(r.updated); return d ? d.getTime() : 0; };
   const list = rows.filter(r=>r.opName||r.opNick||r.model).slice().sort((a,b)=>tms(b)-tms(a));
   const thumbs = r => {
-    const scr = (state.screens||{})[skey(r)] || [];
+    const scr = ((state.screens||{})[skey(r)] || []).filter(s=>!isAdvCat(s.cat)); // фото советов — под своими категориями
     return scr.length ? `<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" data-cat="${esc(s.cat||"скрин")}" alt="скрин"></span>`).join("")}</div>` : "";
   };
   const card = r => {
     const s = rowStats(r), vk = pmxVk(s.verdict);
-    const cats = CATS.map((n,j)=>{ const t = (r.cats[j]||"").trim(); if (!t) return "";
-      return `<div class="pmx-rv-row" data-st="${s.st[j]||""}">${pmxIco(s.st[j])}<b>${esc(n)}</b><span class="utext">${esc(pmxStrip(t) || (s.st[j]==="ok" ? "всё хорошо" : ST_LBL[s.st[j]] || ""))}</span></div>`; }).join("");
+    const rsp = recoSplit(r.reco);
+    const allScr = (state.screens||{})[skey(r)] || [];
+    const cats = CATS.map((n,j)=>{ const t = (r.cats[j]||"").trim(), aScr = allScr.filter(x=>String(x.cat)===ADV_CAT(n)); if (!t && !rsp.adv[j] && !aScr.length) return "";
+      const aTh = aScr.length ? `<div class="scrow">${aScr.map(x=>`<span class="sthumb" title="${esc(x.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[x.mini||x.link] || (x.mini ? BLANK : driveThumb(x.link,thumbPx(96))))}" data-tk="${esc(x.mini||"")}" data-full="${esc(x.link)}" alt="фото к совету: ${esc(n)}" data-cat="${esc(ADV_CAT(n))}"></span>`).join("")}</div>` : "";
+      return `<div class="pmx-rv-row" data-st="${s.st[j]||""}">${pmxIco(s.st[j])}<b>${esc(n)}</b><span class="utext">${esc(pmxStrip(t) || (s.st[j]==="ok" ? "всё хорошо" : ST_LBL[s.st[j]] || "не отмечено"))}</span>${rsp.adv[j] || aScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${rsp.adv[j] ? `<span class="utext">${esc(rsp.adv[j])}</span>` : ""}${aTh}</div>` : ""}</div>`; }).join("");
     const extra = (r.obs ? `<div class="pmx-rv-x"><b>Доп. комментарий</b><span class="utext">${esc(r.obs)}</span></div>` : "")
-      + (r.reco ? `<div class="pmx-rv-x reco"><b>Рекомендации</b><span class="utext">${esc(r.reco)}</span></div>` : "");
+      + (rsp.gen ? `<div class="pmx-rv-x reco"><b>Рекомендации</b><span class="utext">${esc(rsp.gen)}</span></div>` : "");
     return `<article class="pmx-rv" data-skey="${esc(skey(r))}">
       <div class="pmx-rv-h"><b class="pmx-pname">${teamBadges(r)}${esc(pmxName(r))}</b><span class="pmx-faint">${esc([r.opName ? r.opNick : "", coLbl(r.city), r.week || ""].filter(Boolean).join(" · "))}</span>
         <span class="pmx-vd v-${vk}">${esc(pmxVl(s.verdict))}</span><span class="pmx-sp"></span>
@@ -5977,7 +6131,7 @@ function renderProdHome(rows){
       <div class="pmx-tm-h"><b class="pmx-pname">${teamBadges(r)}${esc(pmxName(r))}</b>${r.opName && r.opNick ? `<span class="pmx-faint">${esc(r.opNick)}</span>` : ""}<span class="pmx-sp"></span><span class="pmx-vd v-${vk}">${esc(pmxVl(s.verdict))}</span></div>
       <div class="pmx-tm-bar">${pmxSegs(null, s.st, true)}<b class="pmx-score v-${vk}">${s.score!==null ? fmtSc(s.score) + "/" + MAX_SCORE : "—"}</b></div>
       <div class="pmx-tm-f">${s.score===null ? "ещё не проверялась" : fails.length || warns.length ? [fails.length ? "плохо: " + esc(fails.join(", ")) : "", warns.length ? "замечания: " + esc(warns.join(", ")) : ""].filter(Boolean).join(" · ") : "без замечаний"}</div>
-      <div class="pmx-tm-reco">${r.reco ? `<span class="utext">${esc(r.reco)}</span>` : "Рекомендаций нет"}</div>
+      <div class="pmx-tm-reco">${r.reco ? recoHtml(r.reco) : "Рекомендаций нет"}</div>
       <div class="pmx-tm-foot"><span>${r.updated ? "разбор смотрящего · " + esc(fmtDay(r.updated)) : "разбора ещё нет"}</span><button class="pmx-sec" data-phrev="${esc(skey(r))}">Открыть разбор</button></div>
     </article>`;
   }).join("");
@@ -6892,7 +7046,7 @@ function presSlideHtml(id, D){
     const cr = rows.map(r=>({ r, s: rowStats(r) })).filter(x=>x.s.verdict === "критично").slice(0, 9);
     if (!cr.length) return `<h2>Критичные команды</h2><div class="pempty big">Критичных нет 🎉</div>`;
     return `<h2>Критичные команды <small>${cr.length} · клик — карточка команды</small></h2><div class="pcrit">${cr.map(x=>{
-      const sc = ((state.screens||{})[skey(x.r)] || []).find(s=>s.type !== "video"), tk = sc ? (sc.mini || sc.link) : "";
+      const sc = ((state.screens||{})[skey(x.r)] || []).find(s=>s.type !== "video" && !isAdvCat(s.cat)), tk = sc ? (sc.mini || sc.link) : "";
       const bad = CATS.filter((n,j)=>x.s.st[j] === "bad").concat(CATS.filter((n,j)=>x.s.st[j] === "warn")); // сначала «плохо», затем замечания
       return `<div class="pcard" data-go="${esc(x.r._sheet + "|" + x.r._row)}">${tk ? `<img loading="lazy" data-tk="${esc(tk)}" src="${esc((state.thumbData||{})[tk] || BLANK)}" alt="">` : '<div class="pnoimg">нет скрина</div>'}
         <div class="pcard-b"><b>${teamBadges(x.r)}${esc(presTeamName(x.r))}</b><small>${esc(clabel(x.r.city))} · ${esc(x.r.producer||"")} · ${fmtSc(x.s.score)}/${MAX_SCORE}</small><div class="ptags">${bad.slice(0,4).map(n=>`<span>${esc(n)}</span>`).join("")}${bad.length>4?`<span>+${bad.length-4}</span>`:""}</div></div></div>`;
@@ -7562,7 +7716,8 @@ function aiDraftMerge(existing, add){ // чистая: не дублируем �
 }
 function aiPickScreen(list){ // чистая: кадр/картинка → общее → первый
   const L = list || [];
-  return L.find(s=>String(s.cat)==="Кадр / картинка") || L.find(s=>!s.cat) || L[0] || null;
+  const M = L.filter(s=>!isAdvCat(s.cat)); // фото к совету — не разбор трансляции
+  return M.find(s=>String(s.cat)==="Кадр / картинка") || M.find(s=>!s.cat) || M[0] || null;
 }
 function aiAcceptCat(key, item){
   const ta = document.getElementById("ed"+key+"_"+item.i);
@@ -7705,7 +7860,7 @@ function rowByRk(k){ return state.rows.find(r=>rk(r)===k) || (realData ? realDat
 function queueRowSave(x, key, changes){
   const qk = rk(x.r);
   const q = saveQueue[qk] = saveQueue[qk] || { r: x.r, fields: {}, timer: null, queuedAt: 0 };
-  q.r = x.r; q.queuedAt = Date.now();
+  q.r = x.r; q.queuedAt = Date.now(); q.key = key;
   changes.forEach(c => { q.fields[c[0]] = c[1]; });
   const opt = state.optimistic[qk] = state.optimistic[qk] || { fields: {} };
   Object.assign(opt.fields, q.fields);
@@ -7738,6 +7893,7 @@ async function flushRowSave(qk){
     if (d && !(d.ts > q.queuedAt) && !saveQueue[qk]) clearDraft(cur); // правки после «Сохранить» остаются в черновике
     toast("✔ Сохранено в таблицу (" + entries.length + " " + (entries.length===1?"поле":"полей") + ")");
     softRender();
+    setTimeout(()=>{ try { const sb = q.key != null ? document.getElementById("sv" + q.key) : null; if (sb) fxClass(sb, "saved", 1200); } catch(e){} }, 90); // v7.3: вспышка «сохранено» — после перерисовки карточки
   } catch(e){
     const keep = {};
     entries.forEach(c=>{ if (isLatest(c[0])) keep[c[0]] = c[1]; });
@@ -8039,8 +8195,8 @@ async function camEditShot(){
 document.getElementById("cam-edit").onclick = camEditShot;
 // ---------- окно вставки фото (кнопка или Ctrl+V) ----------
 let uplTarget = null;
-function openUpload(x, catIdx, label){
-  uplTarget = { x: x, catIdx: catIdx };
+function openUpload(x, catIdx, label, adv){
+  uplTarget = { x: x, catIdx: catIdx, adv: !!adv };
   document.getElementById("u-title").textContent = "📷 Фото — " + label;
   document.getElementById("u-msg").textContent = "";
   openModal("uplmodal");
@@ -8181,7 +8337,7 @@ function uplQueueDraw(){
 }
 function uplEnqueue(files, opts){
   if (!uplTarget || !files.length) return;
-  const t = { x: uplTarget.x, catIdx: uplTarget.catIdx, pm: uplTarget.pm }; // v6.2: pm — карточка мониторинга продюсера
+  const t = { x: uplTarget.x, catIdx: uplTarget.catIdx, pm: uplTarget.pm, adv: !!uplTarget.adv }; // v6.2: pm — карточка мониторинга продюсера
   files.forEach((f,i)=>uplQueue.items.push({ blob: f, name: (f.name || ("скрин " + (uplQueue.items.length + 1))) + (opts && opts.tag ? " · " + opts.tag : ""), t: t, st: "wait" }));
   uplQueueDraw();
   uplRun();
@@ -8193,7 +8349,7 @@ async function uplRun(){
     for (;;){
       const q = uplQueue.items.find(z=>z.st==="wait"); if (!q) break;
       q.st = "run"; uplQueueDraw();
-      const ok = q.t.pm ? await pmUploadOne(q.blob, q.t.pm, q.t.catIdx) : await uploadScreen(q.blob, q.t.x, q.t.catIdx, true);
+      const ok = q.t.pm ? await pmUploadOne(q.blob, q.t.pm, q.t.catIdx) : await uploadScreen(q.blob, q.t.x, q.t.catIdx, true, q.t.adv);
       q.st = ok === true ? "ok" : "err"; if (ok !== true) q.err = String(ok || "ошибка").slice(0, 80);
       q.blob = null; // память
       uplQueueDraw();
@@ -8753,19 +8909,20 @@ document.addEventListener("paste", function(e){
   }
 });
 
-async function uploadScreen(blob, x, catIdx, quiet){ // → true | текст ошибки
+async function uploadScreen(blob, x, catIdx, quiet, adv){ // → true | текст ошибки; adv — фото к совету категории
   try {
     if (!rowEditable(x.r)){ toast("Скрины добавляются только в открытой неделе", true); return "неделя закрыта"; }
     const isVid = isVideoBlob(blob);
     if (!isVid && blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return "больше 25 МБ"; }
     if (!isVid && blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка и не видео", true); return "не картинка"; }
-    const label = (isVid ? "🎬 Видео" : "📸 Скрин") + (catIdx!==undefined&&catIdx!==null?" ["+CATS[catIdx]+"]":"");
+    const catName = (catIdx!==undefined&&catIdx!==null) ? (adv ? ADV_CAT(CATS[catIdx]) : CATS[catIdx]) : "";
+    const label = (isVid ? "🎬 Видео" : "📸 Скрин") + (catName ? " [" + catName + "]" : "");
     toast(label + ": " + (isVid ? "готовлю…" : "сжимаю…"));
     const enc = isVid ? await videoEncode(blob) : await shotEncode(blob); // v6.6: WebP, где браузер умеет; видео — с обложкой
     toast(label + ": загружаю на диск…");
     // ответ сервера читаем напрямую — он и есть подтверждение (без опроса action=screens и без полной перезагрузки)
     const j = await wp(Object.assign({ action:"upload", data: enc.data, small: enc.small, kind: isVid ? "video" : "",
-        cat: (catIdx!==undefined&&catIdx!==null)?CATS[catIdx]:"" }, rowKeyParams(x.r)), isVid ? 180000 : 90000);
+        cat: catName }, rowKeyParams(x.r)), isVid ? 180000 : 90000);
     if (!j || !j.link) throw new Error("сервер не подтвердил загрузку");
     const k0 = j.key || skey(x.r);
     const item = { cat: j.cat||"", link: j.link, mini: j.mini||"", ts: j.ts||"" }; if (j.type === "video") item.type = "video";
