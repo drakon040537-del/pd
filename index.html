@@ -2154,18 +2154,41 @@
   .adv-btn.has{border-style:solid;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:var(--accbg)} .adv-btn.has .adv-ok{display:inline}
   .adv-btn.on{color:var(--accent);border-style:solid;border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
   .adv-btn{min-height:24px;padding:1px 10px;font-size:11.5px;flex:none}
-  .adv-box{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .3s cubic-bezier(.2,.7,.2,1),opacity .22s ease}
-  .adv-wrap.open .adv-box{grid-template-rows:1fr;opacity:1}
-  .adv-in{overflow:hidden;min-height:0}
-  .adv-wrap:not(.open) .adv-in{visibility:hidden}
-  .adv-card{margin-top:8px;border-left:3px solid var(--accent);background:var(--accbg);border-radius:4px 10px 10px 4px;padding:8px 10px 10px 12px}
-  .adv-h{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px} .adv-h b{color:var(--accent);font-weight:650} .adv-h>span:not(.sp){color:var(--faint)} .adv-h{flex-wrap:wrap;row-gap:6px} .adv-h .sp{flex:1} .adv-ph svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round} .adv-card .scrow{margin-top:8px;margin-left:0!important}
-  .adv-ai{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:11.5px;font-weight:600;color:var(--accent);background:var(--panel);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:7px;min-height:26px;padding:2px 9px;cursor:pointer;transition:background .2s,transform .15s}
-  .adv-ai:hover{background:var(--accbg)} .adv-ai:active{transform:scale(.96)} .adv-ai.busy{opacity:.8;cursor:progress}
-  .adv-ta{display:block;width:100%;min-height:44px;max-height:240px;field-sizing:content;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;line-height:1.5;color:var(--ink)}
-  .adv-ta:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accbg)}
-  .adv-ta.adv-new{animation:advglow 1.2s ease}
+  .adv-wrap:not(.open){display:none}
+  .adv-prev{position:relative;margin-top:8px;border-left:3px solid var(--accent);background:var(--accbg);border-radius:4px 10px 10px 4px;padding:8px 70px 9px 12px;display:flex;flex-direction:column;gap:3px;cursor:pointer;transition:background .2s,transform .15s;animation:v7in .3s cubic-bezier(.2,.7,.2,1) both}
+  .adv-prev:hover{background:color-mix(in srgb,var(--accent) 16%,var(--panel))} .adv-prev:active{transform:scale(.995)}
+  .adv-prev>b{color:var(--accent);font-size:12px;font-weight:650}
+  .adv-prev-t{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5;color:var(--ink)} .adv-prev-t:empty{display:none}
+  .adv-prev-e{position:absolute;right:10px;top:8px;font-size:11.5px;font-weight:600;color:var(--accent);opacity:.75} .adv-prev:hover .adv-prev-e{opacity:1}
+  .adv-prev .scrow{margin:4px 0 0!important}
+  /* окно «Совет команде» */
+  .advm{width:min(720px,96vw)}
+  .advm-h{display:flex;align-items:center;gap:12px;margin:0 36px 12px 0}
+  .advm-ico{width:38px;height:38px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;background:var(--accbg);color:var(--accent);flex:none;animation:advico .5s cubic-bezier(.3,1.5,.5,1)}
+  .advm-ico svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  @keyframes advico{0%{transform:scale(.6) rotate(-20deg);opacity:0}100%{transform:none;opacity:1}}
+  .advm-tt{display:flex;flex-direction:column;min-width:0} .advm-tt b{font-size:16px;font-weight:650} .advm-tt small{color:var(--faint);font-size:12px}
+  .advm-issue{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px;margin-bottom:12px;max-height:120px;overflow:auto}
+  .advm-issue .utext{white-space:pre-wrap;color:var(--dim)} .advm-noissue{color:var(--faint)}
+  .advm-lbl{display:block;font-size:12px;font-weight:600;color:var(--dim);margin-bottom:6px}
+  #advm-ta{display:block;width:100%;min-height:130px;max-height:45vh;field-sizing:content;resize:vertical;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font:inherit;font-size:14px;line-height:1.55}
+  #advm-ta:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accbg)}
+  #advm-ta.adv-new{animation:advglow 1.2s ease}
+  .advm-drop{margin-top:10px;display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px dashed var(--line2);border-radius:10px;color:var(--dim);font-size:12.5px;cursor:pointer;transition:border-color .2s,background .2s,color .2s}
+  .advm-drop svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .advm-drop b{color:var(--ink);font-weight:600}
+  .advm-drop:hover,.advm-drop:focus-visible,.advm-drop.drag{border-color:var(--accent);background:var(--accbg);color:var(--ink)}
+  .advm-drop.drag{transform:scale(1.01)}
+  .advm-thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px} .advm-thumbs:empty{display:none}
+  .advm-thumbs .sthumb img{width:160px;height:100px;object-fit:contain;background:var(--panel2);animation:v7pop .3s ease both}
+  .advm-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px} .advm-f .sp{flex:1} .advm-meta{font-size:11.5px;color:var(--faint)}
+  #advm-ai.busy{opacity:.8;cursor:progress}
   @keyframes advglow{0%{box-shadow:0 0 0 0 rgba(91,157,255,.55)}100%{box-shadow:0 0 0 9px rgba(91,157,255,0)}}
+  /* просмотр фото — окно по размеру скрина, без чёрных полей */
+  .cam-modal{width:auto;max-width:min(1400px,98vw);min-width:min(440px,96vw)}
+  .camwrap{background:transparent;display:flex;justify-content:center;align-items:center;min-height:120px}
+  .camwrap img{border-radius:8px;min-height:min(360px,60vh);object-fit:contain}
+  .camwrap.zoom{display:block} .camwrap.zoom img{min-height:0}
   .adv-ro{margin-top:6px;border-left:3px solid var(--accent);background:var(--accbg);border-radius:4px 8px 8px 4px;padding:6px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:2px;grid-column:2/-1}
   .adv-ro b{color:var(--accent);font-size:12px;font-weight:650} .adv-ro .utext{color:var(--ink)!important;white-space:pre-wrap}
   .pmx-tm-reco .adv-ro{grid-column:auto}
@@ -2299,8 +2322,21 @@
       <span id="o-msg" style="color:var(--dim);font-size:12.5px;margin-left:10px"></span>
     </div>
   </div>
+  <div class="modal-ov" id="advmodal">
+    <div class="modal advm" role="dialog" aria-modal="true" aria-labelledby="advm-title">
+      <button class="x" id="advm-x" aria-label="Закрыть">✕</button>
+      <div class="advm-h"><span class="advm-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg></span><div class="advm-tt"><b id="advm-title">Совет команде</b><small id="advm-sub"></small></div></div>
+      <div class="advm-issue" id="advm-issue"></div>
+      <label class="advm-lbl" for="advm-ta">Совет — что сделать иначе</label>
+      <textarea id="advm-ta" placeholder="Конкретно и простыми словами. Скриншот можно вставить прямо сюда: Ctrl+V"></textarea>
+      <div class="advm-drop" id="advm-drop" tabindex="0" role="button" aria-label="Добавить скриншот к совету"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span><b>Скриншот к совету</b> — вставь Ctrl+V, перетащи сюда или нажми, чтобы выбрать файл</span></div>
+      <input type="file" id="advm-file" accept="image/*,video/*" multiple hidden>
+      <div class="advm-thumbs" id="advm-thumbs"></div>
+      <div class="advm-f"><span class="advm-meta">Видит продюсер. В таблицу уходит по «Сохранить в таблицу».</span><span class="sp"></span><button class="abtn2" id="advm-ai" type="button">ИИ-подсказка</button><button class="abtn" id="advm-ok" type="button">Готово</button></div>
+    </div>
+  </div>
   <div class="modal-ov" id="cammodal">
-    <div class="modal" style="width:min(1400px,98vw)">
+    <div class="modal cam-modal">
       <button class="x" id="cam-x">✕</button>
       <h3 id="cam-title">📷 Скрин</h3>
       <div id="cam-wrap" class="camwrap" title="клик — 1:1 / вписать"><img id="cam-img" alt="скрин" decoding="async"><span id="cam-q" class="camq"></span></div>
@@ -2808,7 +2844,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-14.75"
+  VER: "2026-10-15.76"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2972,12 +3008,13 @@ function advCount(t){ return recoSplit(t).adv.filter(Boolean).length; }
 // блок «💡 Совет» под категорией (карточка смотрящего): кнопка + заметка; совет есть — открыта сразу
 function advBtn(key, j, val, nPh){
   const has = !!String(val||"").trim() || nPh > 0, id = key + "_" + j;
-  return `<button type="button" class="adv-btn${has ? " has on" : ""}" data-adv="${id}" aria-expanded="${has}" aria-controls="advw${id}"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Совет<span class="adv-ok" aria-hidden="true">✓</span></button>`;
+  return `<button type="button" class="adv-btn${has ? " has" : ""}" data-adv="${id}" aria-haspopup="dialog" title="написать совет команде и приложить скриншот"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></svg>Совет<span class="adv-ok" aria-hidden="true">✓</span></button>`;
 }
+// под категорией — только предпросмотр (текст + фото); писать и вставлять скрины — в окне «Совет команде». Скрытое поле adv… хранит текст.
 function advBlock(key, j, n, val, thumbsHtml){
   const has = !!String(val||"").trim() || !!thumbsHtml, id = key + "_" + j;
-  return `<div class="adv-wrap${has ? " open" : ""}" id="advw${id}"><div class="adv-box" id="advb${id}"><div class="adv-in"><div class="adv-card"><div class="adv-h"><b>Совет команде</b><span>видит продюсер</span><span class="sp"></span><button type="button" class="adv-ai adv-ph" data-upl="${key}_A${j}" title="прикрепить фото к совету (можно вставить Ctrl+V, перетащить, разметить)" aria-label="фото к совету «${esc(n)}»"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Фото</button><button type="button" class="adv-ai" data-advai="${id}" title="ИИ напишет черновик совета по тексту замечания — его можно поправить">${V7I.spark}ИИ-подсказка</button></div>`
-    + `<textarea id="adv${id}" class="adv-ta" rows="2" placeholder="Что сделать иначе — конкретно и простыми словами" aria-label="Совет команде: ${esc(n)}">${esc(val||"")}</textarea>${thumbsHtml || ""}</div></div></div></div>`;
+  return `<div class="adv-wrap${has ? " open" : ""}" id="advw${id}"><textarea id="adv${id}" class="adv-ta" hidden aria-hidden="true" tabindex="-1">${esc(val||"")}</textarea>`
+    + `<div class="adv-prev" data-advopen="${id}" role="button" tabindex="0" title="открыть совет"><b>💡 Совет команде</b><span class="adv-prev-t">${esc(val||"")}</span>${thumbsHtml || ""}<span class="adv-prev-e">изменить</span></div></div>`;
 }
 // собрать полное значение колонки «Рекомендации» из общего поля и советов (скрытое поле ed…_reco — его читают черновик, сохранение и «есть изменения»)
 function advCompose(key){
@@ -2991,24 +3028,74 @@ function advFill(key){
   const sp = recoSplit(h.value), g = document.getElementById("recg" + key); if (g) g.value = sp.gen;
   CATS.forEach((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); if (a){ a.value = sp.adv[j]; advMark(key + "_" + j); } });
 }
-function advMark(id){ const a = document.getElementById("adv" + id), b = document.querySelector('[data-adv="' + id + '"]'), w = document.getElementById("advw" + id); if (a && b) b.classList.toggle("has", !!a.value.trim() || !!(w && w.querySelector(".sthumb"))); }
-function advToggle(id, force){
-  const w = document.getElementById("advw" + id), b = document.querySelector('[data-adv="' + id + '"]'); if (!w || !b) return;
-  const on = force === undefined ? !w.classList.contains("open") : !!force;
-  w.classList.toggle("open", on); b.classList.toggle("on", on); b.setAttribute("aria-expanded", on ? "true" : "false");
-  if (on){ const a = document.getElementById("adv" + id); if (a) setTimeout(()=>focusEnd(a), 60); }
+// кнопка ✓ и предпросмотр под категорией — по текущему тексту и фото
+function advMark(id){
+  const a = document.getElementById("adv" + id), b = document.querySelector('[data-adv="' + id + '"]'), w = document.getElementById("advw" + id); if (!a) return;
+  const has = !!a.value.trim() || !!(w && w.querySelector(".adv-prev .sthumb"));
+  if (b) b.classList.toggle("has", has);
+  if (w){ w.classList.toggle("open", has); const t = w.querySelector(".adv-prev-t"); if (t) t.textContent = a.value; }
 }
+// ---------- окно «Совет команде» ----------
+let advM = null; // { id, key, j }
+function advOpen(id){
+  const key = id.replace(/_\d$/, ""), j = +id.slice(id.lastIndexOf("_") + 1), x = state.lastView[key];
+  const a = document.getElementById("adv" + id); if (!x || !a) return;
+  advM = { id, key, j };
+  document.getElementById("advm-title").textContent = "Совет команде · " + CATS[j];
+  document.getElementById("advm-sub").textContent = [(x.r.opName || x.r.opNick || ""), (x.r.model || "")].filter(Boolean).join(" · ") + " · видит продюсер";
+  const ta = document.getElementById("ed" + key + "_" + j), v = ta ? ta.value : (x.r.cats[j]||""), st = catState(v);
+  document.getElementById("advm-issue").innerHTML = markBody(v)
+    ? `<span class="chip ${st==="bad"?"c-bad":st==="warn"?"c-warn":st==="ok"?"c-ok":"ov-nochip"}">${ST_LBL[st]||"не отмечено"}</span><span class="utext">${esc(markBody(v).slice(0, 600))}</span>`
+    : `<span class="advm-noissue">По этой категории замечание не написано — совет можно дать и так.</span>`;
+  const mt = document.getElementById("advm-ta"); mt.value = a.value;
+  uplTarget = rowEditable(x.r) ? { x: x, catIdx: j, adv: true } : null; // вставка Ctrl+V и перетаскивание — фото к этому совету
+  advModalThumbs();
+  openModal("advmodal");
+  setTimeout(()=>focusEnd(mt), 60);
+}
+function advModalThumbs(){
+  const box = document.getElementById("advm-thumbs"); if (!box) return;
+  if (!advM){ box.innerHTML = ""; return; }
+  const x = state.lastView[advM.key]; if (!x){ box.innerHTML = ""; return; }
+  const dsk = skey(x.r), list = ((state.screens||{})[dsk] || []).filter(s=>String(s.cat) === ADV_CAT(CATS[advM.j]));
+  box.innerHTML = list.map(s=>`<span class="sthumb${s.type==="video"?" isvid":""}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(160))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" data-advview="1" alt="фото к совету"><span class="sqx" data-advdel="${esc(s.link)}" title="удалить фото" role="button" aria-label="удалить фото">✕</span></span>`).join("");
+  setTimeout(ensureThumbs, 30);
+  // предпросмотр под категорией: фото могли добавиться или удалиться
+  const id = advM.id, w = document.getElementById("advw" + id); if (w) advMark(id);
+}
+function advClose(){ closeModal("advmodal"); }
 // ввод в совет или в общие рекомендации: сначала собираем скрытое поле (фаза захвата — раньше обработчика черновика)
 document.addEventListener("input", ev=>{ const t = ev.target; if (!t || !t.id) return;
+  if (t.id === "advm-ta"){ if (!advM) return; const a = document.getElementById("adv" + advM.id); if (!a){ toast("Карточка закрылась — открой команду и нажми «Совет» ещё раз", true); return; } a.value = t.value; a.dispatchEvent(new Event("input", { bubbles: true })); return; }
   let m = t.id.match(/^adv(.+_\d)$/); if (m){ advMark(m[1]); advCompose(m[1].replace(/_\d$/, "")); return; }
   m = t.id.match(/^recg(.+)$/); if (m) advCompose(m[1]); }, true);
-document.addEventListener("click", async ev=>{
-  const b = ev.target && ev.target.closest ? ev.target.closest("[data-adv], [data-advai]") : null; if (!b) return;
-  ev.stopPropagation();
-  if (b.dataset.adv){ advToggle(b.dataset.adv); return; }
-  const id = b.dataset.advai, key = id.replace(/_\d$/, ""), j = +id.slice(id.lastIndexOf("_") + 1);
-  const ta = document.getElementById("ed" + key + "_" + j); let a = document.getElementById("adv" + id); if (!ta || !a) return;
-  const st = catState(ta.value), body = markBody(ta.value);
+document.addEventListener("click", ev=>{
+  const b = ev.target && ev.target.closest ? ev.target.closest("[data-adv], [data-advopen]") : null; if (!b) return;
+  if (ev.target.closest(".sthumb")) return; // фото в предпросмотре — открывается просмотр, а не окно совета
+  ev.stopPropagation(); fxPop(b); advOpen(b.dataset.adv || b.dataset.advopen);
+}, true);
+document.addEventListener("keydown", ev=>{ const t = ev.target; if ((ev.key === "Enter" || ev.key === " ") && t && t.matches && t.matches("[data-advopen]")){ ev.preventDefault(); advOpen(t.dataset.advopen); } });
+document.getElementById("advm-x").onclick = advClose;
+document.getElementById("advm-ok").onclick = advClose;
+document.getElementById("advmodal").addEventListener("click", ev=>{ if (ev.target.id === "advmodal") advClose(); });
+// Esc: окно совета закрывает общий обработчик окон (closeModal сбрасывает advM) — карточка при этом не закрывается
+const advDrop = document.getElementById("advm-drop"), advFile = document.getElementById("advm-file");
+advDrop.onclick = ()=>{ if (!uplTarget){ toast("Скрины добавляются только в открытой неделе", true); return; } advFile.click(); };
+advDrop.onkeydown = ev=>{ if (ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); advDrop.click(); } };
+advFile.onchange = function(){ const f = uplImagesFrom(this.files); if (f.length && uplTarget) doUpload(f); this.value = ""; };
+["dragenter","dragover"].forEach(t=>document.getElementById("advmodal").addEventListener(t, e=>{ if (advM && uplTarget){ e.preventDefault(); advDrop.classList.add("drag"); } }));
+["dragleave","drop"].forEach(t=>document.getElementById("advmodal").addEventListener(t, e=>{ advDrop.classList.remove("drag"); if (t === "drop" && advM && uplTarget){ e.preventDefault(); const f = uplImagesFrom(e.dataTransfer && e.dataTransfer.files); if (f.length) doUpload(f); else toast("Это не картинка и не видео", true); } }));
+document.getElementById("advm-thumbs").addEventListener("click", ev=>{
+  const d = ev.target.closest("[data-advdel]"); const x = advM && state.lastView[advM.key];
+  if (d){ ev.stopPropagation(); if (x) scrDelete(skey(x.r), d.dataset.advdel); return; }
+  const im = ev.target.closest("img[data-advview]"); if (!im) return;
+  document.getElementById("cam-ai").style.display = "none"; document.getElementById("cam-aiout").style.display = "none";
+  camShow(im.getAttribute("src") || BLANK, true); document.getElementById("cam-title").textContent = "💡 Совет · " + CATS[advM.j];
+  openModal("cammodal"); camLoadFull(driveId(im.getAttribute("data-full") || ""));
+});
+document.getElementById("advm-ai").onclick = async function(){
+  if (!advM) return; const b = this, j = advM.j, key = advM.key;
+  const ta = document.getElementById("ed" + key + "_" + j); const st = ta ? catState(ta.value) : null, body = ta ? markBody(ta.value) : "";
   if (!body || st === "ok"){ toast("Сначала отметь «Замечание» или «Плохо» и опиши, что не так — по этому тексту ИИ и подскажет", true); return; }
   if (b.classList.contains("busy")) return;
   b.classList.add("busy"); const old = b.innerHTML; b.innerHTML = '<span class="v7spin"></span>думаю…';
@@ -3017,14 +3104,12 @@ document.addEventListener("click", async ev=>{
     const res = await aiAsk("catadvice", { text: text, ckey: "adv|" + strHash(text) });
     if (res.error) throw new Error(res.error);
     const tip = String(res.tip || "").trim(); if (!tip) throw new Error("ИИ не предложил совет");
-    a = document.getElementById("adv" + id); // экран мог перерисоваться, пока ИИ думал — берём живое поле
-    if (!a){ toast("Карточка обновилась — нажми «ИИ-подсказка» ещё раз", true); return; }
-    advToggle(id, true);
-    a.value = a.value.trim() ? a.value.replace(/\s+$/, "") + "\n" + tip : tip;
-    a.dispatchEvent(new Event("input", { bubbles: true })); a.classList.remove("adv-new"); void a.offsetWidth; a.classList.add("adv-new"); focusEnd(a);
+    const mt = document.getElementById("advm-ta"); if (!advM || !mt) return;
+    mt.value = mt.value.trim() ? mt.value.replace(/\s+$/, "") + "\n" + tip : tip;
+    mt.dispatchEvent(new Event("input", { bubbles: true })); fxClass(mt, "adv-new", 1200); focusEnd(mt);
   } catch(e){ toast("ИИ: " + (e.message || e), true); }
-  finally { const b2 = document.querySelector('[data-advai="' + id + '"]') || b; b2.classList.remove("busy"); if (b2.querySelector(".v7spin")) b2.innerHTML = old; }
-}, true);
+  finally { b.classList.remove("busy"); b.innerHTML = old; }
+};
 // v7.2: при «Замечании» и «Плохо» текст обязателен — какие категории без пояснения
 function needText(vals){ return (vals||[]).map((v,j)=>{ const st = catState(v); return (st === "warn" || st === "bad") && !markBody(v) ? j : -1; }).filter(j=>j >= 0); }
 function markNeed(tas){
@@ -3371,7 +3456,7 @@ function toast(msg, isErr){
 }
 
 function openModal(id){ document.getElementById(id).classList.add("show"); }
-function closeModal(id){ document.getElementById(id).classList.remove("show"); if (id === "vidmodal"){ const v = document.querySelector("#vid-box video"); if (v){ try { v.pause(); } catch(e){} } vidSeq++; document.getElementById("vid-box").innerHTML = ""; } if (id === "annmodal" && typeof annOnClose === "function"){ const f = annOnClose; annOnClose = null; f(); } }
+function closeModal(id){ document.getElementById(id).classList.remove("show"); if (id === "advmodal" && typeof advM !== "undefined" && advM){ advM = null; uplTarget = null; } if (id === "vidmodal"){ const v = document.querySelector("#vid-box video"); if (v){ try { v.pause(); } catch(e){} } vidSeq++; document.getElementById("vid-box").innerHTML = ""; } if (id === "annmodal" && typeof annOnClose === "function"){ const f = annOnClose; annOnClose = null; f(); } }
 let annOnClose = null; // Обновление 6: закрытие окна разметки фоном/Esc = «не загружать этот скрин», очередь идёт дальше
 document.addEventListener("click", e=>{
   document.querySelectorAll(".modal-ov.show").forEach(ov=>{ if (e.target === ov) closeModal(ov.id); });
@@ -3379,7 +3464,7 @@ document.addEventListener("click", e=>{
 document.addEventListener("keydown", e=>{
   if (e.key === "Escape"){
     const open = document.querySelectorAll(".modal-ov.show");
-    if (open.length){ open.forEach(ov=>closeModal(ov.id)); return; }
+    if (open.length){ closeModal(open[open.length - 1].id); return; } // v7.5: закрываем только верхнее окно (фото поверх совета — сначала фото)
     const det = focusedDetail();
     if (det){ if (!rowDirty(det.dataset.d) || confirm("Есть несохранённые правки (черновик сохранён). Закрыть?")) det.classList.remove("open"); }
   }
@@ -4192,7 +4277,7 @@ function renderMain(){
       const recoV = dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""), rsp = recoSplit(recoV); // v7.3: общие рекомендации + советы по категориям
       const editDet = CATS.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
-        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-ta="ed${key}_${j}"`, v7CatState(val))}</span><span class="sp"></span><button class="qbtn cat-ib" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»" aria-label="прикрепить скрин к «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button class="qbtn qclr cat-ib" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6h11v12H9l-6-6z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg></button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="что увидел — при замечании или «плохо» опиши, что именно" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="ed${key}_${j}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), true))}</div>`;
+        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-ta="ed${key}_${j}"`, v7CatState(val))}</span><span class="sp"></span><button class="qbtn cat-ib" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»" aria-label="прикрепить скрин к «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button class="qbtn qclr cat-ib" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6h11v12H9l-6-6z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg></button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="что увидел — при замечании или «плохо» опиши, что именно" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="ed${key}_${j}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), false))}</div>`;
       }).join("");
       const failInfo = state.failedSaves[rk(x.r)];
       const failBar = canEdit && failInfo ? `<div class="failbar">Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
@@ -4355,28 +4440,7 @@ function renderMain(){
       camLoadFull(driveId(full));
     };
   });
-  document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=async (ev)=>{
-    ev.stopPropagation();
-    const dsk = x.dataset.dsk, dlink = x.dataset.dlink; // запоминаем до перерисовки
-    // мгновенно убираем с сайта; серверное удаление едет в фоне
-    const arr0 = (state.screens||{})[dsk] || [];
-    const was0 = arr0.find(s=>s.link===dlink) || {}; // v7.4: при откате вернуть в ту же категорию / совет
-    if (arr0.some(s=>s.link===dlink)) { state.screens[dsk] = arr0.filter(s=>s.link!==dlink); toast("Скрин удалён"); render(); }
-    let lastErr = null;
-    for (let a=0;a<4;a++){ // Apps Script бывает капризным сразу после загрузки — до 4 фоновых попыток
-      try {
-        const res = await wp({ action:"delscreen", bkey: dsk, link: dlink }, 30000);
-        if (res.error) throw new Error(res.error);
-        return; // сервер подтвердил удаление
-      } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,3000)); }
-    }
-    // сервер так и не подтвердил — возвращаем скрин на место и честно говорим
-    state.screens = state.screens || {};
-    state.screens[dsk] = state.screens[dsk] || [];
-    if (!state.screens[dsk].some(s=>s.link===dlink)) state.screens[dsk].push(Object.assign({}, was0, {cat: was0.cat || "", link:dlink, ts:"не удалён — попробуй ещё раз"}));
-    toast("Скрин вернул на место — сервер не подтвердил удаление, попробуй ещё раз", true);
-    render();
-  });
+  document.querySelectorAll("[data-dsk]").forEach(x=>x.onclick=(ev)=>{ ev.stopPropagation(); scrDelete(x.dataset.dsk, x.dataset.dlink); });
   document.querySelectorAll(".myadd").forEach(b=>b.onclick=(ev)=>{ ev.stopPropagation(); const cur = (document.getElementById("ed"+b.dataset.add)||{}).value || ""; const v=prompt("Шаблон замечания для «"+b.dataset.n+"» (сохранится у тебя на всех устройствах):", cur.trim().split("\n").pop().slice(0,300)); if(v && v.trim()){ addPhrase(b.dataset.code, v.trim()); render(); } });
   document.querySelectorAll(".rbtn[data-rop]").forEach(b=>b.onclick=(ev)=>{
     ev.stopPropagation();
@@ -8901,7 +8965,12 @@ function overdueCount(city){
 
 document.addEventListener("paste", function(e){
   if (!AUTH.edit && !(uplTarget && uplTarget.pm)) return; // v6.2: продюсер тоже вставляет в окно «📷 Фото» своего мониторинга
-  const um = document.getElementById("uplmodal");
+  const um = document.getElementById("uplmodal"), am = document.getElementById("advmodal");
+  if (am && am.classList.contains("show") && !(um && um.classList.contains("show"))){ // v7.5: окно совета — скриншот из буфера прямо в совет
+    const f = uplImagesFrom(e.clipboardData && e.clipboardData.items);
+    if (f.length){ e.preventDefault(); if (uplTarget && uplTarget.adv) doUpload(f); else toast("Скрины добавляются только в открытой неделе", true); }
+    return;
+  }
   if (um && um.classList.contains("show") && uplTarget){ // окно фото открыто — вставка идёт туда
     const items = e.clipboardData && e.clipboardData.items;
     const f = uplImagesFrom(items);
@@ -8909,6 +8978,27 @@ document.addEventListener("paste", function(e){
   }
 });
 
+// удалить скрин команды: сразу с сайта, на сервере — в фоне с повторами; не вышло — вернуть на место
+async function scrDelete(dsk, dlink){
+    // мгновенно убираем с сайта; серверное удаление едет в фоне
+    const arr0 = (state.screens||{})[dsk] || [];
+    const was0 = arr0.find(s=>s.link===dlink) || {}; // v7.4: при откате вернуть в ту же категорию / совет
+    if (arr0.some(s=>s.link===dlink)) { state.screens[dsk] = arr0.filter(s=>s.link!==dlink); toast("Скрин удалён"); render(); advModalThumbs(); }
+    let lastErr = null;
+    for (let a=0;a<4;a++){ // Apps Script бывает капризным сразу после загрузки — до 4 фоновых попыток
+      try {
+        const res = await wp({ action:"delscreen", bkey: dsk, link: dlink }, 30000);
+        if (res.error) throw new Error(res.error);
+        return; // сервер подтвердил удаление
+      } catch(e){ lastErr = e; await new Promise(r=>setTimeout(r,3000)); }
+    }
+    // сервер так и не подтвердил — возвращаем скрин на место и честно говорим
+    state.screens = state.screens || {};
+    state.screens[dsk] = state.screens[dsk] || [];
+    if (!state.screens[dsk].some(s=>s.link===dlink)) state.screens[dsk].push(Object.assign({}, was0, {cat: was0.cat || "", link:dlink, ts:"не удалён — попробуй ещё раз"}));
+    toast("Скрин вернул на место — сервер не подтвердил удаление, попробуй ещё раз", true);
+    render(); advModalThumbs();
+}
 async function uploadScreen(blob, x, catIdx, quiet, adv){ // → true | текст ошибки; adv — фото к совету категории
   try {
     if (!rowEditable(x.r)){ toast("Скрины добавляются только в открытой неделе", true); return "неделя закрыта"; }
@@ -8933,6 +9023,7 @@ async function uploadScreen(blob, x, catIdx, quiet, adv){ // → true | текс
     if (j.stamp){ const cur = rowByRk(rk(x.r)); if (cur) cur.updated = j.stamp; }
     if (!quiet) toast(label + " загружен ✓");
     softRender(); // U11: вставка скрина не перерисовывает экран посреди набора текста и не перезагружает данные
+    advModalThumbs(); // v7.5: окно совета открыто — сразу показать новое фото
     return true;
   } catch(err){ toast("Не загрузилось: " + err.message, true); return err.message || "ошибка"; }
 }
