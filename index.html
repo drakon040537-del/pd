@@ -2212,6 +2212,12 @@
   tr.detail.open.fresh .f.cat{animation:v7in .34s cubic-bezier(.2,.7,.2,1) both}
   tr.detail.open.fresh .f.cat:nth-child(2){animation-delay:.03s} tr.detail.open.fresh .f.cat:nth-child(3){animation-delay:.06s} tr.detail.open.fresh .f.cat:nth-child(4){animation-delay:.09s} tr.detail.open.fresh .f.cat:nth-child(5){animation-delay:.12s} tr.detail.open.fresh .f.cat:nth-child(n+6){animation-delay:.15s}
   tr.detail.open.fresh .co-side{animation:v7in .4s .08s cubic-bezier(.2,.7,.2,1) both}
+
+  /* v7.6: продюсеры компании без команд */
+  .pempty-prods{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .pempty-p{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px dashed var(--line2);border-radius:12px;background:var(--panel);animation:v7in .3s ease both}
+  .pempty-p b{font-weight:650} .pempty-t{color:var(--faint);font-size:12.5px} .pempty-p .sp{flex:1}
+  .pempty-p .cdot{width:10px;height:10px;border-radius:50%;flex:none}
 </style>
 </head>
 <body>
@@ -2844,7 +2850,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-15.76"
+  VER: "2026-10-23.77"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -4350,8 +4356,8 @@ function renderMain(){
       </div>
       <div class="pbody"><table><thead><tr><th>Опер · модель</th>${showCoCol?"<th>Компания</th>":""}<th>Оценка по 9 категориям</th><th>Вердикт</th><th class="pcol">Проверено</th>${pmOn?"<th>Мониторинг продюсера</th>":""}<th><span class="ov-vh">действия</span></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
     </div>`;
-  }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "")
-    : `<div class="empty ov-empty">${esc(emptyReason())}</div>`;
+  }).join("") + (hidden>0 ? `<div style="text-align:center;margin-top:12px"><button class="abtn2" id="morebtn">Показать ещё команды (${hidden})</button></div>` : "") + emptyProdsHtml(groups)
+    : (emptyProdsHtml(groups) || `<div class="empty ov-empty">${esc(emptyReason())}</div>`);
 
   document.querySelectorAll(".phead").forEach(h=>h.onclick=()=>{
     state.grpOpen[h.dataset.g] = !state.grpOpen[h.dataset.g];
@@ -5824,11 +5830,16 @@ function renderUsers(){
   };
   const run = (body, okMsg)=> wp(Object.assign({ action:"useradmin" }, body)).then(r=>{
       if (r.tempPass) st.temp = { u: body.login, p: r.tempPass };
-      st.list = null; toast(okMsg); renderUsers();
+      st.list = null;
+      const bl = r.blocks || [], made = bl.filter(b=>b.created), bad = bl.filter(b=>b.error); // v7.6: блок продюсера в компаниях
+      toast(okMsg + (made.length ? " · продюсер добавлен в " + made.map(b=>clabel(b.city)).join(", ") : "") + (bad.length ? " · не удалось: " + bad.map(b=>clabel(b.city) + " — " + b.error).join("; ") : ""), !!bad.length);
+      if (made.length) setTimeout(()=>load({ force: true }), 600);
+      renderUsers();
     }).catch(e=>toast(e.message, true));
   box.querySelectorAll("[data-urole]").forEach(b=>b.onclick=()=>{ document.getElementById("u-role").value = b.dataset.urole; syncForm(); });
-  document.getElementById("u-add").onclick = ()=>{ const f = form(); if (f.prod === "" && document.getElementById("u-role").value==="prod") return toast("укажи имя продюсера", true); run(Object.assign({ op:"add" }, f), "пользователь добавлен"); };
-  document.getElementById("u-save").onclick = ()=>{ const f = form(); if (!f.login) return toast("выбери пользователя (Изменить)", true); run(Object.assign({ op:"set" }, f), "сохранено — пользователю нужно войти заново"); };
+  const prodCityOk = f=>{ if (document.getElementById("u-role").value !== "prod") return true; if (f.prod === ""){ toast("укажи фамилию продюсера — как в таблице", true); return false; } if (!Array.isArray(f.cities) || !f.cities.length){ toast("отметь компанию продюсера — иначе он ничего не увидит", true); return false; } return true; };
+  document.getElementById("u-add").onclick = ()=>{ const f = form(); if (!prodCityOk(f)) return; run(Object.assign({ op:"add" }, f), "пользователь добавлен"); };
+  document.getElementById("u-save").onclick = ()=>{ const f = form(); if (!f.login) return toast("выбери пользователя (Изменить)", true); if (!prodCityOk(f)) return; run(Object.assign({ op:"set" }, f), "сохранено — пользователю нужно войти заново"); };
   const tx = document.getElementById("u-tempx"); if (tx) tx.onclick = ()=>{ st.temp = null; renderUsers(); };
   const showTab = t=>{
     st.tab = t;
@@ -8029,10 +8040,23 @@ async function saveRow(x, key){
   render();
 }
 
+// v7.6: продюсеры компании из блоков листа (в том числе новые, у которых ещё нет команд)
+function blockProds(city){
+  const wk = state.serverLatest || "";
+  return [...new Set((state.pblocks||[]).filter(b=>b.city===city && (!wk || b.week===wk)).map(b=>b.producer).filter(Boolean))];
+}
+// в компании: продюсеры без команд — чтобы новый продюсер был виден сразу и ему можно было добавить команду
+function emptyProdsHtml(groups){
+  if (!CITY_ORDER.includes(state.tab) || AUTH.prod || state.search || state.quick || state.producer) return "";
+  const have = new Set((groups||[]).map(g=>g.producer));
+  const list = blockProds(state.tab).filter(p=>!have.has(p)).sort((a,b)=>a.localeCompare(b, "ru"));
+  if (!list.length) return "";
+  return `<div class="pempty-prods">${list.map(p=>`<div class="pempty-p"><span class="cdot" style="background:${esc((state.colors||{})[p] || "#9aa3b2")}"></span><b>${esc(p)}</b><span class="pempty-t">команд пока нет</span><span class="sp"></span>${AUTH.edit ? `<button class="gbtn addg" data-addg="${esc(state.tab + "|" + p)}" ${weekPinned()?"disabled":""}>+ Команда</button>` : ""}</div>`).join("")}</div>`;
+}
 // ---------- форма нового мониторинга ----------
 function updateProdList(){
   const city = document.getElementById("a-city").value;
-  const list = [...new Set(state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean))].sort();
+  const list = [...new Set(state.rows.filter(r=>r.city===city).map(r=>r.producer).filter(Boolean).concat(blockProds(city)))].sort((a,b)=>a.localeCompare(b, "ru"));
   const sel = document.getElementById("a-prod");
   if (!sel) return;
   if (!list.length){
@@ -8749,8 +8773,8 @@ document.getElementById("a-save").onclick = async ()=>{
   if (!prod){ msg.textContent = "Укажи продюсера"; return; }
   if (!nick && !opname){ msg.textContent = "Укажи ник или имя оператора"; return; }
   if (weekPinned()){ msg.textContent = "Выбери конкретную неделю (на «все недели»/«месяц» добавлять нельзя)"; return; }
-  const any = state.rows.find(r=>r.city===city && weekOpen_(r)); // открытая неделя
-  if (!any){ msg.textContent = "На листе " + clabel(city) + " пока нет строк — создай блок продюсера в таблице"; return; }
+  const any = state.rows.find(r=>r.city===city && weekOpen_(r)) || (()=>{ const b = (state.pblocks||[]).find(b=>b.city===city && b.week===state.serverLatest); return b ? { _sheet: b.sheet } : null; })(); // открытая неделя (или лист с пустым блоком продюсера)
+  if (!any){ msg.textContent = "Нет открытой недели " + clabel(city) + " — сначала создай неделю"; return; }
   msg.textContent = "Добавляю… (до минуты)";
   // один и тот же rid для повторного нажатия после таймаута: сервер не добавит строку второй раз
   const sig = [any._sheet, prod, nick, opname, model].join("|");
@@ -8763,7 +8787,7 @@ document.getElementById("a-save").onclick = async ()=>{
     addReq = null;
     closeModal("addmodal");
     try{ localStorage.setItem("dash_addlast", JSON.stringify({city:city, prod:prod})); }catch(e){}
-    toast("✔ Мониторинг добавлен в " + clabel(city) + (res.dup ? " (уже был добавлен этим запросом)" : " (строка " + res.row + ")"));
+    toast("✔ Мониторинг добавлен в " + clabel(city) + (res.dup ? " (уже был добавлен этим запросом)" : " (строка " + res.row + ")") + (res.newProducer ? " · создан блок продюсера «" + prod + "»" : ""));
     ["a-nick","a-opname","a-model","a-prod-new"].forEach(id=>document.getElementById(id).value="");
     setTimeout(load, 800);
   } catch(e){
@@ -9043,6 +9067,7 @@ function applyData(j, isHistory, mergeWeek){
     Object.keys(baseScr).forEach(k=>{ if (!weekSheets.has(String(k).split("|")[0])) merged[k] = baseScr[k]; });
     screens = Object.assign(merged, screens);
   }
+  if (Array.isArray(j.pblocks)) state.pblocks = mergeWeek ? (state.pblocks||[]).filter(b=>b.week!==mergeWeek).concat(j.pblocks) : j.pblocks.slice(); // v7.6: блоки продюсеров
   if (j.rules){ setVRules(j.rules); try { localStorage.setItem("dash_vrules", JSON.stringify(j.rules)); } catch(e){} } // v7.2: пороги вердикта из таблицы
   state.rows = rows;
   if (Array.isArray(j.weeks)){ state.knownWeeks = j.weeks.slice(); try{ localStorage.setItem("dash_weeks", JSON.stringify(state.knownWeeks)); }catch(e){} }
