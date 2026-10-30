@@ -2218,6 +2218,44 @@
   .pempty-p{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px dashed var(--line2);border-radius:12px;background:var(--panel);animation:v7in .3s ease both}
   .pempty-p b{font-weight:650} .pempty-t{color:var(--faint);font-size:12.5px} .pempty-p .sp{flex:1}
   .pempty-p .cdot{width:10px;height:10px;border-radius:50%;flex:none}
+  /* v7.7 — чек-лист VVCAM (НСК) */
+  .nsk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:10px 0 4px;padding:10px 14px;border:1px solid rgba(91,157,255,.45);background:rgba(91,157,255,.08);border-radius:10px;font-size:13px;color:var(--dim)}
+  .nsk-bar b{color:var(--ink)}.nsk-bar span{flex:1 1 320px;min-width:0}.nsk-bar .nsk-warn{color:var(--warn)}
+  .nsk-bar.on{border-color:var(--line);background:var(--panel);padding:7px 12px;font-size:12px}
+  .nsk-bar .nsk-off{background:none;border:0;color:var(--faint);text-decoration:underline;cursor:pointer;font:inherit;padding:4px}
+  .nsk-bar .nsk-off:hover{color:var(--ink)}
+  .nsk-hint{font-size:12px;color:var(--faint);line-height:1.4;margin:2px 0 4px}
+  .co-rcat .nsk-hint.ro,.co-rcat .ng-ro,.co-rcat .nsk-shots{grid-column:2/-1}
+  .nsk-shots{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap;justify-self:start}
+  .nsk-shots.ok{color:var(--ok);background:var(--okbg)}.nsk-shots.miss{color:var(--warn);background:var(--warnbg)}
+  .cat-scale .qsc{min-width:30px;font-weight:700}
+  .cat-scale .qsc[aria-pressed="true"].sc1,.cat-scale .qsc[aria-pressed="true"].sc2{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+  .cat-scale .qsc[aria-pressed="true"].sc3{background:var(--warnbg);color:var(--warn);border-color:var(--warn)}
+  .cat-scale .qsc[aria-pressed="true"].sc4,.cat-scale .qsc[aria-pressed="true"].sc5{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+  .nsk-goals{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+  .nsk-goals .ng-h,.nsk-goals .ng-r{display:grid;grid-template-columns:22px minmax(0,1fr) 92px 92px 28px;gap:6px;align-items:center}
+  .nsk-goals .ng-h{font-size:11px;color:var(--faint);padding-left:28px;grid-template-columns:minmax(0,1fr) 92px 92px 28px}
+  .nsk-goals .ng-n{color:var(--faint);font-size:12px;text-align:right}
+  .nsk-goals input{width:100%;min-width:0;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font:inherit;font-size:13px}
+  .nsk-goals input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .nsk-goals .ng-x{width:28px;height:28px;border:0;background:none;color:var(--faint);cursor:pointer;border-radius:6px;font-size:16px}
+  .nsk-goals .ng-x:hover{color:var(--bad);background:var(--badbg)}
+  .nsk-goals .ng-f{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+  .nsk-goals .ng-add{background:var(--panel2);border:1px dashed var(--line);color:var(--dim);border-radius:7px;padding:5px 12px;cursor:pointer;font:inherit;font-size:12.5px}
+  .nsk-goals .ng-add:disabled{opacity:.45;cursor:default}
+  .ng-cnt{font-size:12px;font-weight:600}.ng-cnt.ok{color:var(--ok)}.ng-cnt.miss{color:var(--warn)}
+  .ng-ro{border-collapse:collapse;font-size:12.5px;margin:4px 0;width:auto;max-width:100%}
+  .ng-ro th,.ng-ro td{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left;white-space:nowrap}
+  .ng-ro th{color:var(--faint);font-weight:500;font-size:11px}.ng-ro td:nth-child(2){white-space:normal}
+  .nsk-sc{display:inline-block;font-weight:700;font-size:12px;border-radius:6px;padding:0 7px;margin-right:6px}
+  .nsk-sc.sc1,.nsk-sc.sc2{color:var(--bad);background:var(--badbg)}.nsk-sc.sc3{color:var(--warn);background:var(--warnbg)}.nsk-sc.sc4,.nsk-sc.sc5{color:var(--ok);background:var(--okbg)}
+  .mp7-na{background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(128,128,128,.12) 4px 8px)!important;color:var(--faint)}
+  @media (max-width:640px){
+    .nsk-goals .ng-h{display:none}
+    .nsk-goals .ng-r{grid-template-columns:18px minmax(0,1fr) 64px 64px 26px;gap:4px}
+    .nsk-goals input{padding:6px 5px;font-size:14px}
+    .cat-scale .qsc{min-width:34px;min-height:34px}
+  }
 </style>
 </head>
 <body>
@@ -2599,7 +2637,8 @@ function v7CatSync(ta){
   if (!/^ed.+_\d$/.test(ta.id || "")) return; // v7.3: поле совета (adv…) не меняет статус категории
   var f = ta.closest(".f.cat"); if (!f) return;
   var ns = v7CatState(ta.value), changed = f.dataset.st !== ns;
-  f.dataset.st = ns; v7AriaSeg(f); if (changed && ns) fxClass(f, "stflash", 700);
+  f.dataset.st = ns; v7AriaSeg(f);
+  if (f.querySelector(".qsc")){ var sc = scaleOf(ta.value); f.querySelectorAll(".qsc").forEach(function(b){ b.setAttribute("aria-pressed", String(+b.dataset.sc === sc)); }); } if (changed && ns) fxClass(f, "stflash", 700);
   var l = f.querySelector(".ta-len"); if (l) l.textContent = ta.value.length ? ta.value.length + " симв." : "";
   if (!("fieldSizing" in ta.style)){ ta.style.height = "auto"; ta.style.height = Math.min(Math.max(ta.scrollHeight + 2, 56), 300) + "px"; }
 }
@@ -2616,7 +2655,7 @@ function v7BigOpen(id){
   v7Big = { key: m[1], j: +m[2] };
   var x = state.lastView && state.lastView[m[1]];
   document.getElementById("be-num").textContent = (+m[2] + 1);
-  document.getElementById("be-title").textContent = CATS[+m[2]] || "";
+  document.getElementById("be-title").textContent = (x ? catsOf(x.r) : CATS)[+m[2]] || "";
   document.getElementById("be-team").textContent = x ? [(x.r.opName || x.r.opNick || ""), (x.r.model || "")].filter(Boolean).join(" · ") : "";
   var be = document.getElementById("be-ta"); be.value = ta.value;
   v7BigMeta();
@@ -2850,7 +2889,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-23.77"
+  VER: "2026-10-30.78"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2882,6 +2921,18 @@ const AUTH = {
 
 const CATS = ["Работа с ОКО","Общение с моделью","Общение с мемберами","Работа с голами","Шоу","Плейлист","Работа с сайтами / раскладка","Кадр / картинка","Комната"];
 const FIELDCODES = ["oko","model","membrs","goly","show","playlist","sites","kadr","room"];
+// v7.7: чек-лист VVCAM (НСК) — с недели, где в шапке листа новые названия (r.fmt === "nsk"); прошлые недели — по-старому
+const CATS_NSK = ["Свет и кадр","Ловенс","Голы (5–10 подряд)","Боты","Блокнот и микрофон","Рабочие позиции (4+)","Посты в ленту (2+/день)","Модель ↔ мемберы","Оператор ↔ мемберы (1–5)"];
+const NSK_HINT = ["Скриншот: как настроены свет и кадр","Скриншот: как настроен ловенс","5–10 голов подряд: цена и онлайн в момент установки гола","Есть ли боты и адекватно ли они настроены","Работает ли команда с блокнотом и микрофоном","Скриншоты минимум 4 рабочих позиций","Выгружается ли хотя бы 2 поста в ленту каждый день","Есть ли взаимодействие модели с мемберами","Насколько активно оператор общается с мемберами — от 1 до 5"];
+const NSK_SHOTS = { 0: 1, 1: 1, 5: 4 }; // сколько скринов нужно в пункте
+const NSK_GOALS = 2, NSK_SCALE = 8;      // особые пункты: таблица голов и шкала 1–5
+const CATS_ALL = CATS.concat(CATS_NSK);
+const isNskRow = r => !!(r && r.fmt === "nsk");
+const catsOf = r => isNskRow(r) ? CATS_NSK : CATS;
+// список категорий для набора строк: один формат — его список; смешанные — оба (сводки считают по названию, не по номеру)
+function catNamesFor(rows){ let n = false, o = false; (rows||[]).forEach(x=>{ const r = x && x.r ? x.r : x; if (isNskRow(r)) n = true; else o = true; }); return n && o ? CATS_ALL : n ? CATS_NSK : CATS; }
+function stByName(r, st, name){ const i = catsOf(r).indexOf(name); return i < 0 ? undefined : (st||[])[i]; }
+function phCode(r, j){ return isNskRow(r) ? "n" + j : FIELDCODES[j]; } // свои шаблоны — отдельно для чек-листа НСК
 const PH = {
   oko: ["не отписал шапку","не отписал конец брейка","нет скрина рабочего стола"],
   model: ["блокнот не используется","микрофон выключен","общение не ведётся","модель не управляется"],
@@ -2895,7 +2946,21 @@ const PH = {
 };
 // v7.2: шаблоны, которые сразу ставят «✕ Плохо» (остальные — «! Замечание»)
 const PH_BAD = new Set(["микрофон выключен","модель не управляется","общение не ведётся","шоу не ведётся","работы нет","обрезано лицо","пустая комната"]);
-const phLv = p => PH_BAD.has(p) ? "bad" : "warn";
+const phLv = p => PH_BAD.has(p) ? "bad" : (PH_NSK_LV[p] || "warn");
+// шаблоны чек-листа НСК: [текст, уровень]
+const PH_NSK = [
+  [["свет тусклый","warn"],["лицо в тени","warn"],["кадр обрезан","warn"],["кадр не настроен","bad"]],
+  [["ловенс не подключён","bad"],["нет таблицы уровней","warn"],["уровни не настроены","warn"]],
+  [["меньше 5 голов","warn"],["цены не растут","warn"],["голы не ставятся","bad"]],
+  [["ботов нет","bad"],["боты спамят","warn"],["настройки ботов неадекватные","warn"]],
+  [["блокнот не используется","warn"],["микрофон выключен","bad"],["не работают с блокнотом и микрофоном","bad"]],
+  [["меньше 4 позиций","warn"],["позиции однотипные","warn"]],
+  [["постов нет","bad"],["1 пост в день","warn"],["посты не каждый день","warn"]],
+  [["модель не общается","bad"],["общается мало","warn"],["не обращается по никам","warn"]],
+  [["не пишет первым","warn"],["сухие сообщения","warn"],["не цепляется за новых","warn"]]
+];
+const PH_NSK_LV = {}; PH_NSK.forEach(l=>l.forEach(([t, lv])=>{ PH_NSK_LV[t] = lv; }));
+const phList = (r, j) => isNskRow(r) ? (PH_NSK[j]||[]).map(x=>x[0]) : (PH[FIELDCODES[j]]||[]);
 // три кнопки уровня для категории (карточка смотрящего и мониторинг продюсера — одна разметка)
 function segBtns(taAttr, st, extraCls){
   const c = extraCls || "";
@@ -2905,6 +2970,7 @@ function segBtns(taAttr, st, extraCls){
 }
 // клик по кнопке уровня или шаблону: новое значение поля
 function segApply(ta, b){
+  if (b.dataset.sc) return scaleApply(ta.value, +b.dataset.sc); // v7.7: шкала 1–5
   if (b.dataset.mk) return markAs(ta.value, b.dataset.mk);
   return b.dataset.v;
 }
@@ -2991,26 +3057,118 @@ function markWarn(v){ return markAs(v, "warn"); }
 function markBody(v){ return String(v||"").replace(MARK_RE, "").trim(); }
 // v7.3: советы по категориям живут в колонке «Рекомендации команде»: сначала общий текст, затем блоки «💡 Категория: совет».
 //   Строки после «💡 Категория:» до следующего «💡 …:» — продолжение этого совета (совет может быть в несколько строк).
-const ADV_RE = new RegExp("^💡\\s*(" + CATS.map(c=>c.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&")).join("|") + ")\\s*:\\s?(.*)$");
-function recoSplit(t){ // чистая
-  const gen = [], adv = CATS.map(()=>""); let cur = -1;
+const ADV_RE = new RegExp("^💡\\s*(" + CATS_ALL.map(c=>c.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&")).join("|") + ")\\s*:\\s?(.*)$");
+function recoSplit(t, list){ // чистая; list — категории строки (по умолчанию стандартные)
+  const L = list || CATS, gen = [], adv = L.map(()=>""); let cur = -1;
   String(t||"").replace(/\r\n?/g, "\n").split("\n").forEach(line=>{ const m = line.match(ADV_RE);
-    if (m){ cur = CATS.indexOf(m[1]); adv[cur] = adv[cur] ? adv[cur] + "\n" + m[2] : m[2]; }
+    if (m && L.indexOf(m[1]) >= 0){ cur = L.indexOf(m[1]); adv[cur] = adv[cur] ? adv[cur] + "\n" + m[2] : m[2]; }
+    else if (m){ cur = -1; gen.push(line); } // совет к категории другого чек-листа — остаётся в общем тексте
     else if (cur >= 0) adv[cur] += "\n" + line; else gen.push(line); });
   return { gen: gen.join("\n").replace(/\s+$/, ""), adv: adv.map(a=>a.replace(/\s+$/, "")) };
 }
-function recoJoin(gen, adv){ // чистая
-  const parts = CATS.map((n,j)=>{ const a = String((adv||[])[j]||"").trim(); return a ? "💡 " + n + ": " + a : ""; }).filter(Boolean);
+function recoJoin(gen, adv, list){ // чистая
+  const parts = (list || CATS).map((n,j)=>{ const a = String((adv||[])[j]||"").trim(); return a ? "💡 " + n + ": " + a : ""; }).filter(Boolean);
   return [String(gen||"").replace(/\s+$/, "")].concat(parts).filter(Boolean).join("\n");
 }
 // v7.3: короткие эффекты (перезапуск анимации классом; при «уменьшить движение» CSS их гасит)
 function fxClass(el, cls, ms){ if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); clearTimeout(el["_fx" + cls]); el["_fx" + cls] = setTimeout(()=>el.classList.remove(cls), ms || 600); }
 function fxPop(b){ fxClass(b, "pop", 340); }
-function recoHtml(t){ const sp = recoSplit(t); return (sp.gen ? `<span class="utext">${esc(sp.gen)}</span>` : "") + CATS.map((n,j)=>sp.adv[j] ? `<div class="adv-ro"><b>💡 ${esc(n)}</b><span class="utext">${esc(sp.adv[j])}</span></div>` : "").join(""); }
+function recoHtml(t, list){ const sp = recoSplit(t, list); return (sp.gen ? `<span class="utext">${esc(sp.gen)}</span>` : "") + (list || CATS).map((n,j)=>sp.adv[j] ? `<div class="adv-ro"><b>💡 ${esc(n)}</b><span class="utext">${esc(sp.adv[j])}</span></div>` : "").join(""); }
 // v7.4: фото к совету — обычный скрин строки с категорией «💡 Название категории»
 const ADV_CAT = n => "💡 " + n;
 const isAdvCat = c => String(c||"").indexOf("💡 ") === 0;
-function advCount(t){ return recoSplit(t).adv.filter(Boolean).length; }
+function advCount(t, list){ return recoSplit(t, list).adv.filter(Boolean).length; }
+// ---------- v7.7: особые пункты чек-листа НСК ----------
+// «Голы (5–10 подряд)»: в ячейке — комментарий (с меткой уровня), ниже строки «🎯 гол | 99 тк | 120 онл»
+const GOAL_RE = /^\s*🎯\s*/;
+function goalsParse(v){ // чистая
+  const head = [], goals = [];
+  String(v||"").replace(/\r/g, "").split("\n").forEach(l=>{
+    if (GOAL_RE.test(l)){ const p = l.replace(GOAL_RE, "").split("|").map(x=>x.trim()); goals.push({ g: p[0]||"", p: (p[1]||"").replace(/\s*(тк|ток\w*)\.?$/i, ""), o: (p[2]||"").replace(/\s*(онл\w*|онлайн)\.?$/i, "") }); }
+    else head.push(l);
+  });
+  return { head: head.join("\n").replace(/\s+$/, ""), goals };
+}
+function goalsJoin(head, goals){ // чистая
+  const gl = (goals||[]).filter(x=>x.g || x.p || x.o).map(x=>"🎯 " + [x.g || "—", x.p ? x.p + " тк" : "—", x.o ? x.o + " онл" : "—"].join(" | "));
+  const h = String(head||"").replace(/\s+$/, "");
+  return (h ? [h] : []).concat(gl).join("\n");
+}
+function goalsEditor(key, goals){
+  const rows = (goals && goals.length ? goals : []).concat([]);
+  while (rows.length < 5) rows.push({ g: "", p: "", o: "" });
+  const n = (goals||[]).filter(x=>x.g || x.p || x.o).length;
+  return `<div class="nsk-goals" data-gk="${key}"><div class="ng-h"><span>Гол</span><span>Цена, тк</span><span>Онлайн</span><span></span></div>`
+    + rows.map((x, i)=>`<div class="ng-r"><span class="ng-n">${i+1}</span><input class="ng-g" value="${esc(x.g)}" placeholder="что за гол" aria-label="гол ${i+1}"><input class="ng-p" value="${esc(x.p)}" inputmode="numeric" placeholder="0" aria-label="цена гола ${i+1}"><input class="ng-o" value="${esc(x.o)}" inputmode="numeric" placeholder="0" aria-label="онлайн при голе ${i+1}"><button type="button" class="ng-x" data-ngx="${i}" title="убрать строку" aria-label="убрать гол ${i+1}">✕</button></div>`).join("")
+    + `<div class="ng-f"><button type="button" class="ng-add"${rows.length >= 10 ? " disabled" : ""}>＋ гол</button><span class="ng-cnt ${n >= 5 ? "ok" : "miss"}">${n >= 5 ? "✓" : "!"} голов: ${n} (нужно 5–10)</span></div></div>`;
+}
+// только просмотр: таблица голов и оценка 1–5 — наглядно; остальное — текстом
+function nskRoBody(r, j, t, hlf){
+  const H = hlf || esc;
+  if (isNskRow(r) && j === NSK_GOALS){ const gp = goalsParse(t), g = gp.goals.filter(x=>x.g || x.p || x.o);
+    return (gp.head ? `<span class="utext">${H(gp.head)}</span>` : "") + (g.length ? `<table class="ng-ro"><thead><tr><th>#</th><th>Гол</th><th>Цена</th><th>Онлайн</th></tr></thead><tbody>${g.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.g)}</td><td>${esc(x.p)}${x.p ? " тк" : ""}</td><td>${esc(x.o)}</td></tr>`).join("")}</tbody></table><span class="ng-cnt ${g.length >= 5 ? "ok" : "miss"}">голов: ${g.length} (нужно 5–10)</span>` : (t ? "" : `<span class="utext">—</span>`)); }
+  if (isNskRow(r) && j === NSK_SCALE){ const k = scaleOf(t); return (k ? `<span class="nsk-sc sc${k}" title="активность оператора">${k}/5</span>` : "") + `<span class="utext">${H(markBody(t).replace(SCALE_RE, "").trim() || (k ? "" : t))}</span>`; }
+  return `<span class="utext">${H(t)}</span>`;
+}
+// чего не хватает в разборе НСК: скринов в пунктах, голов (5+), оценки оператора
+function nskGaps(x, key){
+  const out = [], scr = (state.screens||{})[skey(x.r)] || [];
+  Object.keys(NSK_SHOTS).forEach(j=>{ const have = scr.filter(s=>String(s.cat)===CATS_NSK[j]).length, need = NSK_SHOTS[j]; if (have < need) out.push(CATS_NSK[j] + ": скрин " + have + " из " + need); });
+  const hid = document.getElementById("ed" + key + "_" + NSK_GOALS); const g = goalsParse(hid ? hid.value : x.r.cats[NSK_GOALS]).goals.filter(z=>z.g || z.p || z.o).length;
+  if (g < 5) out.push("голов " + g + " из 5");
+  const sc = document.getElementById("ed" + key + "_" + NSK_SCALE); if (!scaleOf(sc ? sc.value : x.r.cats[NSK_SCALE])) out.push("оценка оператора 1–5");
+  return out;
+}
+function goalsFromDom(box){ return [...box.querySelectorAll(".ng-r")].map(r=>({ g: r.querySelector(".ng-g").value.trim(), p: r.querySelector(".ng-p").value.trim(), o: r.querySelector(".ng-o").value.trim() })); }
+// собрать скрытое поле «Голов» из комментария и таблицы; без метки уровня и с голами — ставим её сами (5+ — норма, меньше — замечание)
+function goalsCompose(key){
+  const box = document.querySelector('.nsk-goals[data-gk="' + key + '"]'), hid = document.getElementById("ed" + key + "_" + NSK_GOALS), vis = document.getElementById("edc" + key + "_" + NSK_GOALS);
+  if (!box || !hid || !vis) return;
+  const goals = goalsFromDom(box), n = goals.filter(x=>x.g || x.p || x.o).length;
+  if (n && !/^\s*(✅|❌|⚠|🟠|🔴)/.test(vis.value)){ vis.value = (n >= 5 ? "✅ " : MARK.warn) + vis.value.replace(/^\s+/, ""); v7CatSync(vis); }
+  hid.value = goalsJoin(vis.value, goals);
+  const c = box.querySelector(".ng-cnt"); if (c){ c.className = "ng-cnt " + (n >= 5 ? "ok" : "miss"); c.textContent = (n >= 5 ? "✓" : "!") + " голов: " + n + " (нужно 5–10)"; }
+}
+// разложить скрытое поле обратно (после «не восстанавливать черновик», ответа ИИ и т. п.)
+function goalsFill(key){
+  const hid = document.getElementById("ed" + key + "_" + NSK_GOALS), vis = document.getElementById("edc" + key + "_" + NSK_GOALS), box = document.querySelector('.nsk-goals[data-gk="' + key + '"]');
+  if (!hid || !vis || !box) return;
+  const gp = goalsParse(hid.value); vis.value = gp.head; v7CatSync(vis);
+  box.outerHTML = goalsEditor(key, gp.goals);
+}
+// «Оператор ↔ мемберы (1–5)»: «✅ Оценка 4/5. текст»; 4–5 — норма, 3 — замечание, 1–2 — плохо
+const SCALE_RE = /Оценка\s*([1-5])\s*\/\s*5\.?\s*/i;
+function scaleOf(v){ const m = String(v||"").match(SCALE_RE); return m ? +m[1] : 0; }
+function scaleApply(v, n){ // чистая
+  const lvl = n >= 4 ? "ok" : n === 3 ? "warn" : "bad";
+  const rest = markBody(v).replace(SCALE_RE, "").trim();
+  return (lvl === "ok" ? "✅ " : MARK[lvl]) + "Оценка " + n + "/5" + (rest ? ". " + rest : "");
+}
+let _goalsBusy = false;
+function goalsPush(key){ // собрать и отдать черновику/«есть изменения» (обработчик карточки слушает скрытое поле)
+  goalsCompose(key);
+  const hid = document.getElementById("ed" + key + "_" + NSK_GOALS); if (!hid) return;
+  _goalsBusy = true; try { hid.dispatchEvent(new Event("input", { bubbles: true })); } finally { _goalsBusy = false; }
+}
+document.addEventListener("input", ev=>{
+  const t = ev.target; if (!t) return;
+  const box = t.closest && t.closest(".nsk-goals");
+  if (box){ goalsPush(box.dataset.gk); return; }
+  if (t.id && /^edc.+_\d$/.test(t.id)){ const key = t.id.slice(3, t.id.lastIndexOf("_")); goalsCompose(key); return; } // фаза захвата: скрытое поле готово раньше черновика
+  if (!_goalsBusy && t.id && t.hidden && /^ed.+_\d$/.test(t.id) && +t.id.slice(t.id.lastIndexOf("_") + 1) === NSK_GOALS){ const key = t.id.slice(2, t.id.lastIndexOf("_")); if (document.getElementById("edc" + t.id.slice(2))) goalsFill(key); } // поле поменяли программно (ИИ и т. п.)
+}, true);
+document.addEventListener("click", ev=>{
+  const t = ev.target; if (!t || !t.closest) return;
+  const add = t.closest(".ng-add"), del = t.closest(".ng-x"); if (!add && !del) return;
+  ev.stopPropagation();
+  const box = t.closest(".nsk-goals"), key = box.dataset.gk;
+  const goals = goalsFromDom(box);
+  if (add){ if (goals.length >= 10) return; goals.push({ g: "", p: "", o: "" }); }
+  else goals.splice(+del.dataset.ngx, 1);
+  box.outerHTML = goalsEditor(key, goals);
+  goalsPush(key);
+  if (add){ const nb = document.querySelector('.nsk-goals[data-gk="' + key + '"]'); const ins = nb ? nb.querySelectorAll(".ng-g") : []; if (ins.length) ins[ins.length - 1].focus(); }
+}, true);
 // блок «💡 Совет» под категорией (карточка смотрящего): кнопка + заметка; совет есть — открыта сразу
 function advBtn(key, j, val, nPh){
   const has = !!String(val||"").trim() || nPh > 0, id = key + "_" + j;
@@ -3026,13 +3184,15 @@ function advBlock(key, j, n, val, thumbsHtml){
 function advCompose(key){
   const h = document.getElementById("ed" + key + "_reco"); if (!h) return;
   const g = document.getElementById("recg" + key);
-  h.value = recoJoin(g ? g.value : "", CATS.map((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); return a ? a.value : ""; }));
+  const xr = state.lastView[key], L = xr ? catsOf(xr.r) : CATS;
+  h.value = recoJoin(g ? g.value : "", L.map((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); return a ? a.value : ""; }), L);
 }
 // разложить полное значение обратно по полям (после «не восстанавливать черновик» и т. п.)
 function advFill(key){
   const h = document.getElementById("ed" + key + "_reco"); if (!h) return;
-  const sp = recoSplit(h.value), g = document.getElementById("recg" + key); if (g) g.value = sp.gen;
-  CATS.forEach((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); if (a){ a.value = sp.adv[j]; advMark(key + "_" + j); } });
+  const xr = state.lastView[key], L = xr ? catsOf(xr.r) : CATS;
+  const sp = recoSplit(h.value, L), g = document.getElementById("recg" + key); if (g) g.value = sp.gen;
+  L.forEach((n,j)=>{ const a = document.getElementById("adv" + key + "_" + j); if (a){ a.value = sp.adv[j]; advMark(key + "_" + j); } });
 }
 // кнопка ✓ и предпросмотр под категорией — по текущему тексту и фото
 function advMark(id){
@@ -3047,7 +3207,8 @@ function advOpen(id){
   const key = id.replace(/_\d$/, ""), j = +id.slice(id.lastIndexOf("_") + 1), x = state.lastView[key];
   const a = document.getElementById("adv" + id); if (!x || !a) return;
   advM = { id, key, j };
-  document.getElementById("advm-title").textContent = "Совет команде · " + CATS[j];
+  const CLa = catsOf(x.r); advM.n = CLa[j];
+  document.getElementById("advm-title").textContent = "Совет команде · " + CLa[j];
   document.getElementById("advm-sub").textContent = [(x.r.opName || x.r.opNick || ""), (x.r.model || "")].filter(Boolean).join(" · ") + " · видит продюсер";
   const ta = document.getElementById("ed" + key + "_" + j), v = ta ? ta.value : (x.r.cats[j]||""), st = catState(v);
   document.getElementById("advm-issue").innerHTML = markBody(v)
@@ -3063,7 +3224,7 @@ function advModalThumbs(){
   const box = document.getElementById("advm-thumbs"); if (!box) return;
   if (!advM){ box.innerHTML = ""; return; }
   const x = state.lastView[advM.key]; if (!x){ box.innerHTML = ""; return; }
-  const dsk = skey(x.r), list = ((state.screens||{})[dsk] || []).filter(s=>String(s.cat) === ADV_CAT(CATS[advM.j]));
+  const dsk = skey(x.r), list = ((state.screens||{})[dsk] || []).filter(s=>String(s.cat) === ADV_CAT(advM.n || CATS[advM.j]));
   box.innerHTML = list.map(s=>`<span class="sthumb${s.type==="video"?" isvid":""}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(160))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" data-advview="1" alt="фото к совету"><span class="sqx" data-advdel="${esc(s.link)}" title="удалить фото" role="button" aria-label="удалить фото">✕</span></span>`).join("");
   setTimeout(ensureThumbs, 30);
   // предпросмотр под категорией: фото могли добавиться или удалиться
@@ -3096,7 +3257,7 @@ document.getElementById("advm-thumbs").addEventListener("click", ev=>{
   if (d){ ev.stopPropagation(); if (x) scrDelete(skey(x.r), d.dataset.advdel); return; }
   const im = ev.target.closest("img[data-advview]"); if (!im) return;
   document.getElementById("cam-ai").style.display = "none"; document.getElementById("cam-aiout").style.display = "none";
-  camShow(im.getAttribute("src") || BLANK, true); document.getElementById("cam-title").textContent = "💡 Совет · " + CATS[advM.j];
+  camShow(im.getAttribute("src") || BLANK, true); document.getElementById("cam-title").textContent = "💡 Совет · " + (advM.n || CATS[advM.j]);
   openModal("cammodal"); camLoadFull(driveId(im.getAttribute("data-full") || ""));
 });
 document.getElementById("advm-ai").onclick = async function(){
@@ -3106,7 +3267,7 @@ document.getElementById("advm-ai").onclick = async function(){
   if (b.classList.contains("busy")) return;
   b.classList.add("busy"); const old = b.innerHTML; b.innerHTML = '<span class="v7spin"></span>думаю…';
   try {
-    const text = "Категория: " + CATS[j] + ". Уровень: " + (st === "bad" ? "плохо" : "замечание") + ". Что увидел смотрящий: " + body.slice(0, 1500);
+    const text = "Категория: " + (advM.n || CATS[j]) + (isNskRow((state.lastView[key]||{}).r) ? " (" + NSK_HINT[j] + ")" : "") + ". Уровень: " + (st === "bad" ? "плохо" : "замечание") + ". Что увидел смотрящий: " + body.slice(0, 1500);
     const res = await aiAsk("catadvice", { text: text, ckey: "adv|" + strHash(text) });
     if (res.error) throw new Error(res.error);
     const tip = String(res.tip || "").trim(); if (!tip) throw new Error("ИИ не предложил совет");
@@ -3117,7 +3278,7 @@ document.getElementById("advm-ai").onclick = async function(){
   finally { b.classList.remove("busy"); b.innerHTML = old; }
 };
 // v7.2: при «Замечании» и «Плохо» текст обязателен — какие категории без пояснения
-function needText(vals){ return (vals||[]).map((v,j)=>{ const st = catState(v); return (st === "warn" || st === "bad") && !markBody(v) ? j : -1; }).filter(j=>j >= 0); }
+function needText(vals){ return (vals||[]).map((v,j)=>{ const st = catState(v); return (st === "warn" || st === "bad") && !markBody(v).replace(SCALE_RE, "").trim() ? j : -1; }).filter(j=>j >= 0); } // оценка «3/5» без пояснения — тоже просим текст
 function markNeed(tas){
   document.querySelectorAll(".need-text").forEach(el=>{ el.classList.remove("need-text"); const m = el.querySelector(".need-msg"); if (m) m.remove(); });
   tas.filter(Boolean).forEach((ta, i)=>{ const box = ta.closest(".f.cat, .pmx-cat"); if (!box) return; box.classList.add("need-text"); fxClass(box, "shake", 450);
@@ -3127,14 +3288,14 @@ function markNeed(tas){
 // v7.2: уровень с клавиатуры — Alt+1/2/3 в поле категории или 1/2/3 на кнопках уровня
 document.addEventListener("keydown", ev=>{
   // только верхний ряд цифр (не цифровой блок: Alt+0171 и т. п. в Windows), без Shift/Ctrl/Cmd; на Mac Option+цифра — это символы, поэтому в поле только на кнопках
-  const k = ev.code === "Digit1" ? 0 : ev.code === "Digit2" ? 1 : ev.code === "Digit3" ? 2 : -1;
+  const k = ev.code === "Digit1" ? 0 : ev.code === "Digit2" ? 1 : ev.code === "Digit3" ? 2 : ev.code === "Digit4" ? 3 : ev.code === "Digit5" ? 4 : -1;
   if (k < 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
   const t = ev.target; if (!t || !t.closest) return;
   const box = t.closest(".f.cat, .pmx-cat"); if (!box) return;
   const inText = t.tagName === "TEXTAREA" || t.tagName === "INPUT";
   const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
   if (inText ? (!ev.altKey || mac) : (ev.altKey || !t.closest(".cat-seg, .pmx-segbtn"))) return;
-  const b = box.querySelectorAll(".cat-seg .qbtn, .pmx-segbtn .qbtn")[k]; if (!b) return;
+  const b = box.querySelectorAll(".cat-seg .qbtn, .pmx-segbtn .qbtn")[k]; if (!b) return; // у шкалы 1–5 — пять кнопок, у остальных — три
   ev.preventDefault(); b.click();
 });
 document.addEventListener("input", ev=>{ const t = ev.target; if (!t || t.tagName !== "TEXTAREA" || !/^(ed.+_\d|pm.+_\d)$/.test(t.id || "")) return; const box = t.closest(".need-text"); if (box && (markBody(t.value) || !isDev(catState(t.value)))){ box.classList.remove("need-text"); const m = box.querySelector(".need-msg"); if (m) m.remove(); } });
@@ -3491,7 +3652,8 @@ function taInfo(el){
   const x = det ? state.lastView[det.dataset.d] : null;
   if (!x) return null;
   const am = el.id.match(/^adv.+_(\d)$/); // v7.3: совет и общие рекомендации — своя история (не путать с категорией)
-  const field = am ? "adv" + am[1] : /^recg/.test(el.id) ? "recg" : /^lk/.test(el.id) ? "links" : el.id.slice(el.id.indexOf("_") + 1);
+  const cm = el.id.match(/^edc.+_(\d)$/);
+  const field = am ? "adv" + am[1] : cm ? "c" + cm[1] : /^recg/.test(el.id) ? "recg" : /^lk/.test(el.id) ? "links" : el.id.slice(el.id.indexOf("_") + 1);
   return { x: x, field: field, key: rk(x.r) + "\u0000" + field };
 }
 function taHistKey(el){ const i = taInfo(el); return i ? i.key : null; }
@@ -3500,7 +3662,8 @@ function taBaseline(x, field){ // что было в поле при откры�
   if (/^\d+$/.test(field)) return d["f"+field] !== undefined ? d["f"+field] : (x.r.cats[+field]||"");
   if (field === "comment") return d.comment !== undefined ? d.comment : (x.r.obs||"");
   if (field === "reco") return d.reco !== undefined ? d.reco : (x.r.reco||"");
-  if (field === "recg" || /^adv\d$/.test(field)){ const sp = recoSplit(d.reco !== undefined ? d.reco : (x.r.reco||"")); return field === "recg" ? sp.gen : sp.adv[+field.slice(3)]; }
+  if (field === "recg" || /^adv\d$/.test(field)){ const sp = recoSplit(d.reco !== undefined ? d.reco : (x.r.reco||""), catsOf(x.r)); return field === "recg" ? sp.gen : sp.adv[+field.slice(3)]; }
+  if (/^c\d$/.test(field)){ const j = +field.slice(1); return goalsParse(d["f"+j] !== undefined ? d["f"+j] : (x.r.cats[j]||"")).head; } // комментарий к голам
   if (field === "links") return d.lk !== undefined ? d.lk : (x.r.linksTxt||"");
   return "";
 }
@@ -3847,15 +4010,16 @@ function renderMain(){
   const curW = (!state.search && curWs.length === 1) ? curWs[0] : "";
   const serW = curW ? allW.filter(w=>weekKey(w) <= weekKey(curW)).slice(-6) : [];
   const wStat = rs => { const ss = rs.map(rowStats), ws = ss.filter(x=>x.score!==null);
-    return { rs, ss, n: rs.length, ok: ws.filter(x=>x.verdict==="норма").length, warn: ws.filter(x=>x.verdict==="замечание").length, bad: ws.filter(x=>x.verdict==="критично").length, avg: avgOf(ss), cat: CATS.map((n,j)=>ss.filter(x=>isDev(x.st[j])).length) }; };
+    return { rs, ss, n: rs.length, ok: ws.filter(x=>x.verdict==="норма").length, warn: ws.filter(x=>x.verdict==="замечание").length, bad: ws.filter(x=>x.verdict==="критично").length, avg: avgOf(ss), cat: Object.fromEntries(CATS_ALL.map(n=>[n, rs.filter((r,i)=>isDev(stByName(r, ss[i].st, n))).length])) }; }; // v7.7: по названию категории (у НСК свой чек-лист)
   const ser = serW.map(w=> w===curW ? wStat(rows) : wStat(dedupeRows(state.rows.filter(r=>r.week===w && ovScope(r)))));
   const prevS = ser.length > 1 ? ser[ser.length-2] : null;
   const ovD = (d, goodUp, unit) => { if (d===null || d===undefined || isNaN(d)) return ""; if (!d) return `<span class="ov-d">— 0</span>`; const good = goodUp ? d > 0 : d < 0; return `<span class="ov-d ${good?"up":"down"}">${d>0?"▲ +":"▼ −"}${Math.abs(d)}${unit||""}</span>`; };
   const ovSpark = (arr, col) => { const v = arr.filter(x=>x!==null && x!==undefined); if (v.length < 2) return ""; const mn = Math.min(...v), mx = Math.max(...v), sp = (mx-mn) || 1;
     return `<svg class="ov-spark" width="104" height="32" viewBox="0 0 104 32" aria-hidden="true"><polyline points="${v.map((x,i)=>(4+i*96/(v.length-1)).toFixed(1)+","+(28-(x-mn)/sp*24).toFixed(1)).join(" ")}" style="stroke:${col}"/></svg>`; };
-  const catNow = CATS.map((n,j)=>S.filter(x=>isDev(x.st[j])).length);
-  const catBadN = CATS.map((n,j)=>S.filter(x=>x.st[j]==="bad").length);
-  const catCounts = CATS.map((n,i)=>({n, i, c: catNow[i], b: catBadN[i], w: catNow[i] - catBadN[i], d: prevS ? catNow[i] - prevS.cat[i] : null})).sort((a,b)=>b.b-a.b || b.c-a.c);
+  const catList = catNamesFor(rows); // v7.7: один чек-лист — его 9 пунктов; ArtLife/DIAMOND вместе с НСК — оба списка
+  const catNow = catList.map(n=>rows.filter((r,i)=>isDev(stByName(r, S[i].st, n))).length);
+  const catBadN = catList.map(n=>rows.filter((r,i)=>stByName(r, S[i].st, n)==="bad").length);
+  const catCounts = catList.map((n,i)=>({n, i, c: catNow[i], b: catBadN[i], w: catNow[i] - catBadN[i], d: prevS && prevS.cat[n] !== undefined ? catNow[i] - prevS.cat[n] : null})).filter(x=>catList.length === 9 || rows.some(r=>catsOf(r).includes(x.n))).sort((a,b)=>b.b-a.b || b.c-a.c);
   const taskDays = t => { const s = String(t.when||""); const d = /^\d{4}-\d{2}-\d{2}/.test(s) ? new Date(s.slice(0,10)+"T12:00:00") : parseUpd(s); return d ? Math.max(0, Math.floor((Date.now()-d)/864e5)) : null; };
   const scopeCity = isCityTab ? state.tab : ovCo;
   const openTasks = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan && (!scopeCity || t.city===scopeCity || String(t.sheet||"").indexOf(scopeCity) >= 0));
@@ -3888,7 +4052,7 @@ function renderMain(){
         <button id="aibatch0" title="ИИ смотрит скрины непроверенных команд и пишет черновики разбора по 9 категориям — в таблицу попадёт только после «Сохранить»"><b>Разобрать все непроверенные</b><small>ИИ смотрит скрины и пишет черновики по 9 категориям</small></button>
         <button id="aibatch1" title="ИИ перепроверяет вердикт и тон комментария у проверенных команд — тоже черновиками"><b>Перепроверить проверенные</b><small>сверяет вердикт и тон комментария — тоже черновиками</small></button>
         <div class="ov-mnote">Результат — только черновики. В таблицу уходит по «Сохранить».</div></div></div>` : ""}</div>
-      ${isCityTab && AUTH.edit ? `<div id="aisumout" class="ov-aisum">${aiBatchHtml()}</div>` : ""}`;
+      ${isCityTab && AUTH.edit ? `<div id="aisumout" class="ov-aisum">${aiBatchHtml()}</div>` : ""}${state.tab === "Новосибирск" ? nskFmtBar() : ""}`;
   }
 
   // ---- полоса «Проверено» ----
@@ -3925,7 +4089,7 @@ function renderMain(){
     });
     const tc = catCounts[0];
     if (tc && tc.b >= 2){ // v7.2: «горит» — только «плохо», замечания не шумят
-      const cs = [...new Set(rows.filter((r,i)=>S[i].st[tc.i]==="bad").map(r=>r.city))];
+      const cs = [...new Set(rows.filter((r,i)=>stByName(r, S[i].st, tc.n)==="bad").map(r=>r.city))];
       if (tabs().includes("Карта")) ovGo.push(()=>switchTab("Карта"));
       alerts.push({ lv:"warn", w:2, title: `«${tc.n}» — плохо у ${tc.b} ${ovPl(tc.b,"команды","команд","команд")}`, city: cs[0], meta: cs.length > 1 && !AUTH.prod ? `и ещё ${cs.length-1} ${ovPl(cs.length-1,"компания","компании","компаний")}` : "", go: tabs().includes("Карта") ? ovGo.length-1 : -1 });
     }
@@ -4063,18 +4227,18 @@ function renderMain(){
           const scr = aiPickScreen((state.screens || {})[skey(r)] || []);
           const id = scr ? driveId(scr.link || scr.mini || "") : "";
           if (!id){ B.skip++; B.items.push({ name, go, note: "нет скрина — пропущено", skip: 1 }); continue; }
-          const res = await aiAsk("screendraft", { id: id, text: "", ckey: "batch|" + id });
+          const res = await aiAsk("screendraft", { id: id, text: "", set: isNskRow(r) ? "nsk" : "", ckey: "batch|" + (isNskRow(r) ? "n|" : "") + id });
           if (res.error) throw new Error(res.error);
           const d = getDraft(r) || {};
           const filled = [];
           (res.cats || []).forEach(it => {
             const v = aiDraftMerge(d["f" + it.i] || "", aiDraftText(it));
-            if (v !== (d["f" + it.i] || "").trim()){ d["f" + it.i] = v; filled.push((it.state === "bad" ? "❌ " : it.state === "warn" ? "⚠️ " : it.state === "ok" ? "✅ " : "") + CATS[it.i]); }
+            if (v !== (d["f" + it.i] || "").trim()){ d["f" + it.i] = v; filled.push((it.state === "bad" ? "❌ " : it.state === "warn" ? "⚠️ " : it.state === "ok" ? "✅ " : "") + catsOf(r)[it.i]); }
           });
           if (filled.length){ setDraft(r, d); B.items.push({ name, go, note: "черновик: " + filled.length + " из 9 категорий", detail: filled.join(" · "), bad: (res.cats||[]).filter(c=>c.state==="bad").length }); }
           else { B.skip++; B.items.push({ name, go, note: "ИИ ничего не добавил", skip: 1 }); }
         } else {
-          const text = CATS.map((n,j)=>{ const v = (r.cats[j] || "").trim(); return v ? n + ": " + v : ""; }).filter(Boolean).join("; ").slice(0, 6000) + (r.obs ? "; доп: " + r.obs.slice(0, 500) : "");
+          const text = catsOf(r).map((n,j)=>{ const v = (r.cats[j] || "").trim(); return v ? n + ": " + v : ""; }).filter(Boolean).join("; ").slice(0, 6000) + (r.obs ? "; доп: " + r.obs.slice(0, 500) : "");
           if (!text.trim()){ B.skip++; B.items.push({ name, go, note: "нет текста — пропущено", skip: 1 }); continue; }
           const res = await aiAsk("verdict", { text: text, ckey: skey(r) + "|batch|" + strHash(text) });
           if (res.error) throw new Error(res.error);
@@ -4139,7 +4303,7 @@ function renderMain(){
       // ищем по ВСЕМ командам: сервер режет текст на 12000 символов, поэтому команды
       // уходят пачками (каждая пачка — свой вызов ИИ), результаты склеиваются
       const lines = rows.map((r,i)=>{
-        const t = r.cats.map((c,j)=>c?CATS[j]+": "+c:"").filter(Boolean).join("; ") + (r.obs ? " | " + r.obs : "");
+        const t = r.cats.map((c,j)=>c?catsOf(r)[j]+": "+c:"").filter(Boolean).join("; ") + (r.obs ? " | " + r.obs : "");
         return i+"|"+(r.opName||r.opNick||"—")+"/"+(r.model||"—")+" ["+clabel(r.city)+"]: "+t.slice(0,200);
       });
       const chunks = [];
@@ -4231,15 +4395,15 @@ function renderMain(){
   const showCoCol = (state.tab==="Обзор"||state.search) && !AUTH.prod;
   const ncols = 5 + (showCoCol ? 1 : 0) + (pmOn ? 1 : 0);
   const PMLBL = { "черновик":"начат", "отправлено":"отправлен", "принято":"принят", "возврат":"возврат" };
-  const segRow = (sts, cls, texts) => `<span class="ov-segs ${cls||""}">${sts.map((v,j)=>`<i class="${v==="ok"?"o":v==="warn"?"w":v==="bad"?"b":""}" title="${esc(CATS[j])} — ${ST_LBL[v]||"не отмечено"}${texts && markBody(texts[j]) ? ": " + esc(markBody(texts[j]).slice(0, 240)) : ""}"></i>`).join("")}</span>`; // v7.1: при наведении — сам текст замечания
+  const segRow = (sts, cls, texts, names) => `<span class="ov-segs ${cls||""}">${sts.map((v,j)=>`<i class="${v==="ok"?"o":v==="warn"?"w":v==="bad"?"b":""}" title="${esc((names||CATS)[j])} — ${ST_LBL[v]||"не отмечено"}${texts && markBody(texts[j]) ? ": " + esc(markBody(texts[j]).slice(0, 240)) : ""}"></i>`).join("")}</span>`; // v7.1: при наведении — сам текст замечания
   // крупная оценка в карточке: по текущему тексту полей + ручные оценка/вердикт (как rowStats)
-  const ovScore = (vals, msc, mvd, stsIn) => { // stsIn — готовые состояния (у облегчённой строки истории их посчитал сервер по полному тексту)
+  const ovScore = (vals, msc, mvd, stsIn, names) => { // stsIn — готовые состояния (у облегчённой строки истории их посчитал сервер по полному тексту)
     const sts = stsIn || vals.map(catState), ok = sts.filter(v=>v==="ok").length, warn = sts.filter(v=>v==="warn").length, bad = sts.filter(v=>v==="bad").length, n = sts.filter(v=>v!==null).length;
     let score = n ? ok + warn * 0.5 : null, verdict = n ? verdictOf(bad, warn) : "";
     const m = String(msc==null ? "" : msc).trim().match(/^(\d+)/);
     if (n && m) score = Math.min(MAX_SCORE, Math.max(0, parseInt(m[1],10)));
     if (n && mvd) verdict = mvd;
-    return `<div class="ov-big"><b class="${vcls(verdict)}">${fmtSc(score)}<small>/${MAX_SCORE}</small></b>${verdict ? `<span class="chip ${chipCls[verdict]||""}">${VLX[verdict]||esc(verdict)}</span>` : '<span class="chip ov-nochip">не отмечено</span>'}</div>${segRow(sts, "big")}`;
+    return `<div class="ov-big"><b class="${vcls(verdict)}">${fmtSc(score)}<small>/${MAX_SCORE}</small></b>${verdict ? `<span class="chip ${chipCls[verdict]||""}">${VLX[verdict]||esc(verdict)}</span>` : '<span class="chip ov-nochip">не отмечено</span>'}</div>${segRow(sts, "big", null, names)}`;
   };
   const ovBadges = r => { const m = markOf(r), nb = newbieOf(r);
     return (m && m.p ? `<span class="ov-pin" title="закреплена наверху">${ovIc(OVP.pin, 12)}</span>` : "")
@@ -4255,23 +4419,23 @@ function renderMain(){
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"ссылка")}</a>`).join("");
       const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
-      const genScreens = rowScreens.filter(s=>!CATS.includes(String(s.cat)) && !isAdvCat(s.cat)); // фото советов — в своих заметках
+      const genScreens = rowScreens.filter(s=>!CATS_ALL.includes(String(s.cat)) && !isAdvCat(s.cat)); // фото советов — в своих заметках
       const plan = (state.plans||{})[x.r.city+"|"+x.r.producer] || "";
       const pmBlk = pmBlockFor(x.r); // v6: мониторинг продюсера по этой команде (статус, расхождения)
       const teamTools = (AUTH.edit && !viewAsActive()) ? `<button class="ov-tbtn" data-mark="${key}" title="цвет, подпись и закрепление наверху — видят все">Метка</button><button class="ov-tbtn${newbieOf(x.r) ? " on" : ""}" data-newbie="${key}" title="новый оператор: метка «новичок» на период адаптации">${newbieOf(x.r) ? "Снять «новичок»" : "Новичок"}</button>` : "";
       // --- только просмотр ---
       const readDet = `<div class="co-main"><div class="co-tools"><span class="co-hint">Разбор смотрящего · только просмотр</span><span class="sp"></span>${teamTools}</div>`
-        + CATS.map((n,j)=>{
-          const t = (x.r.cats[j]||"").trim(), s0 = x.s.st[j], adv = recoSplit(x.r.reco).adv[j], advScr = rowScreens.filter(s=>String(s.cat)===ADV_CAT(n));
+        + catsOf(x.r).map((n,j)=>{
+          const t = (x.r.cats[j]||"").trim(), s0 = x.s.st[j], adv = recoSplit(x.r.reco, catsOf(x.r)).adv[j], advScr = rowScreens.filter(s=>String(s.cat)===ADV_CAT(n));
           const scr = rowScreens.filter(s=>String(s.cat)===n);
-          return `<div class="co-rcat ${s0?"st-"+s0:""}"><span class="cnum">${j+1}</span><b>${esc(n)}</b><span class="chip ${s0==="bad"?"c-bad":s0==="warn"?"c-warn":s0==="ok"?"c-ok":"ov-nochip"}">${ST_LBL[s0]||"не отмечено"}</span><span class="utext">${hl(t)}</span>${scrThumbs(scr,n,false)}${adv || advScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${adv ? `<span class="utext">${hl(adv)}</span>` : ""}${scrThumbs(advScr, ADV_CAT(n), false)}</div>` : ""}</div>`;
+          return `<div class="co-rcat ${s0?"st-"+s0:""}"><span class="cnum">${j+1}</span><b>${esc(n)}</b><span class="chip ${s0==="bad"?"c-bad":s0==="warn"?"c-warn":s0==="ok"?"c-ok":"ov-nochip"}">${ST_LBL[s0]||"не отмечено"}</span>${isNskRow(x.r) ? `<span class="nsk-hint ro">${esc(NSK_HINT[j])}</span>` : ""}${nskRoBody(x.r, j, t, hl)}${isNskRow(x.r) && NSK_SHOTS[j] ? `<span class="nsk-shots ${scr.length >= NSK_SHOTS[j] ? "ok" : "miss"}">скрин ${scr.length} из ${NSK_SHOTS[j]}</span>` : ""}${scrThumbs(scr,n,false)}${adv || advScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${adv ? `<span class="utext">${hl(adv)}</span>` : ""}${scrThumbs(advScr, ADV_CAT(n), false)}</div>` : ""}</div>`;
         }).join("")
         + (genScreens.length ? `<div class="drow"><b>Общее фото / видео</b>${scrThumbs(genScreens,"общее фото",false)}</div>` : "")
         + (x.r.obs ? `<div class="drow"><b>Комментарий / наблюдение</b><span class="utext">${hl(x.r.obs)}</span></div>` : "")
         + (recoSplit(x.r.reco).gen ? `<div class="drow"><b>Рекомендации команде</b><span class="utext">${hl(recoSplit(x.r.reco).gen)}</span></div>` : "")
         + (plan ? `<div class="drow"><b>План работ</b><span class="utext">${esc(plan)}</span></div>` : "")
         + (rowLinks.length ? `<div class="drow"><b>Ссылки</b><span>${linksCell}</span></div>` : "")
-        + `</div><aside class="co-side">${ovScore(x.r.cats.map(c=>c||""), x.r.scoreM, x.r.verdictM, x.r._lite ? rowStats(x.r).st : null)}<div class="co-hint">${x.r.updated ? "Оценка смотрящего · последняя проверка " + esc(fmtDay(x.r.updated)) : "Смотрящий ещё не проверял"}</div>${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}</aside>`;
+        + `</div><aside class="co-side">${ovScore(x.r.cats.map(c=>c||""), x.r.scoreM, x.r.verdictM, x.r._lite ? rowStats(x.r).st : null, catsOf(x.r))}<div class="co-hint">${x.r.updated ? "Оценка смотрящего · последняя проверка " + esc(fmtDay(x.r.updated)) : "Смотрящий ещё не проверял"}</div>${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}</aside>`;
       // --- редактор ---
       const vals0 = CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||""));
       const lv0 = liveEval(vals0);
@@ -4280,10 +4444,24 @@ function renderMain(){
       const comV = dr && dr.comment !== undefined ? dr.comment : (x.r.obs||"");
       const lkV = dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||"");
       const xo = state.ovX || (state.ovX = {});
-      const recoV = dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""), rsp = recoSplit(recoV); // v7.3: общие рекомендации + советы по категориям
-      const editDet = CATS.map((n,j)=>{
+      const recoV = dr && dr.reco !== undefined ? dr.reco : (x.r.reco||""), rsp = recoSplit(recoV, catsOf(x.r)); // v7.3: общие рекомендации + советы по категориям
+      const CL = catsOf(x.r), nsk = isNskRow(x.r);
+      const editDet = CL.map((n,j)=>{
         const val = dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||"");
-        return `<div class="f cat" data-st="${v7CatState(val)}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${n}</b><span class="cat-seg" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-ta="ed${key}_${j}"`, v7CatState(val))}</span><span class="sp"></span><button class="qbtn cat-ib" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»" aria-label="прикрепить скрин к «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button class="qbtn qclr cat-ib" data-ta="ed${key}_${j}" data-v="" title="очистить поле" aria-label="очистить поле «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6h11v12H9l-6-6z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg></button></div><div class="cat-ta"><textarea id="ed${key}_${j}" data-j="${j}" rows="2" placeholder="что увидел — при замечании или «плохо» опиши, что именно" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span><button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button></div></div><div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${getPhrases(FIELDCODES[j]).map(p=>`<span class="qchip myq" data-ta="ed${key}_${j}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${FIELDCODES[j]}">✕</span></span>`).join("")}${(PH[FIELDCODES[j]]||[]).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="ed${key}_${j}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${FIELDCODES[j]}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), false))}</div>`;
+        const goals = nsk && j === NSK_GOALS, scale = nsk && j === NSK_SCALE;
+        const gp = goals ? goalsParse(val) : null;
+        const taId = goals ? `edc${key}_${j}` : `ed${key}_${j}`; // у «Голов» видимое поле — комментарий, полное значение собирается в скрытом ed…
+        const st0 = v7CatState(val), code = phCode(x.r, j);
+        const shotsNeed = nsk ? (NSK_SHOTS[j] || 0) : 0, shotsHave = rowScreens.filter(s=>String(s.cat)===n).length;
+        const seg = scale ? `<span class="cat-seg cat-scale" role="group" aria-label="${esc(n)}: оценка от 1 до 5">${[1,2,3,4,5].map(k=>`<button class="qbtn qsc sc${k}" data-ta="${taId}" data-sc="${k}" title="${["","не общается","очень слабо","средне — есть что поправить","хорошо","очень активно"][k]}" aria-pressed="${scaleOf(val)===k}">${k}</button>`).join("")}</span>`
+          : `<span class="cat-seg" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-ta="${taId}"`, st0)}</span>`;
+        return `<div class="f cat${nsk ? " nsk" : ""}" data-st="${st0}" data-j="${j}"><div class="cat-h"><span class="cnum">${j+1}</span><b class="cname">${esc(n)}</b>${seg}<span class="sp"></span>`
+          + (shotsNeed ? `<span class="nsk-shots ${shotsHave >= shotsNeed ? "ok" : "miss"}" title="нужно скринов: ${shotsNeed}">${shotsHave >= shotsNeed ? "✓" : "!"} скрин ${Math.min(shotsHave, 99)} из ${shotsNeed}</span>` : "")
+          + `<button class="qbtn cat-ib" data-upl="${key}_${j}" title="прикрепить скрин к «${esc(n)}»" aria-label="прикрепить скрин к «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button class="qbtn qclr cat-ib" data-ta="${taId}" data-v="" title="очистить поле" aria-label="очистить поле «${esc(n)}»"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 6h11v12H9l-6-6z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg></button></div>`
+          + (nsk ? `<div class="nsk-hint">${esc(NSK_HINT[j])}</div>` : "")
+          + `<div class="cat-ta"><textarea id="${taId}" data-j="${j}" rows="2" placeholder="${goals ? "комментарий к голам (необязательно)" : scale ? "что видно в общении — при 1–3 опиши, что не так" : "что увидел — при замечании или «плохо» опиши, что именно"}" aria-label="Комментарий: ${esc(n)}">${esc(goals ? gp.head : val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span>${goals ? "" : `<button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button>`}</div></div>`
+          + (goals ? `<textarea id="ed${key}_${j}" hidden aria-hidden="true" tabindex="-1">${esc(val)}</textarea>${goalsEditor(key, gp.goals)}` : "")
+          + `<div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${getPhrases(code).map(p=>`<span class="qchip myq" data-ta="${taId}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${code}">✕</span></span>`).join("")}${phList(x.r, j).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="${taId}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${code}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), false))}</div>`;
       }).join("");
       const failInfo = state.failedSaves[rk(x.r)];
       const failBar = canEdit && failInfo ? `<div class="failbar">Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
@@ -4300,7 +4478,7 @@ function renderMain(){
           ${genScreens.length ? `<div class="co-gen"><b>Общее фото / видео</b>${scrThumbs(genScreens,"общее фото",true)}</div>` : ""}
         </div>
         <aside class="co-side">
-          <div class="co-score" id="ovsc${key}">${ovScore(vals0, scV, vdV)}</div>
+          <div class="co-score" id="ovsc${key}">${ovScore(vals0, scV, vdV, null, catsOf(x.r))}</div>
           <div class="co-hint">Считается само: норма — 1 балл, замечание — ½, плохо — 0. Вручную — оценка и вердикт ниже.</div>
           <div class="editlive" id="live${key}" hidden>${lv0}</div>
           ${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}
@@ -4324,7 +4502,7 @@ function renderMain(){
         : roNote + `<div class="co-card ro">${readDet}</div>`;
       const cityCell = showCoCol ? `<td class="ov-cocell"><span style="color:${OVC[x.r.city]||"var(--dim)"}">${esc(clabel(x.r.city))}</span>${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
-      const icons = ((x.r.obs||"").trim() ? `<span class="ov-ico" title="${esc(x.r.obs)}">комм.</span>` : "") + (()=>{ const sp = recoSplit(x.r.reco), na = x.r._lite && x.r._advN != null ? +x.r._advN : sp.adv.filter(Boolean).length; /* у облегчённой строки число советов посчитал сервер */ return (sp.gen ? '<span class="ov-ico" title="есть рекомендации">реком.</span>' : "") + (na ? `<span class="ov-ico ov-adv" title="советы по категориям: ${esc(CATS.filter((n,j)=>sp.adv[j]).join(", "))}">советы ${na}</span>` : ""); })() + (x.r.scoreM ? `<span class="ov-ico" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/${MAX_SCORE}">вручную</span>` : "");
+      const icons = ((x.r.obs||"").trim() ? `<span class="ov-ico" title="${esc(x.r.obs)}">комм.</span>` : "") + (()=>{ const sp = recoSplit(x.r.reco, catsOf(x.r)), na = x.r._lite && x.r._advN != null ? +x.r._advN : sp.adv.filter(Boolean).length; /* у облегчённой строки число советов посчитал сервер */ return (sp.gen ? '<span class="ov-ico" title="есть рекомендации">реком.</span>' : "") + (na ? `<span class="ov-ico ov-adv" title="советы по категориям: ${esc(CATS.filter((n,j)=>sp.adv[j]).join(", "))}">советы ${na}</span>` : ""); })() + (x.r.scoreM ? `<span class="ov-ico" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/${MAX_SCORE}">вручную</span>` : "");
       const updCell = (()=>{ const u = dueInfo(x.r); if (!u) return '<span style="color:var(--faint);font-size:11.5px">—</span>';
         const nx = String(u.nextDay).padStart(2,"0")+"."+String(u.nextMonth).padStart(2,"0");
         const lab = u.days>=u.per ? '<span style="color:var(--bad-t);font-weight:600">к перепроверке</span>' : u.days>=u.per-1 ? '<span style="color:var(--warn);font-weight:600">скоро</span>' : '<span style="color:var(--ok)">'+(u.days===0?"сегодня":u.days+" дн. назад")+'</span>';
@@ -4333,11 +4511,11 @@ function renderMain(){
       const pmIt = pmOf(x.r);
       const pmCell = pmOn ? (()=>{ if (!pmIt) return '<span class="ov-pmst">не начат</span>'; const d = pmDiff(pmIt.cats, x.s.st), nd = d.miss.length + d.strict.length;
         const cls = pmIt.status==="возврат" || nd ? "warn" : pmIt.status==="принято" ? "ok" : pmIt.status==="отправлено" ? "ink" : "";
-        return `<span class="ov-pmst ${cls}" title="${nd ? "расхождений с тобой: " + nd + " (" + esc(d.miss.concat(d.strict).map(j=>CATS[j]).join(", ")) + ")" : "мониторинг продюсера"}">${PMLBL[pmIt.status]||"не начат"}${nd ? " · ≠" + nd : ""}</span>`; })() : "";
+        return `<span class="ov-pmst ${cls}" title="${nd ? "расхождений с тобой: " + nd + " (" + esc(d.miss.concat(d.strict).map(j=>catsOf(x.r)[j]).join(", ")) + ")" : "мониторинг продюсера"}">${PMLBL[pmIt.status]||"не начат"}${nd ? " · ≠" + nd : ""}</span>`; })() : "";
       const mk = markOf(x.r);
       const op = x.r.opName || x.r.opNick || "";
       const nick = x.r.opName && x.r.opNick ? x.r.opNick : "";
-      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"${mk && mk.c ? ` style="box-shadow:inset 4px 0 0 ${esc(mk.c)}"` : ""}><td class="ov-tc"><div class="ov-team"><span class="ov-car">${ovIc(OVP.car, 12)}</span><b>${hl(op)}${x.r.model ? `<span class="ov-sep"> · </span>${hl(x.r.model)}` : ""}</b>${nick ? `<span class="ov-nick">${hl(nick)}</span>` : ""}${ovBadges(x.r)}${icons}${draftMark}</div>${linksCell ? `<div class="ov-links">${linksCell}</div>` : ""}</td>${cityCell}<td><div class="ov-sc">${segRow(x.s.st, "", x.r.cats)}<b class="${x.s.score===null ? "" : vcls(x.s.verdict)}">${x.s.score===null ? "–" : fmtSc(x.s.score) + "/" + MAX_SCORE}</b></div></td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]||""}">${VLX[x.s.verdict]||esc(x.s.verdict)}</span>`:'<span class="chip ov-nochip">не проверено</span>'}</td><td class="pcol">${updCell}</td>${pmOn ? `<td>${pmCell}</td>` : ""}<td class="ov-act">${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip ov-nochip">статус</span>`}</button><span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель" aria-label="сменить оператора или модель">${ovIc(OVP.users, 15)}</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену" aria-label="удалить смену">${ovIc(OVP.trash, 15)}</button></span>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td></tr>
+      return `<tr class="r${state.failedSaves[rk(x.r)]?" savefail":""}" data-i="${key}"${mk && mk.c ? ` style="box-shadow:inset 4px 0 0 ${esc(mk.c)}"` : ""}><td class="ov-tc"><div class="ov-team"><span class="ov-car">${ovIc(OVP.car, 12)}</span><b>${hl(op)}${x.r.model ? `<span class="ov-sep"> · </span>${hl(x.r.model)}` : ""}</b>${nick ? `<span class="ov-nick">${hl(nick)}</span>` : ""}${ovBadges(x.r)}${icons}${draftMark}</div>${linksCell ? `<div class="ov-links">${linksCell}</div>` : ""}</td>${cityCell}<td><div class="ov-sc">${segRow(x.s.st, "", x.r.cats, catsOf(x.r))}<b class="${x.s.score===null ? "" : vcls(x.s.verdict)}">${x.s.score===null ? "–" : fmtSc(x.s.score) + "/" + MAX_SCORE}</b></div></td><td>${x.s.verdict?`<span class="chip ${chipCls[x.s.verdict]||""}">${VLX[x.s.verdict]||esc(x.s.verdict)}</span>`:'<span class="chip ov-nochip">не проверено</span>'}</td><td class="pcol">${updCell}</td>${pmOn ? `<td>${pmCell}</td>` : ""}<td class="ov-act">${canEdit?`<button class="schipbtn" data-stc="${key}" title="клик — сменить статус (ново → в работе → исправлено)">${x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:`<span class="chip ov-nochip">статус</span>`}</button><span class="rowbtns"><button class="rbtn" data-rop="${key}" title="сменить оператора/модель" aria-label="сменить оператора или модель">${ovIc(OVP.users, 15)}</button><button class="rbtn rbtn-del" data-rdel="${key}" title="удалить смену" aria-label="удалить смену">${ovIc(OVP.trash, 15)}</button></span>`:(x.r.status?`<span class="chip ${chipCls[x.r.status]||"c-warn"}">${esc(x.r.status)}</span>`:"")}</td></tr>
       <tr class="detail${openDet.has(String(key))?" open":""}" data-d="${key}"><td colspan="${ncols}"><div class="detail-in">${inner}</div></td></tr>`;
     }).join("");
     const pcol = state.colors[g.producer]||"#566070";
@@ -4421,9 +4599,9 @@ function renderMain(){
     ev.stopPropagation();
     const parts = b.dataset.upl.split("_");
     const x = state.lastView[parts[0]]; if (!x) return;
-    if (/^A\d$/.test(parts[1])){ const ai = +parts[1].slice(1); openUpload(x, ai, "💡 совет · " + CATS[ai], true); return; } // v7.4: фото к совету
+    if (/^A\d$/.test(parts[1])){ const ai = +parts[1].slice(1); openUpload(x, ai, "💡 совет · " + catsOf(x.r)[ai], true); return; } // v7.4: фото к совету
     const catIdx = parts[1]==="G" ? undefined : parseInt(parts[1],10); // G = общее фото без категории
-    openUpload(x, catIdx, catIdx===undefined ? "общее фото" : CATS[catIdx]);
+    openUpload(x, catIdx, catIdx===undefined ? "общее фото" : catsOf(x.r)[catIdx]);
   });
   document.querySelectorAll(".sthumb img").forEach(im=>{
     im.onclick=()=>{
@@ -4513,6 +4691,7 @@ function renderMain(){
         } else {
           clearDraft(x0.r); // сбрасываем поля на значения из таблицы
           for (let j=0;j<9;j++){ const el = document.getElementById("ed"+tr.dataset.i+"_"+j); if (el) el.value = x0.r.cats[j]||""; }
+          goalsFill(tr.dataset.i);
           const c = document.getElementById("ed"+tr.dataset.i+"_comment"); if (c) c.value = x0.r.obs||"";
           const rc = document.getElementById("ed"+tr.dataset.i+"_reco"); if (rc){ rc.value = x0.r.reco||""; advFill(tr.dataset.i); }
           const lk = document.getElementById("lk"+tr.dataset.i); if (lk) lk.value = x0.r.linksTxt||"";
@@ -4560,7 +4739,7 @@ function renderMain(){
         for (let j=0;j<9;j++){ const ta=document.getElementById("ed"+det.dataset.d+"_"+j); vals.push(ta?ta.value:""); }
         lv.textContent = liveEval(vals);
         const ovb = document.getElementById("ovsc"+det.dataset.d); // v7: крупная оценка справа — живьём
-        if (ovb){ const sc0 = document.getElementById("ed"+det.dataset.d+"_score"), vd0 = document.getElementById("ed"+det.dataset.d+"_verdict"); const was = (ovb.querySelector(".ov-big b")||{}).textContent; ovb.innerHTML = ovScore(vals, sc0 ? sc0.value : "", vd0 ? vd0.value : ""); const nb = ovb.querySelector(".ov-big b"); if (nb && was !== undefined && was !== nb.textContent) fxClass(nb, "bump", 500); }
+        if (ovb){ const sc0 = document.getElementById("ed"+det.dataset.d+"_score"), vd0 = document.getElementById("ed"+det.dataset.d+"_verdict"); const was = (ovb.querySelector(".ov-big b")||{}).textContent; ovb.innerHTML = ovScore(vals, sc0 ? sc0.value : "", vd0 ? vd0.value : "", null, catsOf(x.r)); const nb = ovb.querySelector(".ov-big b"); if (nb && was !== undefined && was !== nb.textContent) fxClass(nb, "bump", 500); }
         const ods = document.getElementById("ovds"+det.dataset.d); if (ods) ods.textContent = "Есть изменения — черновик хранится в браузере";
         const odd = document.getElementById("ovdd"+det.dataset.d); if (odd) odd.className = "w";
       }
@@ -4589,7 +4768,7 @@ function renderMain(){
     if (aiv) aiv.onclick = async ()=>{
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        let text = CATS.map((n,j)=>{ const v = edVal("ed"+key+"_"+j); return v ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 6000);
+        let text = catsOf(x.r).map((n,j)=>{ const v = edVal("ed"+key+"_"+j); return v ? n+": "+v : ""; }).filter(Boolean).join("; ").slice(0, 6000);
         const comV = edVal("ed"+key+"_comment"); if (comV) text += "; доп: " + comV.slice(0,500);
         const res = await aiAsk("verdict", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
@@ -4608,7 +4787,7 @@ function renderMain(){
     if (aich) aich.onclick = async ()=>{
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        const crit = CATS.map((n,j)=>{ const v = edVal("ed"+key+"_"+j), cs = v ? catState(v) : null; return isDev(cs) ? n + (cs==="bad" ? " (плохо)" : " (замечание)") + ": " + markBody(v) : ""; }).filter(Boolean).join("; ").slice(0, 6000);
+        const crit = catsOf(x.r).map((n,j)=>{ const v = edVal("ed"+key+"_"+j), cs = v ? catState(v) : null; return isDev(cs) ? n + (cs==="bad" ? " (плохо)" : " (замечание)") + ": " + markBody(v) : ""; }).filter(Boolean).join("; ").slice(0, 6000);
         if (!crit){ aiMsg(key, "🤖 критичных пунктов в этой проверке нет"); return; }
         const res = await aiAsk("chekdraft", { text: crit, ckey: skey(x.r) + "|" + strHash(crit) });
         if (res.error) throw new Error(res.error);
@@ -4639,7 +4818,7 @@ function renderMain(){
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
         const parts = [];
-        CATS.forEach((n,j)=>{ const v = edVal("ed"+key+"_"+j); if (v) parts.push(n+": "+v); });
+        catsOf(x.r).forEach((n,j)=>{ const v = edVal("ed"+key+"_"+j); if (v) parts.push(n+": "+v); });
         const oldCom = edVal("ed"+key+"_comment");
         if (oldCom) parts.push("Общий комментарий: " + oldCom);
         const recV = edVal("ed"+key+"_reco"); if (recV) parts.push("Рекомендации: " + recV);
@@ -4672,7 +4851,7 @@ function renderMain(){
         const prev = cand.sort((a,b)=>weekKey(b)-weekKey(a))[0];
         if (!prev){ aiMsg(key, "прошлой недели у этой команды нет — сравнивать не с чем"); return; }
         if (prev._lite) await ensureRowFull(prev); // v6: для сравнения нужен полный текст прошлой недели
-        const dump = r => CATS.map((n,j)=>{ const v=(r.cats[j]||"").trim(); return v ? n+": "+v : ""; }).filter(Boolean).join("; ") + (r.obs?" | комментарий: "+r.obs:"");
+        const dump = r => catsOf(r).map((n,j)=>{ const v=(r.cats[j]||"").trim(); return v ? n+": "+v : ""; }).filter(Boolean).join("; ") + (r.obs?" | комментарий: "+r.obs:"");
         const text = ("ПРОШЛАЯ НЕДЕЛЯ (" + prev.week + "): " + dump(prev) + "\nЭТА НЕДЕЛЯ (" + cur.week + "): " + dump(cur)).slice(0, 8000);
         const res = await aiAsk("teamdelta", { text: text, ckey: skey(cur) + "|" + prev.week + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
@@ -4691,7 +4870,7 @@ function renderMain(){
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
         // C: совет — по тому, что сейчас в редакторе (включая ещё не сохранённое)
-        const crit = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = String(el ? el.value : (x.r.cats[j]||"")).trim(), cs = v ? catState(v) : null; return isDev(cs) ? n + (cs==="bad" ? " (плохо)" : " (замечание)") + ": " + markBody(v) : ""; }).filter(Boolean).join("; ").slice(0, 4000);
+        const crit = catsOf(x.r).map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = String(el ? el.value : (x.r.cats[j]||"")).trim(), cs = v ? catState(v) : null; return isDev(cs) ? n + (cs==="bad" ? " (плохо)" : " (замечание)") + ": " + markBody(v) : ""; }).filter(Boolean).join("; ").slice(0, 4000);
         if (!crit){ aiMsg(key, "🤖 замечаний по категориям нет — совета не нужно"); return; }
         const res = await aiAsk("opadvice", { text: crit, ckey: skey(x.r) + "|" + strHash(crit) });
         if (res.error) throw new Error(res.error);
@@ -4713,7 +4892,7 @@ function renderMain(){
       if (!oldCom){ aiMsg(key, "🧐 общий комментарий пуст — проверять тон нечего"); return; }
       aiMsg(key, "🤖 ИИ думает… (до минуты)");
       try {
-        const catsTxt = CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = String(el ? el.value : (x.r.cats[j]||"")).trim(); return v ? n+" — "+v : ""; }).filter(Boolean).join("; ").slice(0,3000);
+        const catsTxt = catsOf(x.r).map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j); const v = String(el ? el.value : (x.r.cats[j]||"")).trim(); return v ? n+" — "+v : ""; }).filter(Boolean).join("; ").slice(0,3000);
         const text = ("КОММЕНТАРИЙ: " + oldCom + "\nКАТЕГОРИИ: " + catsTxt).slice(0, 8000);
         const res = await aiAsk("tonecheck", { text: text, ckey: skey(x.r) + "|" + strHash(text) });
         if (res.error) throw new Error(res.error);
@@ -4807,7 +4986,7 @@ function switchTab(t){
 // ---------- «Операторы» ----------
 // v7: общие мелочи четырёх экранов
 const O7_CVAR = { "Томск":"var(--art)", "Новосибирск":"var(--vv)", "Онлайн":"var(--dia)" };
-const O7_CSHORT = { "Работа с ОКО":"ОКО", "Общение с моделью":"Модель", "Общение с мемберами":"Мемберы", "Работа с голами":"Голы", "Шоу":"Шоу", "Плейлист":"Плейлист", "Работа с сайтами / раскладка":"Сайты", "Кадр / картинка":"Кадр", "Комната":"Комната" };
+const O7_CSHORT = { "Свет и кадр":"Свет/кадр", "Ловенс":"Ловенс", "Голы (5–10 подряд)":"Голы 5–10", "Боты":"Боты", "Блокнот и микрофон":"Блокнот", "Рабочие позиции (4+)":"Позиции", "Посты в ленту (2+/день)":"Посты", "Модель ↔ мемберы":"Модель↔м", "Оператор ↔ мемберы (1–5)":"Опер 1–5", "Работа с ОКО":"ОКО", "Общение с моделью":"Модель", "Общение с мемберами":"Мемберы", "Работа с голами":"Голы", "Шоу":"Шоу", "Плейлист":"Плейлист", "Работа с сайтами / раскладка":"Сайты", "Кадр / картинка":"Кадр", "Комната":"Комната" };
 function o7Short(n){ return O7_CSHORT[n] || String(n||"").replace("Работа с ", "").replace("Общение с ", "").replace(" / раскладка", "").replace(" / картинка", ""); }
 function o7CoChip(c, colored){ const n = coLbl(c); if (!n) return ""; const v = O7_CVAR[c] || "var(--faint)"; return colored ? `<span class="o7-co tx" style="color:${v}">${esc(n)}</span>` : `<span class="o7-co"><i style="background:${v}"></i>${esc(n)}</span>`; }
 function o7ScVar(v){ if (v == null) return "var(--faint)"; const k = v / MAX_SCORE; return k >= 0.75 ? "var(--ok)" : k >= 0.375 ? "var(--warn)" : "var(--bad-t)"; }
@@ -4861,13 +5040,14 @@ function renderOperators(rows, st){
     const scored = o.rows.filter(x=>x.s.score!==null);
     const best = scored.length ? Math.max.apply(null, scored.map(x=>x.s.score)) : null;
     const worst = scored.length ? Math.min.apply(null, scored.map(x=>x.s.score)) : null;
-    const catBad = CATS.map((n,j)=>o.rows.filter(x=>x.s.st && isDev(x.s.st[j])).length); // сколько раз отклонение (замечание или плохо)
-    const catW = CATS.map((n,j)=>o.rows.filter(x=>x.s.st && x.s.st[j]==="bad").length + 0.5 * o.rows.filter(x=>x.s.st && x.s.st[j]==="warn").length); // вес для «слабого места»
+    const catNames = catNamesFor(o.rows); // v7.7: по названию — у НСК свой чек-лист
+    const catBad = catNames.map(n=>o.rows.filter(x=>x.s.st && isDev(stByName(x.r, x.s.st, n))).length); // сколько раз отклонение (замечание или плохо)
+    const catW = catNames.map(n=>o.rows.filter(x=>x.s.st && stByName(x.r, x.s.st, n)==="bad").length + 0.5 * o.rows.filter(x=>x.s.st && stByName(x.r, x.s.st, n)==="warn").length); // вес для «слабого места»
     const mxBad = Math.max.apply(null, catW.concat([0]));
-    const weak = mxBad > 0 ? CATS[catW.indexOf(mxBad)] : "";
+    const weak = mxBad > 0 ? catNames[catW.indexOf(mxBad)] : "";
     const nickRow = o.rows.find(x=>x.r.opNick);
     return { name, nick: nickRow ? nickRow.r.opNick : "", checks:o.checks, avg: o.scored ? o.sum/o.scored : null, best, worst,
-      crit:o.crit, cities:[...o.cities], prods:[...o.prods], rows:o.rows, perWeek, trend, known, catBad, weak };
+      crit:o.crit, cities:[...o.cities], prods:[...o.prods], rows:o.rows, perWeek, trend, known, catBad, catNames, weak };
   });
   const val = (o,k)=> k==="name" ? o.name : k==="weak" ? o.weak : k==="avg" ? (o.avg ?? -1) : k==="trend" ? (o.known.length>=2 ? o.trend : -99) : k==="checks" ? o.checks : o.crit;
   ops.sort((a,b)=>{ const x = val(a,O.sort), y = val(b,O.sort); const c = typeof x==="string" ? String(x).localeCompare(String(y), "ru") : (x - y); return (c * O.dir) || ((b.avg ?? -1) - (a.avg ?? -1)); });
@@ -4892,7 +5072,7 @@ function renderOperators(rows, st){
     <section class="o7-card op7-card">${ops.length ? `<div class="o7-scroll"><table class="op7-t"><thead><tr><th class="op7-n">#</th>${heads.map(h=>{ const on = O.sort===h[0]; return `<th class="${h[2]==="r"?"r":""}" aria-sort="${on?(O.dir>0?"ascending":"descending"):"none"}"><button class="op7-sort${on?" on":""}" data-opsort="${h[0]}">${esc(h[1])}${on?(O.dir>0?" ↑":" ↓"):""}</button></th>`; }).join("")}<th class="op7-goh"><span class="sr">история</span></th></tr></thead><tbody>${
       ops.map((o,i)=>{
         const c = o7ScVar(o.avg);
-        const catsTop = o.catBad.map((v,j)=>[CATS[j], v]).filter(x=>x[1] > 0).sort((a,b)=>b[1]-a[1]);
+        const catsTop = o.catBad.map((v,j)=>[o.catNames[j], v]).filter(x=>x[1] > 0).sort((a,b)=>b[1]-a[1]);
         return `<tr class="op op7-r" data-i="${i}" tabindex="0" aria-expanded="false">
           <td class="op7-n">${i+1}</td>
           <td><div class="op7-who"><b>${esc(o.name)} <span>${esc(o.nick)}</span></b>${AUTH.prod ? "" : `<span class="op7-cos">${o.cities.map(c=>o7CoChip(c, true)).join("")}</span>`}</div></td>
@@ -4906,7 +5086,7 @@ function renderOperators(rows, st){
           <div class="op7-dcol"><b class="op7-dh">Замечания и «плохо» по категориям${weeks.length>1?" за "+weeks.length+" "+o7Wk(weeks.length, true):""}</b>${catsTop.length ? catsTop.map(k=>`<div class="op7-kr"><span>${esc(k[0])}</span><span class="op7-kb"><i style="width:${Math.round(k[1]*100/Math.max(1,o.checks))}%"></i></span><b>${k[1]}</b></div>`).join("") : '<span class="op7-tnone">провалов нет</span>'}
             <div class="op7-meta">Продюсеры: ${o.prods.map(esc).join(", ")}${AUTH.prod ? "" : " · Компании: " + o.cities.map(c=>esc(clabel(c))).join(", ")}</div></div>
           <div class="op7-dcol op7-hist"><b class="op7-dh">Проверки (${o.rows.length})</b>${
-            o.rows.map(x=>`<div class="drow"><b${x.s.score!==null?(x.s.score===o.best?' style="color:var(--ok)"':(x.s.score===o.worst&&o.best!==o.worst?' style="color:var(--bad-t)"':"")):""}>${x.r.week?esc(x.r.week)+" · ":""}${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")}${coLbl(x.r.city)?" · "+esc(coLbl(x.r.city)):""} · ${x.s.verdict?esc(VLBL[x.s.verdict]||x.s.verdict):"не проверено"}${x.s.score!==null?" · "+fmtSc(x.s.score)+"/"+MAX_SCORE:""}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+CATS[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
+            o.rows.map(x=>`<div class="drow"><b${x.s.score!==null?(x.s.score===o.best?' style="color:var(--ok)"':(x.s.score===o.worst&&o.best!==o.worst?' style="color:var(--bad-t)"':"")):""}>${x.r.week?esc(x.r.week)+" · ":""}${esc(x.r.producer||"—")} · ${esc(x.r.model||"—")}${coLbl(x.r.city)?" · "+esc(coLbl(x.r.city)):""} · ${x.s.verdict?esc(VLBL[x.s.verdict]||x.s.verdict):"не проверено"}${x.s.score!==null?" · "+fmtSc(x.s.score)+"/"+MAX_SCORE:""}</b><span>${esc(x.r.cats.map((c,j)=>c?("["+catsOf(x.r)[j]+"] "+c):"").filter(Boolean).join("  |  ") || (x.r.obs||""))}</span></div>`).join("")
           }</div></div></td></tr>`;
       }).join("")}</tbody></table></div>` : `<div class="o7-empty">Нет данных</div>`}
     </section>
@@ -5219,7 +5399,7 @@ function renderSummary(rows, st){
     });
     return { w, cells };
   });
-  const topCats = CATS.map((n,i)=>({n, c: rows.filter(r=>isDev(rowStats(r).st[i])).length}))
+  const topCats = catNamesFor(rows).map(n=>({n, c: rows.filter(r=>isDev(stByName(r, rowStats(r).st, n))).length}))
     .sort((a,b)=>b.c-a.c).slice(0,5);
   const mx = Math.max(1,...topCats.map(x=>x.c));
   const gm = {};
@@ -5654,7 +5834,7 @@ function heatOrder(items){ // чистая: сначала больше заме
 }
 function heatColTotals(items, n){ // чистая: по каждой категории — сколько ✅/⚠️/❌/пусто
   const t = Array.from({length:n}, ()=>({ ok:0, warn:0, bad:0, none:0 }));
-  items.forEach(it => it.st.forEach((s,j)=>{ if (j < n) t[j][s==="ok"||s==="warn"||s==="bad" ? s : "none"]++; }));
+  items.forEach(it => it.st.forEach((s,j)=>{ if (j < n && s !== "na") t[j][s==="ok"||s==="warn"||s==="bad" ? s : "none"]++; })); // na — пункта нет в чек-листе этой строки
   return t;
 }
 function renderHeat(){
@@ -5663,25 +5843,27 @@ function renderHeat(){
   state.heatCo = comps.includes(state.heatCo) ? state.heatCo : (comps[0] || "");
   const co = state.heatCo;
   const rows = dedupeRows(AUTH.prod ? rowsOf(prodTabName()) : rowsOf(co));
-  const items = heatOrder(rows.map((r,i)=>{ const s = rowStats(r); return { i, r, st: s.st, bad: s.bad, score: s.score, verdict: s.verdict, producer: r.producer||"" }; }));
-  const tot = heatColTotals(items, CATS.length);
-  const hl = (typeof state.heatHl === "number" && state.heatHl < CATS.length) ? state.heatHl : -1;
+  const HN = catNamesFor(rows); // v7.7: колонки — пункты чек-листа (у НСК свои; смешанные недели — оба набора)
+  const items = heatOrder(rows.map((r,i)=>{ const s = rowStats(r), L = catsOf(r); return { i, r, st: HN.map(n=>stByName(r, s.st, n) || null), ci: HN.map(n=>L.indexOf(n)), bad: s.bad, score: s.score, verdict: s.verdict, producer: r.producer||"" }; }));
+  const tot = heatColTotals(items.map(it=>Object.assign({}, it, { st: it.st.map((v,j)=>it.ci[j] < 0 ? "na" : v) })), HN.length);
+  const hl = (typeof state.heatHl === "number" && state.heatHl < HN.length) ? state.heatHl : -1;
   tot.forEach(t=>{ t.w8 = t.bad + t.warn * 0.5; }); // v7.2: худшая категория — по «плохо» + ½ замечаний
   const mx0 = Math.max.apply(null, tot.map(t=>t.w8).concat([0])), mn0 = Math.min.apply(null, tot.map(t=>t.w8));
   const mx = mx0 > mn0 ? mx0 : -1; // выделяем худшую категорию, только если она одна из отличающихся
   const wks = [...new Set(rows.map(r=>r.week).filter(Boolean))];
   const wk = wks.length === 1 ? wks[0] : (document.getElementById("weeklabel").textContent || "").trim();
   const cell = (it, s, j)=>{
-    const tip = CATS[j] + (s ? " — " + ST_LBL[s] : "") + ": " + ((it.r.cats[j]||"").slice(0,160) || "не заполнено");
+    if (it.ci[j] < 0) return `<span class="mp7-c mp7-na" title="${esc(HN[j])}: нет в чек-листе этой недели" aria-hidden="true"></span>`;
+    const tip = HN[j] + (s ? " — " + ST_LBL[s] : "") + ": " + ((it.r.cats[it.ci[j]]||"").slice(0,160) || "не заполнено");
     return `<button class="mp7-c mp7-${s==="ok"||s==="warn"||s==="bad"?s:"none"}${hl>=0&&hl!==j?" dim":""}" data-hgo="${it.i}" title="${esc(tip)}" aria-label="${esc((it.r.opName||it.r.opNick||"—") + " / " + (it.r.model||"—") + " · " + tip)}">${s==="bad"?"✕":s==="warn"?"!":s==="ok"?"":"·"}</button>`;
   };
   document.getElementById("content").innerHTML = `<div class="o7pg">
-    <div class="o7-head"><h1>Карта ошибок</h1><span class="o7-sub">команды × ${CATS.length} категорий${wk && wk!=="—" ? " · неделя " + esc(wk) : ""} · команд: ${items.length} · худшие сверху</span><span class="o7-sp"></span>
+    <div class="o7-head"><h1>Карта ошибок</h1><span class="o7-sub">команды × ${HN.length} ${ruPl(HN.length, "категория", "категории", "категорий")}${wk && wk!=="—" ? " · неделя " + esc(wk) : ""} · команд: ${items.length} · худшие сверху</span><span class="o7-sp"></span>
       ${comps.filter(Boolean).length ? `<div class="o7-seg" role="group" aria-label="Компания">${comps.filter(Boolean).map(c=>`<button class="${c===co?"on":""}" data-hco="${c}"><i style="background:${O7_CVAR[c]||"var(--faint)"}"></i>${esc(clabel(c))}</button>`).join("")}</div>` : ""}
     </div>
-    <section class="o7-card mp7-card">${items.length ? `<div class="o7-scroll"><div class="mp7-grid" style="--mp7-n:${CATS.length}">
-      <div class="mp7-row mp7-hd"><span class="mp7-lb">Продюсер · опер / модель</span>${CATS.map((n,j)=>`<button class="mp7-h${hl===j?" on":""}${mx>0&&tot[j].w8===mx&&hl!==j?" mx":""}" data-hcol="${j}" aria-pressed="${hl===j}" title="${esc(n)}: норма ${tot[j].ok} · замечаний ${tot[j].warn} · плохо ${tot[j].bad} · не заполнено ${tot[j].none}">${esc(o7Short(n))}</button>`).join("")}<span class="mp7-lb mp7-scl">Оценка</span></div>
-      ${items.map(it=>`<div class="mp7-row"><button class="mp7-name hm-name" data-hgo="${it.i}" title="открыть карточку команды"><b>${esc(it.producer||"—")}</b> <span>· ${esc(it.r.opName||it.r.opNick||"—")} / ${esc(it.r.model||"—")}</span></button>${it.st.slice(0, CATS.length).map((s,j)=>cell(it, s, j)).join("")}<b class="mp7-sc" style="color:${o7ScVar(it.score)}">${it.score==null?"–":fmtSc(it.score)+"/"+MAX_SCORE}</b></div>`).join("")}
+    <section class="o7-card mp7-card">${items.length ? `<div class="o7-scroll"><div class="mp7-grid" style="--mp7-n:${HN.length}">
+      <div class="mp7-row mp7-hd"><span class="mp7-lb">Продюсер · опер / модель</span>${HN.map((n,j)=>`<button class="mp7-h${hl===j?" on":""}${mx>0&&tot[j].w8===mx&&hl!==j?" mx":""}" data-hcol="${j}" aria-pressed="${hl===j}" title="${esc(n)}: норма ${tot[j].ok} · замечаний ${tot[j].warn} · плохо ${tot[j].bad} · не заполнено ${tot[j].none}">${esc(o7Short(n))}</button>`).join("")}<span class="mp7-lb mp7-scl">Оценка</span></div>
+      ${items.map(it=>`<div class="mp7-row"><button class="mp7-name hm-name" data-hgo="${it.i}" title="открыть карточку команды"><b>${esc(it.producer||"—")}</b> <span>· ${esc(it.r.opName||it.r.opNick||"—")} / ${esc(it.r.model||"—")}</span></button>${it.st.map((s,j)=>cell(it, s, j)).join("")}<b class="mp7-sc" style="color:${o7ScVar(it.score)}">${it.score==null?"–":fmtSc(it.score)+"/"+MAX_SCORE}</b></div>`).join("")}
       <div class="mp7-row mp7-tot"><span class="mp7-lb">Плохо · замечаний</span>${tot.map((t,j)=>`<b class="${hl===j?"on":mx>0&&t.w8===mx?"mx":""}" title="плохо — ${t.bad}, замечание — ${t.warn}">${t.bad}${t.warn ? `<small class="mp7-tw">+${t.warn}</small>` : ""}</b>`).join("")}<span></span></div>
     </div></div>` : '<div class="o7-empty">Нет команд за эту неделю</div>'}</section>
     <div class="mp7-leg"><span><i class="mp7-k mp7-bad">✕</i>плохо</span><span><i class="mp7-k mp7-warn">!</i>замечание</span><span><i class="mp7-k mp7-ok"></i>норма</span><span><i class="mp7-k mp7-none"></i>не заполнено</span><span>Клик по заголовку — подсветить категорию · по клетке — карточка команды</span></div>
@@ -6082,12 +6264,38 @@ function renderShifts(){
 // ---------- v7 (50_pm): общие кусочки экранов продюсера и мониторинга ----------
 const PMX_CO = { "Томск":"var(--art)", "Новосибирск":"var(--vv)", "Онлайн":"var(--dia)" };
 const PMX_SHORT = ["ОКО","модель","мемберы","голы","шоу","плейлист","сайты","кадр","комната"];
+const NSK_SHORT = ["свет и кадр","ловенс","голы","боты","блокнот и микрофон","позиции","посты","модель ↔ мемберы","оператор 1–5"];
+const pmxShort = r => isNskRow(r) ? NSK_SHORT : PMX_SHORT;
+// v7.7: чек-лист для мониторинга продюсера — как у команды недели; новая команда НСК — по формату открытой недели
+// v7.7: полоса на вкладке VVCAM — включён ли новый чек-лист для открытой недели (переключает редактор)
+function nskLatestSheet(){ const r = (state.rows||[]).find(r=>r.city==="Новосибирск" && r.week===state.serverLatest); if (r) return r._sheet; const b = (state.pblocks||[]).find(b=>b.city==="Новосибирск" && b.week===state.serverLatest); return b ? b.sheet : ""; }
+function nskFmtBar(){
+  if (AUTH.prod || viewAsActive()) return "";
+  const sh = nskLatestSheet(); if (!sh) return "";
+  const wk = state.serverLatest || "", on = nskLatestOn();
+  if (on) return `<div class="nsk-bar on"><b>Чек-лист VVCAM</b><span>неделя ${esc(wk)}: свет и кадр, ловенс, голы 5–10, боты, блокнот и микрофон, 4 позиции, посты, модель и оператор ↔ мемберы</span>${AUTH.edit ? `<button class="nsk-off" data-nskfmt="${esc(sh)}" data-on="0">вернуть прежние категории</button>` : ""}</div>`;
+  if (!AUTH.edit) return "";
+  const filled = (state.rows||[]).filter(r=>r._sheet === sh && r.cats.some(c=>String(c||"").trim())).length;
+  return `<div class="nsk-bar"><b>Новый чек-лист VVCAM</b><span>9 пунктов: скрин света и кадра, скрин ловенса, 5–10 голов с ценой и онлайном, боты, блокнот и микрофон, 4 рабочие позиции, 2+ поста в день, модель и оператор ↔ мемберы (1–5).${filled ? ` <b class="nsk-warn">В неделе уже заполнено команд: ${filled} — их тексты покажутся под новыми названиями.</b>` : ""}</span><button class="abtn" data-nskfmt="${esc(sh)}" data-on="1">Включить для недели ${esc(wk)}</button></div>`;
+}
+document.addEventListener("click", async ev=>{
+  const b = ev.target && ev.target.closest ? ev.target.closest("[data-nskfmt]") : null; if (!b) return;
+  ev.stopPropagation();
+  const on = b.dataset.on !== "0";
+  if (!confirm(on ? "Включить новый чек-лист VVCAM для этой недели? Следующие недели получат его автоматически. Прошлые недели не меняются." : "Вернуть прежние 9 категорий для этой недели? Уже написанные тексты останутся, но покажутся под старыми названиями.")) return;
+  b.disabled = true;
+  try { const r = await wp({ action: "nskfmt", sheet: b.dataset.nskfmt, on: on ? "1" : "0" }); if (r.error) throw new Error(r.error); toast(on ? "✔ Новый чек-лист VVCAM включён" : "✔ Прежние категории возвращены"); load({ force: true }); }
+  catch(e){ toast("Не получилось: " + e.message, true); b.disabled = false; }
+}, true);
+function nskLatestOn(){ return (state.pblocks||[]).some(b=>b.city==="Новосибирск" && b.week===state.serverLatest && b.fmt==="nsk") || (state.rows||[]).some(r=>r.city==="Новосибирск" && r.week===state.serverLatest && isNskRow(r)); }
+function pmListFor(it, br){ if (br) return catsOf(br); return (it && it.city === "Новосибирск" && nskLatestOn()) ? CATS_NSK : CATS; }
+function pmListK(k){ const c = typeof pmFindCard === "function" ? pmFindCard(k) : null; return c ? pmListFor(c.it, c.br) : CATS; }
 const PMX_CHEV = '<svg class="pmx-chev" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const PMX_EYE = '<svg class="pmx-eye" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 100-6 3 3 0 000 6z"/></svg>';
 const PMX_TICK = '<svg class="pmx-tick" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 function pmxStrip(t){ return String(t||"").replace(/^\s*(✅|❌|⚠️?|🟠|🔴)\s*/, "").trim(); }
-function pmxSegs(cats, sts, wide){
-  return '<span class="pmx-segs' + (wide ? " wide" : "") + '" aria-hidden="true">' + CATS.map((n,j)=>{ const s = sts ? sts[j] : catState((cats||[])[j]||""); return '<i class="' + (s ? "s-" + s : "") + '" title="' + esc(n) + (s ? " — " + ST_LBL[s] : "") + '"></i>'; }).join("") + '</span>';
+function pmxSegs(cats, sts, wide, names){
+  return '<span class="pmx-segs' + (wide ? " wide" : "") + '" aria-hidden="true">' + (names || CATS).map((n,j)=>{ const s = sts ? sts[j] : catState((cats||[])[j]||""); return '<i class="' + (s ? "s-" + s : "") + '" title="' + esc(n) + (s ? " — " + ST_LBL[s] : "") + '"></i>'; }).join("") + '</span>';
 }
 function pmxIco(s){ return s==="ok" ? '<b class="pmx-i ok" title="норма">✓</b>' : s==="warn" ? '<b class="pmx-i warn" title="замечание">!</b>' : s==="bad" ? '<b class="pmx-i bad" title="плохо">✕</b>' : '<b class="pmx-i">—</b>'; }
 function pmxVk(v){ return v ? (VMAP[v]||"warn") : "none"; }
@@ -6119,9 +6327,9 @@ function renderProdReviews(rows){
   };
   const card = r => {
     const s = rowStats(r), vk = pmxVk(s.verdict);
-    const rsp = recoSplit(r.reco);
+    const rsp = recoSplit(r.reco, catsOf(r));
     const allScr = (state.screens||{})[skey(r)] || [];
-    const cats = CATS.map((n,j)=>{ const t = (r.cats[j]||"").trim(), aScr = allScr.filter(x=>String(x.cat)===ADV_CAT(n)); if (!t && !rsp.adv[j] && !aScr.length) return "";
+    const cats = catsOf(r).map((n,j)=>{ const t = (r.cats[j]||"").trim(), aScr = allScr.filter(x=>String(x.cat)===ADV_CAT(n)); if (!t && !rsp.adv[j] && !aScr.length) return "";
       const aTh = aScr.length ? `<div class="scrow">${aScr.map(x=>`<span class="sthumb" title="${esc(x.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[x.mini||x.link] || (x.mini ? BLANK : driveThumb(x.link,thumbPx(96))))}" data-tk="${esc(x.mini||"")}" data-full="${esc(x.link)}" alt="фото к совету: ${esc(n)}" data-cat="${esc(ADV_CAT(n))}"></span>`).join("")}</div>` : "";
       return `<div class="pmx-rv-row" data-st="${s.st[j]||""}">${pmxIco(s.st[j])}<b>${esc(n)}</b><span class="utext">${esc(pmxStrip(t) || (s.st[j]==="ok" ? "всё хорошо" : ST_LBL[s.st[j]] || "не отмечено"))}</span>${rsp.adv[j] || aScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${rsp.adv[j] ? `<span class="utext">${esc(rsp.adv[j])}</span>` : ""}${aTh}</div>` : ""}</div>`; }).join("");
     const extra = (r.obs ? `<div class="pmx-rv-x"><b>Доп. комментарий</b><span class="utext">${esc(r.obs)}</span></div>` : "")
@@ -6129,7 +6337,7 @@ function renderProdReviews(rows){
     return `<article class="pmx-rv" data-skey="${esc(skey(r))}">
       <div class="pmx-rv-h"><b class="pmx-pname">${teamBadges(r)}${esc(pmxName(r))}</b><span class="pmx-faint">${esc([r.opName ? r.opNick : "", coLbl(r.city), r.week || ""].filter(Boolean).join(" · "))}</span>
         <span class="pmx-vd v-${vk}">${esc(pmxVl(s.verdict))}</span><span class="pmx-sp"></span>
-        ${s.score!==null ? pmxSegs(null, s.st) + `<b class="pmx-score v-${vk}">${fmtSc(s.score)}/${MAX_SCORE}</b>` : ""}</div>
+        ${s.score!==null ? pmxSegs(null, s.st, false, catsOf(r)) + `<b class="pmx-score v-${vk}">${fmtSc(s.score)}/${MAX_SCORE}</b>` : ""}</div>
       <div class="pmx-faint pmx-rv-when">${r.updated ? "разбор смотрящего · " + esc(fmtDay(r.updated)) : "ещё не проверялась"}</div>
       ${cats || extra ? `<div class="pmx-rv-b">${cats}${extra}</div>` : '<div class="empty">Разбора пока нет</div>'}
       ${thumbs(r)}
@@ -6188,25 +6396,26 @@ function renderProdHome(rows){
   (pm.items||[]).filter(it=>it.status==="возврат").forEach(it=>todo.push({ kind:"возврат", k:"warn",
     title: (it.opName||it.nick||"—") + " · " + (it.model||"—") + " — доделать разбор", meta: it.note ? "смотрящий: «" + it.note + "»" : "смотрящий вернул мониторинг",
     btn: `<button class="pmx-sec" data-phmon="${esc(pmCardKey(it))}">Доделать</button>` }));
-  S.filter(x=>x.s.verdict==="критично").forEach(x=>{ const f = PMX_SHORT.filter((n,j)=>x.s.st[j]==="bad");
+  S.filter(x=>x.s.verdict==="критично").forEach(x=>{ const f = pmxShort(x.r).filter((n,j)=>x.s.st[j]==="bad");
     todo.push({ kind:"критично", k:"bad", title: pmxName(x.r) + " — " + fmtSc(x.s.score) + "/" + MAX_SCORE, meta: f.length ? "плохо: " + f.join(", ") : "",
       btn: `<button class="pmx-sec" data-phrev="${esc(skey(x.r))}">Разбор</button>` }); });
-  const badCnt = CATS.map((n,j)=>withS.filter(x=>isDev(x.s.st[j])).length);
+  const bcNames = catNamesFor(withS); // v7.7: по названию
+  const badCnt = bcNames.map(n=>withS.filter(x=>isDev(stByName(x.r, x.s.st, n))).length);
   const mx = Math.max(0, ...badCnt);
   if (mx >= 2){ const j = badCnt.indexOf(mx);
-    todo.push({ kind:"совет", k:"acc", title: "Чаще всего проваливают «" + CATS[j] + "»", meta: mx + " " + pmxTeams(mx) + " из " + withS.length + " · подсказки в «Рекомендациях»",
+    todo.push({ kind:"совет", k:"acc", title: "Чаще всего проваливают «" + bcNames[j] + "»", meta: mx + " " + pmxTeams(mx) + " из " + withS.length + " · подсказки в «Рекомендациях»",
       btn: `<button class="pmx-sec" data-phgo="Рекомендации">Читать</button>` }); }
   const todoHtml = todo.map(t=>`<div class="pmx-todo-i"><span class="pmx-kind k-${t.k}">${esc(t.kind)}</span><span class="pmx-todo-t"><b>${esc(t.title)}</b>${t.meta ? `<span>${esc(t.meta)}</span>` : ""}</span>${t.btn}</div>`).join("");
   // карточки команд: критичные сверху
   const vOrd = { "критично":0, "замечание":1, "норма":2 };
   const cards = S.slice().sort((a,b)=>((a.s.verdict in vOrd ? vOrd[a.s.verdict] : 3) - (b.s.verdict in vOrd ? vOrd[b.s.verdict] : 3)) || pmxName(a.r).localeCompare(pmxName(b.r), "ru")).map(x=>{
     const r = x.r, s = x.s, vk = pmxVk(s.verdict);
-    const fails = PMX_SHORT.filter((n,j)=>s.st[j]==="bad"), warns = PMX_SHORT.filter((n,j)=>s.st[j]==="warn");
+    const fails = pmxShort(r).filter((n,j)=>s.st[j]==="bad"), warns = pmxShort(r).filter((n,j)=>s.st[j]==="warn");
     return `<article class="pmx-tm">
       <div class="pmx-tm-h"><b class="pmx-pname">${teamBadges(r)}${esc(pmxName(r))}</b>${r.opName && r.opNick ? `<span class="pmx-faint">${esc(r.opNick)}</span>` : ""}<span class="pmx-sp"></span><span class="pmx-vd v-${vk}">${esc(pmxVl(s.verdict))}</span></div>
-      <div class="pmx-tm-bar">${pmxSegs(null, s.st, true)}<b class="pmx-score v-${vk}">${s.score!==null ? fmtSc(s.score) + "/" + MAX_SCORE : "—"}</b></div>
+      <div class="pmx-tm-bar">${pmxSegs(null, s.st, true, catsOf(r))}<b class="pmx-score v-${vk}">${s.score!==null ? fmtSc(s.score) + "/" + MAX_SCORE : "—"}</b></div>
       <div class="pmx-tm-f">${s.score===null ? "ещё не проверялась" : fails.length || warns.length ? [fails.length ? "плохо: " + esc(fails.join(", ")) : "", warns.length ? "замечания: " + esc(warns.join(", ")) : ""].filter(Boolean).join(" · ") : "без замечаний"}</div>
-      <div class="pmx-tm-reco">${r.reco ? recoHtml(r.reco) : "Рекомендаций нет"}</div>
+      <div class="pmx-tm-reco">${r.reco ? recoHtml(r.reco, catsOf(r)) : "Рекомендаций нет"}</div>
       <div class="pmx-tm-foot"><span>${r.updated ? "разбор смотрящего · " + esc(fmtDay(r.updated)) : "разбора ещё нет"}</span><button class="pmx-sec" data-phrev="${esc(skey(r))}">Открыть разбор</button></div>
     </article>`;
   }).join("");
@@ -6256,9 +6465,9 @@ function pmCardKey(it, baseKey){ const b = baseKey || (it && it.base) || ""; ret
 // чистая: есть ли в записи хоть одна заполненная категория
 function pmChecked(it){ return !!(it && it.status !== "скрыта" && (it.cats||[]).some(c=>String(c||"").trim())); }
 // чистая: полнота разбора — сколько из 9 категорий заполнено и каких не хватает
-function pmFill(cats){
-  const miss = [];
-  for (let j = 0; j < 9; j++) if (!String((cats||[])[j]||"").trim()) miss.push(CATS[j] || ("№" + (j+1)));
+function pmFill(cats, list){
+  const miss = [], L = list || CATS;
+  for (let j = 0; j < 9; j++) if (!String((cats||[])[j]||"").trim()) miss.push(L[j] || ("№" + (j+1)));
   return { n: 9 - miss.length, miss, full: miss.length === 0 };
 }
 function pmFillTag(cats){
@@ -6358,7 +6567,8 @@ function pmxForm(c, v, k, kid, canEdit, mineSt, dif, scr, it){
   const meta = `<details class="pmx-meta" data-pmedit="${esc(mk)}" ${(state.pmEditOpen||{})[mk] ? "open" : ""}><summary>Команда и ссылки <span class="pmx-faint">${esc([v.nick, v.opname, v.model].filter(Boolean).join(" · ") || "не указано")}</span></summary>
     <div class="pmx-inps">${inp("pm"+kid+"_nick", v.nick, "ник опера")}${inp("pm"+kid+"_opname", v.opname, "опер")}${inp("pm"+kid+"_model", v.model, "модель")}</div>
     <label class="pmx-lbl" for="pm${kid}_links">Ссылки — одна в строке: «CB = https://chaturbate.com/…»</label><textarea id="pm${kid}_links" class="pmx-ta" rows="1" ${dis} placeholder="CB = https://chaturbate.com/имя">${esc(v.links)}</textarea></details>`;
-  const cats = CATS.map((n,j)=>{
+  const pmL2 = pmListFor(it, c && c.br), nskF = pmL2 === CATS_NSK;
+  const cats = pmL2.map((n,j)=>{
     const id = "pm" + kid + "_" + j, val = v.cats[j] || "";
     const myS = catState(val), hisS = mineSt ? mineSt[j] : null;
     const miss = dif.miss.includes(j), strict = dif.strict.includes(j);
@@ -6369,12 +6579,13 @@ function pmxForm(c, v, k, kid, canEdit, mineSt, dif, scr, it){
       ${canEdit ? `<span class="pmx-segbtn" role="group" aria-label="${esc(n)}: уровень">${segBtns(`data-pmta="${id}"`, myS, "pmq")}</span><button class="qbtn pmq qclr pmx-clr" data-pmta="${id}" data-v="" title="очистить поле" aria-label="очистить поле">⌫</button>` : `<span class="pmx-ro">${pmxIco(myS)}</span>`}
       <span class="pmx-sp"></span>
       ${canEdit ? `<button class="pmx-shot" data-pmupl="${esc(k)}" data-pmc="${j}" title="прикрепить скрин к «${esc(n)}»">Скрин</button>` : ""}</div>
+      ${nskF ? `<div class="nsk-hint pm">${esc(NSK_HINT[j])}${j === NSK_GOALS ? " · строки: «🎯 гол | цена тк | онлайн онл»" : j === NSK_SCALE ? " · напиши «Оценка N/5»" : ""}</div>` : ""}
       <textarea id="${id}" class="pmx-ta" rows="2" ${dis} placeholder="что увидел — пиши подробно, поле растёт" aria-label="Комментарий: ${esc(n)}">${esc(val)}</textarea>
       ${pmThumbs(sc, it, canEdit)}</div>`;
   }).join("");
   const gen = `<div class="pmx-cat pmx-gen"><div class="pmx-cat-h"><b class="pmx-cname">Общий комментарий${canEdit ? '<span class="pmx-hint">скрин можно вставить Ctrl+V прямо в поле категории — он встанет в неё</span>' : ""}</b><span class="pmx-sp"></span>${canEdit ? `<button class="pmx-shot" data-pmupl="${esc(k)}" data-pmc="G">Общее фото</button>` : ""}</div>
     <textarea id="pm${kid}_comment" class="pmx-ta" rows="2" ${dis} placeholder="общее по команде" aria-label="Общий комментарий">${esc(v.comment)}</textarea>
-    ${pmThumbs(scr.filter(s=>!CATS.includes(String(s.cat))), it, canEdit)}</div>`;
+    ${pmThumbs(scr.filter(s=>!CATS_ALL.includes(String(s.cat))), it, canEdit)}</div>`;
   return meta + `<div class="pmx-cats">${cats}${gen}</div>`;
 }
 function pmCardHtml(c, canEdit, isEd){
@@ -6387,14 +6598,15 @@ function pmCardHtml(c, canEdit, isEd){
   const nDif = dif.miss.length + dif.strict.length;
   const open = !!(state.pmOpen||{})[k];
   const scr = it && it.id ? ((state.pm.screens||{})["PM|" + it.id] || []) : [];
-  const fill = pmFill(v.cats);
+  const pmL = pmListFor(it, br);
+  const fill = pmFill(v.cats, pmL);
   const kid = strHash(k);
   const city = (it && it.city) || (br && br.city) || "";
   const isAdded = it ? !it.base : !c.baseKey;
   const hidden = !!(it && it.status === "скрыта");
   const chip = `<span class="pmx-st" data-s="${esc(st)}">${esc(pmStLbl(st))}</span>`;
   const dirty = pmDirty(k) ? '<span class="pmx-dirty" title="есть несохранённые правки (они в черновике)">✎</span>' : "";
-  const segs = pmxSegs(v.cats) + `<small class="pmx-fn">${fill.n} из 9</small>`;
+  const segs = pmxSegs(v.cats, null, false, pmL) + `<small class="pmx-fn">${fill.n} из 9</small>`;
   const badges = (br || mine) ? teamBadges(br || mine) : "";
   const form = pmxForm(c, v, k, kid, canEdit, mineSt, dif, scr, it);
   if (isEd){
@@ -6411,7 +6623,7 @@ function pmCardHtml(c, canEdit, isEd){
       <span class="pmx-c-btn"><button class="pmx-link" data-pmtoggle="${esc(k)}">${open ? "свернуть" : "открыть"}</button></span></div>`;
     if (!open) return `<div class="pmcard pmx-erow">${head}</div>`;
     const note = st === "возврат" && it && it.note ? `<div class="pmx-note"><b>↩ Ты вернул:</b> <span class="utext">${esc(it.note)}</span></div>` : "";
-    const cmp = `<div class="pmx-cmp"><div class="pmx-cr pmx-ch"><span>Категория</span><span>Продюсер${it && it.producer ? " · " + esc(it.producer) : ""}</span><span>Твой разбор</span></div>` + CATS.map((n,j)=>{
+    const cmp = `<div class="pmx-cmp"><div class="pmx-cr pmx-ch"><span>Категория</span><span>Продюсер${it && it.producer ? " · " + esc(it.producer) : ""}</span><span>Твой разбор</span></div>` + pmL.map((n,j)=>{
       const pS = catState(v.cats[j]||""), mS = mineSt ? mineSt[j] : null;
       const miss = dif.miss.includes(j), strict = dif.strict.includes(j);
       const pT = pmxStrip(v.cats[j]) || (pS==="ok" ? "всё хорошо" : ST_LBL[pS] || "не заполнено");
@@ -6628,7 +6840,7 @@ async function pmEnsureId(k){ // для скрина нужна запись —
 // v6.2: скрины мониторинга идут через то же окно «📷 Фото», что и у смотрящего (Ctrl+V, перетаскивание пачкой, камера, разметка)
 function pmOpenUpload(k, catIdx){
   uplTarget = { pm: k, catIdx: catIdx };
-  document.getElementById("u-title").textContent = "📷 Фото — " + (catIdx === undefined ? "общее фото" : CATS[catIdx]);
+  document.getElementById("u-title").textContent = "📷 Фото — " + (catIdx === undefined ? "общее фото" : pmListK(k)[catIdx]);
   document.getElementById("u-msg").textContent = "";
   openModal("uplmodal");
 }
@@ -6638,7 +6850,7 @@ async function pmUploadOne(blob, k, catIdx){ // → true | текст ошибк
     if (!isVid && blob && blob.type && !/^image\//.test(blob.type)) return "не картинка";
     const id = await pmEnsureId(k); if (!id) return "сначала сохрани мониторинг";
     const enc = isVid ? await videoEncode(blob) : await shotEncode(blob);
-    const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, kind: isVid ? "video" : "", cat: catIdx === undefined || catIdx === null ? "" : CATS[catIdx] }, isVid ? 180000 : 90000);
+    const r = await wp({ action:"pmupload", id, data: enc.data, small: enc.small, kind: isVid ? "video" : "", cat: catIdx === undefined || catIdx === null ? "" : pmListK(k)[catIdx] }, isVid ? 180000 : 90000);
     const key = r.key || ("PM|" + id);
     state.pm.screens = state.pm.screens || {};
     const arr = state.pm.screens[key] = state.pm.screens[key] || [];
@@ -6687,7 +6899,7 @@ function pmBind(){
       ev.preventDefault(); ev.stopPropagation();
       uplTarget = { pm: k, catIdx: m ? +m[1] : undefined };
       doUpload(files);
-      toast("📸 Скрин → " + (m ? CATS[+m[1]] : "общее фото"));
+      toast("📸 Скрин → " + (m ? pmListK(k)[+m[1]] : "общее фото"));
     });
   });
   box.querySelectorAll(".pmq").forEach(b=>b.onclick=()=>{ const id = b.dataset.pmta, ta = document.getElementById(id); if (!ta) return; ta.value = segApply(ta, b); ta.dispatchEvent(new Event("input", { bubbles: true })); softRender(); if (b.dataset.mk){ const t2 = document.getElementById(id); if (t2) focusEnd(t2); } });
@@ -6699,7 +6911,7 @@ function pmBind(){
   box.querySelectorAll("[data-pmsave]").forEach(b=>b.onclick=()=>{ const k = b.dataset.pmsave, got = pmCollect(k);
     const was = got && got.c.it ? (got.c.it.cats || []) : [];
     const need = got ? needText(got.v.cats.map((v,j)=>v === (was[j]||"") ? "" : v)) : []; // v7.2: при «Замечании»/«Плохо» нужен текст (автосохранение черновика — без проверки)
-    if (need.length){ const kid = strHash(k); markNeed(need.map(j=>document.getElementById("pm"+kid+"_"+j))); toast("Допиши, что не так: " + need.map(j=>CATS[j]).join(", "), true); return; }
+    if (need.length){ const kid = strHash(k); markNeed(need.map(j=>document.getElementById("pm"+kid+"_"+j))); toast("Допиши, что не так: " + need.map(j=>pmListK(k)[j]).join(", "), true); return; }
     if (state.pmNoAuto) delete state.pmNoAuto[k]; pmSaveQueued(k, false); });
   box.querySelectorAll("[data-pmhide]").forEach(b=>b.onclick=async ()=>{
     const c = pmFindCard(b.dataset.pmhide); if (!c) return;
@@ -6786,10 +6998,10 @@ function pmBlockFor(r){
   if (!it) return "";
   const d = pmDiff(it.cats, rowStats(r).st);
   const nd = d.miss.length + d.strict.length;
-  const txt = CATS.map((n,j)=>{ const t = String((it.cats||[])[j]||"").trim(); if (!t) return ""; const st = catState(t); const m = d.miss.includes(j) ? ' style="color:var(--bad)"' : d.strict.includes(j) ? ' style="color:var(--warn)"' : "";
+  const txt = catsOf(r).map((n,j)=>{ const t = String((it.cats||[])[j]||"").trim(); if (!t) return ""; const st = catState(t); const m = d.miss.includes(j) ? ' style="color:var(--bad)"' : d.strict.includes(j) ? ' style="color:var(--warn)"' : "";
     return `<div${m}><b>${st==="ok"?"✅":st==="warn"?"⚠️":st==="bad"?"❌":"·"} ${esc(n)}:</b> <span class="utext">${esc(t)}</span></div>`; }).join("") + (String(it.comment||"").trim() ? `<div><b>💬</b> <span class="utext">${esc(it.comment)}</span></div>` : "");
   const nScr = ((state.pm.screens||{})["PM|" + it.id] || []).length;
-  return `<div class="drow"><b>📋 Мониторинг продюсера${it.who ? " · " + esc(it.who) : ""}${it.updated ? " · " + esc(fmtDay(it.updated)) : ""}</b><span>${txt ? `<div style="font-size:12.5px;margin-bottom:6px">${txt}</div>` : ""}${nScr ? `<span style="color:var(--faint);font-size:11.5px">📸 скринов: ${nScr} · </span>` : ""}<span class="ptag ${PM_ST_CLS[it.status]||""}">${esc(pmStLbl(it.status))}</span> ${nd ? `<span class="ptag pt-bad">≠ ${nd}: ${esc(d.miss.concat(d.strict).map(j=>CATS[j]).join(", "))}</span>` : (pmChecked(it) ? '<span class="ptag pt-ok">оценки совпадают</span>' : "")} <button class="abtn2" data-pmgo="${esc(it.id)}">открыть</button></span></div>`;
+  return `<div class="drow"><b>📋 Мониторинг продюсера${it.who ? " · " + esc(it.who) : ""}${it.updated ? " · " + esc(fmtDay(it.updated)) : ""}</b><span>${txt ? `<div style="font-size:12.5px;margin-bottom:6px">${txt}</div>` : ""}${nScr ? `<span style="color:var(--faint);font-size:11.5px">📸 скринов: ${nScr} · </span>` : ""}<span class="ptag ${PM_ST_CLS[it.status]||""}">${esc(pmStLbl(it.status))}</span> ${nd ? `<span class="ptag pt-bad">≠ ${nd}: ${esc(d.miss.concat(d.strict).map(j=>catsOf(r)[j]).join(", "))}</span>` : (pmChecked(it) ? '<span class="ptag pt-ok">оценки совпадают</span>' : "")} <button class="abtn2" data-pmgo="${esc(it.id)}">открыть</button></span></div>`;
 }
 document.addEventListener("click", ev=>{
   const b = ev.target && ev.target.closest ? ev.target.closest("[data-pmgo]") : null;
@@ -7085,12 +7297,13 @@ function presSlideHtml(id, D){
   if (id === "heat"){
     const cols = city ? [...new Set(rows.map(r=>r.producer || "—"))].sort((a,b)=>a.localeCompare(b,"ru")) : presCities();
     const pick = c => rows.filter(r=>city ? (r.producer || "—") === c : r.city === c);
-    const cell = (j, c) => { const rs = pick(c), sts = rs.map(r=>rowStats(r).st[j]); const ev = sts.filter(x=>x).length, bad = sts.filter(x=>x==="bad").length, warn = sts.filter(x=>x==="warn").length; return { ev, bad: bad + warn, nb: bad, nw: warn, v: ev ? (bad + warn * 0.5)/ev : 0 }; }; // v7.2: яркость — «плохо» + ½ замечаний
-    let vmax = 0; CATS.forEach((n,j)=>cols.forEach(c=>{ vmax = Math.max(vmax, cell(j, c).v); })); vmax = vmax || 1; // шкала от самой частой ошибки — контраст виден и при малых долях
+    const PN = catNamesFor(rows); // v7.7: строки — пункты чек-листа (по названию)
+    const cell = (j, c) => { const rs = pick(c), sts = rs.map(r=>stByName(r, rowStats(r).st, PN[j])); const ev = sts.filter(x=>x).length, bad = sts.filter(x=>x==="bad").length, warn = sts.filter(x=>x==="warn").length; return { ev, bad: bad + warn, nb: bad, nw: warn, v: ev ? (bad + warn * 0.5)/ev : 0 }; }; // v7.2: яркость — «плохо» + ½ замечаний
+    let vmax = 0; PN.forEach((n,j)=>cols.forEach(c=>{ vmax = Math.max(vmax, cell(j, c).v); })); vmax = vmax || 1; // шкала от самой частой ошибки — контраст виден и при малых долях
     return `<h2>Где ошибаются <small>доля команд с замечанием или «плохо» · чем ярче, тем больше «плохо» · клик — какие команды</small></h2>
       <div class="pheat" style="grid-template-columns:minmax(150px,1.3fr) repeat(${cols.length}, minmax(70px,1fr))"><span></span>${cols.map(c=>`<span class="ph-h">${esc(city ? c : clabel(c))}</span>`).join("")}
-      ${CATS.map((n,j)=>`<span class="ph-r">${esc(n)}</span>` + cols.map(c=>{ const x = cell(j, c); const a = x.ev ? (x.bad ? 0.14 + 0.76*(x.v/vmax) : 0.04) : 0;
-        return `<button class="ph-c" data-drill="cat:${j}:${esc(c)}" style="background:${x.ev ? `rgba(229,101,95,${a.toFixed(2)})` : "transparent"}" title="${esc(n + " · " + (city ? c : clabel(c)) + ": плохо " + x.nb + ", замечание " + x.nw + " из " + x.ev)}">${x.ev ? `<b>${Math.round(x.bad/x.ev*100)}%</b><small>${x.bad}/${x.ev}</small>` : "–"}</button>`; }).join("")).join("")}</div>
+      ${PN.map((n,j)=>`<span class="ph-r">${esc(n)}</span>` + cols.map(c=>{ const x = cell(j, c); const a = x.ev ? (x.bad ? 0.14 + 0.76*(x.v/vmax) : 0.04) : 0;
+        return `<button class="ph-c" data-drill="cat:${CATS_ALL.indexOf(n)}:${esc(c)}" style="background:${x.ev ? `rgba(229,101,95,${a.toFixed(2)})` : "transparent"}" title="${esc(n + " · " + (city ? c : clabel(c)) + ": плохо " + x.nb + ", замечание " + x.nw + " из " + x.ev)}">${x.ev ? `<b>${Math.round(x.bad/x.ev*100)}%</b><small>${x.bad}/${x.ev}</small>` : "–"}</button>`; }).join("")).join("")}</div>
       <div class="plegend">светлее — реже, темнее — чаще · «–» — не проверяли</div>`;
   }
   if (id === "prods"){
@@ -7122,7 +7335,7 @@ function presSlideHtml(id, D){
     if (!cr.length) return `<h2>Критичные команды</h2><div class="pempty big">Критичных нет 🎉</div>`;
     return `<h2>Критичные команды <small>${cr.length} · клик — карточка команды</small></h2><div class="pcrit">${cr.map(x=>{
       const sc = ((state.screens||{})[skey(x.r)] || []).find(s=>s.type !== "video" && !isAdvCat(s.cat)), tk = sc ? (sc.mini || sc.link) : "";
-      const bad = CATS.filter((n,j)=>x.s.st[j] === "bad").concat(CATS.filter((n,j)=>x.s.st[j] === "warn")); // сначала «плохо», затем замечания
+      const bad = catsOf(x.r).filter((n,j)=>x.s.st[j] === "bad").concat(catsOf(x.r).filter((n,j)=>x.s.st[j] === "warn")); // сначала «плохо», затем замечания
       return `<div class="pcard" data-go="${esc(x.r._sheet + "|" + x.r._row)}">${tk ? `<img loading="lazy" data-tk="${esc(tk)}" src="${esc((state.thumbData||{})[tk] || BLANK)}" alt="">` : '<div class="pnoimg">нет скрина</div>'}
         <div class="pcard-b"><b>${teamBadges(x.r)}${esc(presTeamName(x.r))}</b><small>${esc(clabel(x.r.city))} · ${esc(x.r.producer||"")} · ${fmtSc(x.s.score)}/${MAX_SCORE}</small><div class="ptags">${bad.slice(0,4).map(n=>`<span>${esc(n)}</span>`).join("")}${bad.length>4?`<span>+${bad.length-4}</span>`:""}</div></div></div>`;
     }).join("")}</div>`;
@@ -7135,11 +7348,11 @@ function presSlideHtml(id, D){
       <div><h3>👀 Просьбы посмотреть · ${asks.length}</h3><ol class="plist">${asks.slice(0, 8).map(a=>`<li><span>${esc(a.nick||"")} / ${esc(a.model||"")}<small>${esc(a.producer||"")} · ${esc(a.when||"")}</small></span><b class="ptext">«${esc(String(a.text||"").slice(0, 90))}»</b></li>`).join("") || "<li class=pnone>открытых просьб нет</li>"}</ol></div></div>`;
   }
   if (id === "focus"){
-    const cats = CATS.map((n,j)=>({ n, k: S.st.filter(x=>x.st[j] === "bad").length + 0.5 * S.st.filter(x=>x.st[j] === "warn").length })).filter(x=>x.k).sort((a,b)=>b.k-a.k).slice(0, 3);
+    const cats = catNamesFor(rows).map(n=>({ n, k: rows.filter((r,i)=>stByName(r, S.st[i].st, n) === "bad").length + 0.5 * rows.filter((r,i)=>stByName(r, S.st[i].st, n) === "warn").length })).filter(x=>x.k).sort((a,b)=>b.k-a.k).slice(0, 3);
     const tasks = (state.tasks||[]).filter(t=>t.status !== "сделана" && !t.orphan && (!city || t.city === city || String(t.sheet||"").indexOf(city) >= 0));
     const byP = {}; tasks.forEach(t=>{ (byP[t.producer || "—"] = byP[t.producer || "—"] || []).push(t); });
     return `<h2>Фокус на неделю</h2><div class="pcols2">
-      <div><h3>🎯 Главные зоны роста</h3><div class="pfocus">${cats.map((x,i)=>`<div class="pf" data-drill="cat:${CATS.indexOf(x.n)}:"><b>${i+1}</b><span>${esc(x.n)}<small>замечание у ${x.k} из ${S.checked} команд</small></span></div>`).join("") || '<div class="pnone">замечаний нет 🎉</div>'}</div></div>
+      <div><h3>🎯 Главные зоны роста</h3><div class="pfocus">${cats.map((x,i)=>`<div class="pf" data-drill="cat:${CATS_ALL.indexOf(x.n)}:"><b>${i+1}</b><span>${esc(x.n)}<small>замечание у ${x.k} из ${S.checked} команд</small></span></div>`).join("") || '<div class="pnone">замечаний нет 🎉</div>'}</div></div>
       <div><h3>📌 Открытые задачи продюсерам · ${tasks.length}</h3><ol class="plist">${Object.keys(byP).sort((a,b)=>byP[b].length-byP[a].length).map(p=>`<li><span>${esc(p)}<small>${esc(byP[p].slice(0,2).map(t=>String(t.text||"").slice(0,60)).join(" · "))}</small></span><b>${byP[p].length}</b></li>`).join("") || "<li class=pnone>открытых задач нет</li>"}</ol></div></div>`;
   }
   return "";
@@ -7149,7 +7362,7 @@ function presDrill(spec){
   if (spec === "all") title = "Все команды";
   else if (spec.indexOf("city:") === 0){ const c = spec.slice(5); list = presRows(D.wk, c); title = clabel(c); }
   else if (spec.indexOf("prod:") === 0){ const p = spec.slice(5); list = D.rows.filter(r=>r.producer === p); title = "Продюсер " + p; }
-  else if (spec.indexOf("cat:") === 0){ const [, j, c] = spec.split(":");  list = D.rows.filter(r=>isDev(rowStats(r).st[+j]) && (!c || (D.city ? (r.producer||"—") === c : r.city === c))); title = CATS[+j] + (c ? " · " + (D.city ? c : clabel(c)) : "") + " — замечания"; }
+  else if (spec.indexOf("cat:") === 0){ const [, j, c] = spec.split(":");  list = D.rows.filter(r=>isDev(stByName(r, rowStats(r).st, CATS_ALL[+j])) && (!c || (D.city ? (r.producer||"—") === c : r.city === c))); title = CATS_ALL[+j] + (c ? " · " + (D.city ? c : clabel(c)) : "") + " — замечания"; }
   const ord = { "критично": 0, "замечание": 1, "норма": 2 };
   list = list.slice().sort((a,b)=>((ord[rowStats(a).verdict] ?? 3) - (ord[rowStats(b).verdict] ?? 3)));
   const box = document.getElementById("pr-drill");
@@ -7461,9 +7674,9 @@ function renderNotes(kind){
   const filt = state.noteFilt[kind] || "all";
   const nFull = groups.filter(g=>String(map[g.key]||"").trim()).length;
   const hintsOf = rows => { // «чаще всего проваливают» — категории с замечаниями по командам продюсера
-    const cnt = CATS.map(()=>0);
-    rows.forEach(r=>{ try { (rowStats(r).st||[]).forEach((s,i)=>{ if (isDev(s) && i < cnt.length) cnt[i]++; }); } catch(e){} });
-    return cnt.map((n,i)=>({ n, c: CATS[i] })).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,3).map(x=>x.c);
+    const HNn = catNamesFor(rows), cnt = HNn.map(()=>0); // v7.7: по названию
+    rows.forEach(r=>{ try { const st = rowStats(r).st || []; HNn.forEach((n,i)=>{ if (isDev(stByName(r, st, n))) cnt[i]++; }); } catch(e){} });
+    return cnt.map((n,i)=>({ n, c: HNn[i] })).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,3).map(x=>x.c);
   };
   const items = groups.map(g=>{
     const r = g.r, key = g.key;
@@ -7574,7 +7787,7 @@ function renderCompare(rows, st){
     ["🔴 критично", A.bad, B.bad, -1, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
     ["средняя оценка", A.avg===null?null:A.avg, B.avg===null?null:B.avg, 1, null, null, "pct"]
   ];
-  const catRows = CATS.map((n,i)=>({ n, a: teamsOf(a).filter(r=>isDev(rowStats(r).st[i])).length, b: teamsOf(b).filter(r=>isDev(rowStats(r).st[i])).length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
+  const catRows = catNamesFor(teamsOf(a).concat(teamsOf(b))).map(n=>({ n, a: teamsOf(a).filter(r=>isDev(stByName(r, rowStats(r).st, n))).length, b: teamsOf(b).filter(r=>isDev(stByName(r, rowStats(r).st, n))).length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
   document.getElementById("content").innerHTML = `
     <div class="card"><h2>Сравнение недель</h2>
       <div class="filters">
@@ -7808,7 +8021,7 @@ async function aiScreenDraft(key, x){
   const id = driveId(scr.link || scr.mini || "");
   aiMsg(key, "🤖 ИИ смотрит скрин… (до минуты)");
   try {
-    const res = await aiAsk("screendraft", { id: id, text: "", ckey: "scr|" + id });
+    const res = await aiAsk("screendraft", { id: id, text: "", set: isNskRow(x.r) ? "nsk" : "", ckey: "scr|" + (isNskRow(x.r) ? "n|" : "") + id });
     if (res.error) throw new Error(res.error);
     const icon = s => s==="ok" ? "✅" : s==="warn" ? "⚠️" : s==="bad" ? "❌" : "·";
     const col = (d, tag) => {
@@ -8000,7 +8213,8 @@ async function saveRow(x, key){
   if (!rowEditable(x.r)){ toast("Эта неделя открыта только для просмотра — выбери её в списке недель", true); return; }
   const btn = document.getElementById("sv"+key);
   const need = needText(CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j), v = el ? el.value : ""; return v === (x.r.cats[j]||"") ? "" : v; })); // проверяем только изменённые поля: старый голый «❌» в таблице не блокирует
-  if (need.length){ markNeed(need.map(j=>document.getElementById("ed"+key+"_"+j))); toast("Допиши, что не так: " + need.map(j=>CATS[j]).join(", "), true); return; }
+  if (need.length){ markNeed(need.map(j=>document.getElementById("ed"+key+"_"+j))); toast("Допиши, что не так: " + need.map(j=>catsOf(x.r)[j]).join(", "), true); return; }
+  if (isNskRow(x.r)){ const gaps = nskGaps(x, key); if (gaps.length) toast("Сохраняю, но в разборе не хватает: " + gaps.join("; "), true); } // v7.7: не блокируем — напоминаем
   const changes = [];
   for (let j=0;j<9;j++){
     const val = document.getElementById("ed"+key+"_"+j).value;
@@ -9029,7 +9243,7 @@ async function uploadScreen(blob, x, catIdx, quiet, adv){ // → true | текс
     const isVid = isVideoBlob(blob);
     if (!isVid && blob && blob.size > 25*1024*1024){ toast("Файл слишком большой (больше 25 МБ)", true); return "больше 25 МБ"; }
     if (!isVid && blob && blob.type && !/^image\//.test(blob.type)){ toast("Это не картинка и не видео", true); return "не картинка"; }
-    const catName = (catIdx!==undefined&&catIdx!==null) ? (adv ? ADV_CAT(CATS[catIdx]) : CATS[catIdx]) : "";
+    const catName = (catIdx!==undefined&&catIdx!==null) ? (adv ? ADV_CAT(catsOf(x.r)[catIdx]) : catsOf(x.r)[catIdx]) : "";
     const label = (isVid ? "🎬 Видео" : "📸 Скрин") + (catName ? " [" + catName + "]" : "");
     toast(label + ": " + (isVid ? "готовлю…" : "сжимаю…"));
     const enc = isVid ? await videoEncode(blob) : await shotEncode(blob); // v6.6: WebP, где браузер умеет; видео — с обложкой
