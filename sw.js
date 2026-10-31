@@ -1,14 +1,14 @@
 // Обновление 6 (10): service worker — кэширует ТОЛЬКО статическую оболочку сайта.
 // Ответы API (script.google.com / googleusercontent), токены, POST и любые запросы с параметрами не кэшируются никогда.
 // Пути относительные — работает на GitHub Pages под /pd/.
-const SHELL_VER = "shell-2026-10-30.78-layout1";
+const SHELL_VER = "shell-2026-10-31.79";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./icon-32.png", "./favicon.ico"];
 self.addEventListener("install", (e) => {
   // v6.9: по одному файлу — если какую-то иконку забыли загрузить, оболочка всё равно кэшируется
   e.waitUntil(caches.open(SHELL_VER).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== SHELL_VER).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith("shell-") && k !== SHELL_VER).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 function isShell(url) {
   if (url.origin !== self.location.origin) return false; // чужие домены (API) — мимо кэша

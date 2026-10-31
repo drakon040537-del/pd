@@ -1956,6 +1956,8 @@
   .pmx-rv-when{margin:2px 0 8px}
   .pmx-rv-b{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .pmx-rv-row{display:grid;grid-template-columns:16px 200px minmax(0,1fr);gap:8px;padding:7px 10px;font-size:13px;border-bottom:1px solid var(--line)}
+  .pmx-rv-content{min-width:0;overflow-wrap:anywhere;overflow-x:auto}
+  .pmx-rv-content > .utext{display:block}
   .pmx-rv-row b{font-weight:600}
   .pmx-rv-row[data-st="bad"]{background:var(--badbg)}
   .pmx-rv-row .utext,.pmx-rv-x .utext{white-space:pre-wrap;word-break:break-word;color:var(--dim)}
@@ -2000,7 +2002,7 @@
     .pmx-todo-t{min-width:60%}
     .pmx-kpi .n{font-size:28px}
     .pmx-rv-row{grid-template-columns:16px minmax(0,1fr)}
-    .pmx-rv-row .utext{grid-column:2}
+    .pmx-rv-row .utext,.pmx-rv-row > .pmx-rv-content{grid-column:2}
     .pmx-rv-x{grid-template-columns:minmax(0,1fr)}
     .pmx-prods{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
   }
@@ -2892,7 +2894,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-30.78"
+  VER: "2026-10-31.79"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -3228,7 +3230,7 @@ function advModalThumbs(){
   if (!advM){ box.innerHTML = ""; return; }
   const x = state.lastView[advM.key]; if (!x){ box.innerHTML = ""; return; }
   const dsk = skey(x.r), list = ((state.screens||{})[dsk] || []).filter(s=>String(s.cat) === ADV_CAT(advM.n || CATS[advM.j]));
-  box.innerHTML = list.map(s=>`<span class="sthumb${s.type==="video"?" isvid":""}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(160))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" data-advview="1" alt="фото к совету"><span class="sqx" data-advdel="${esc(s.link)}" title="удалить фото" role="button" aria-label="удалить фото">✕</span></span>`).join("");
+  box.innerHTML = list.map(s=>`<span class="sthumb${s.type==="video"?" isvid":""}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(160))))}" data-tk="${esc(s.mini||s.link)}" data-full="${esc(s.link)}" data-advview="1" alt="фото к совету"><span class="sqx" data-advdel="${esc(s.link)}" title="удалить фото" role="button" aria-label="удалить фото">✕</span></span>`).join("");
   setTimeout(ensureThumbs, 30);
   // предпросмотр под категорией: фото могли добавиться или удалиться
   const id = advM.id, w = document.getElementById("advw" + id); if (w) advMark(id);
@@ -4421,7 +4423,7 @@ function renderMain(){
       const rowScreens = (state.screens||{})[skey(x.r)] || [];
       const rowLinks = linksArrFromText(null, x.r.linksTxt||"").filter(l=>/^https?:\/\//i.test(l.url));
       const linksCell = rowLinks.map(l=>`<a class="rlink" href="${esc(l.url)}" target="_blank" rel="noopener" title="${esc(l.url)}">${esc(l.title||"ссылка")}</a>`).join("");
-      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
+      const scrThumbs = (scr,n,del)=>scr.length?`<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc(s.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||s.link)}" data-full="${esc(s.link)}" alt="скрин: ${esc(n)}" data-cat="${esc(n)}">${del?`<span class="sqx" data-dsk="${esc(skey(x.r))}" data-dlink="${esc(s.link)}" title="удалить скрин">✕</span>`:""}</span>`).join("")}</div>`:"";
       const genScreens = rowScreens.filter(s=>!CATS_ALL.includes(String(s.cat)) && !isAdvCat(s.cat)); // фото советов — в своих заметках
       const plan = (state.plans||{})[x.r.city+"|"+x.r.producer] || "";
       const pmBlk = pmBlockFor(x.r); // v6: мониторинг продюсера по этой команде (статус, расхождения)
@@ -4760,7 +4762,7 @@ function renderMain(){
       const f = state.failedSaves[rk(x.r)]; if (!f) return;
       delete state.failedSaves[rk(x.r)];
       toast("Повторяю отправку…");
-      queueRowSave(x, key, Object.entries(f.fields));
+      queueRowSave(x, key, Object.entries(f.fields).map(c=>[c[0], c[1], (f.expected || {})[c[0]]]));
     };
     // U1: ИИ-ответ рисуется через aiShow(key, …): после await элементы ищутся ЗАНОВО по стабильному key,
     // а сам блок переживает перерисовку (state.aiBox). Ничего не сохраняется без «принять»/«заменить».
@@ -6326,15 +6328,15 @@ function renderProdReviews(rows){
   const list = rows.filter(r=>r.opName||r.opNick||r.model).slice().sort((a,b)=>tms(b)-tms(a));
   const thumbs = r => {
     const scr = ((state.screens||{})[skey(r)] || []).filter(s=>!isAdvCat(s.cat)); // фото советов — под своими категориями
-    return scr.length ? `<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||"")}" data-full="${esc(s.link)}" data-cat="${esc(s.cat||"скрин")}" alt="скрин"></span>`).join("")}</div>` : "";
+    return scr.length ? `<div class="scrow">${scr.map(s=>`<span class="sthumb" title="${esc((s.cat?s.cat+" · ":"")+(s.ts||""))}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[s.mini||s.link] || (s.mini ? BLANK : driveThumb(s.link,thumbPx(96))))}" data-tk="${esc(s.mini||s.link)}" data-full="${esc(s.link)}" data-cat="${esc(s.cat||"скрин")}" alt="скрин"></span>`).join("")}</div>` : "";
   };
   const card = r => {
     const s = rowStats(r), vk = pmxVk(s.verdict);
     const rsp = recoSplit(r.reco, catsOf(r));
     const allScr = (state.screens||{})[skey(r)] || [];
     const cats = catsOf(r).map((n,j)=>{ const t = (r.cats[j]||"").trim(), aScr = allScr.filter(x=>String(x.cat)===ADV_CAT(n)); if (!t && !rsp.adv[j] && !aScr.length) return "";
-      const aTh = aScr.length ? `<div class="scrow">${aScr.map(x=>`<span class="sthumb" title="${esc(x.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[x.mini||x.link] || (x.mini ? BLANK : driveThumb(x.link,thumbPx(96))))}" data-tk="${esc(x.mini||"")}" data-full="${esc(x.link)}" alt="фото к совету: ${esc(n)}" data-cat="${esc(ADV_CAT(n))}"></span>`).join("")}</div>` : "";
-      return `<div class="pmx-rv-row" data-st="${s.st[j]||""}">${pmxIco(s.st[j])}<b>${esc(n)}</b><span class="utext">${esc(pmxStrip(t) || (s.st[j]==="ok" ? "всё хорошо" : ST_LBL[s.st[j]] || "не отмечено"))}</span>${rsp.adv[j] || aScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${rsp.adv[j] ? `<span class="utext">${esc(rsp.adv[j])}</span>` : ""}${aTh}</div>` : ""}</div>`; }).join("");
+      const aTh = aScr.length ? `<div class="scrow">${aScr.map(x=>`<span class="sthumb" title="${esc(x.ts||"")}"><img loading="lazy" decoding="async" src="${esc((state.thumbData||{})[x.mini||x.link] || (x.mini ? BLANK : driveThumb(x.link,thumbPx(96))))}" data-tk="${esc(x.mini||x.link)}" data-full="${esc(x.link)}" alt="фото к совету: ${esc(n)}" data-cat="${esc(ADV_CAT(n))}"></span>`).join("")}</div>` : "";
+      return `<div class="pmx-rv-row" data-st="${s.st[j]||""}">${pmxIco(s.st[j])}<b>${esc(n)}</b><div class="pmx-rv-content">${isNskRow(r) ? nskRoBody(r, j, t, esc) : `<span class="utext">${esc(pmxStrip(t) || (s.st[j]==="ok" ? "всё хорошо" : ST_LBL[s.st[j]] || "не отмечено"))}</span>`}</div>${rsp.adv[j] || aScr.length ? `<div class="adv-ro"><b>💡 Совет</b>${rsp.adv[j] ? `<span class="utext">${esc(rsp.adv[j])}</span>` : ""}${aTh}</div>` : ""}</div>`; }).join("");
     const extra = (r.obs ? `<div class="pmx-rv-x"><b>Доп. комментарий</b><span class="utext">${esc(r.obs)}</span></div>` : "")
       + (rsp.gen ? `<div class="pmx-rv-x reco"><b>Рекомендации</b><span class="utext">${esc(rsp.gen)}</span></div>` : "");
     return `<article class="pmx-rv" data-skey="${esc(skey(r))}">
@@ -7959,7 +7961,7 @@ function postJSON(body, timeoutMs){
   });
 }
 // действия, меняющие таблицу: в режиме «глазами» они запрещены (там чужие права и отфильтрованные данные)
-const WRITE_ACTIONS_FE = ["tpl","useradmin","suggest","resetreq","upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply","mark","newbie","askadd","askdone","pmsave","pmupload","pmdelscreen","pmhide","pmunhide","pmstatus","chpass","editscreen"];
+const WRITE_ACTIONS_FE = ["nskfmt","tpl","useradmin","suggest","resetreq","upload","save","add","delrow","delteam","delweek","setoper","touch","setcolor","setplan","delscreen","copyweek","resetok","resetno","suggestdel","suggestset","scrub","taskadd","taskdone","taskreopen","taskdel","suggestreply","mark","newbie","askadd","askdone","pmsave","pmupload","pmdelscreen","pmhide","pmunhide","pmstatus","chpass","editscreen"];
 let writeSeq = 0; // v6.6: счётчик записей — фоновое чтение, начатое до записи, не затирает её результат
 let sessionGone = false;
 function sessionExpired(){ // C: сессия истекла/погашена — сразу окно входа (черновики остаются в браузере)
@@ -8132,6 +8134,7 @@ function linksArrFromText(key, text){
 // ТОЛЬКО после ответа сервера; повтор упавшей отправки не перетирает более новые правки того же поля.
 let saveSeq = 0, inflightSaves = 0;
 const saveQueue = {};
+const rowSaveBusy = {};
 // v6: облегчённая строка прошлой недели → полный текст с сервера (одна строка), подменяем поля на месте
 const _fullReq = {};
 function ensureRowFull(r){
@@ -8150,9 +8153,9 @@ function ensureRowFull(r){
 function rowByRk(k){ return state.rows.find(r=>rk(r)===k) || (realData ? realData.rows.find(r=>rk(r)===k) : null); }
 function queueRowSave(x, key, changes){
   const qk = rk(x.r);
-  const q = saveQueue[qk] = saveQueue[qk] || { r: x.r, fields: {}, timer: null, queuedAt: 0 };
+  const q = saveQueue[qk] = saveQueue[qk] || { r: x.r, fields: {}, expected: {}, timer: null, queuedAt: 0 };
   q.r = x.r; q.queuedAt = Date.now(); q.key = key;
-  changes.forEach(c => { q.fields[c[0]] = c[1]; });
+  changes.forEach(c => { if (!(c[0] in q.fields) && c[2] !== undefined) q.expected[c[0]] = c[2]; q.fields[c[0]] = c[1]; });
   const opt = state.optimistic[qk] = state.optimistic[qk] || { fields: {} };
   Object.assign(opt.fields, q.fields);
   if (q.timer) clearTimeout(q.timer);
@@ -8160,16 +8163,19 @@ function queueRowSave(x, key, changes){
 }
 function flushAllSaves(){ Object.keys(saveQueue).forEach(qk=>{ const q = saveQueue[qk]; if (q.timer) clearTimeout(q.timer); flushRowSave(qk); }); }
 async function flushRowSave(qk){
+  if (rowSaveBusy[qk]) return;
   const q = saveQueue[qk]; if (!q) return;
   delete saveQueue[qk];
   const entries = Object.entries(q.fields);
   if (!entries.length) return;
+  rowSaveBusy[qk] = true;
+  if (q.timer) clearTimeout(q.timer);
   const seq = ++saveSeq;
   const fos = state.fieldOkSeq[qk] = state.fieldOkSeq[qk] || {};
   entries.forEach(c=>{ fos[c[0]] = seq; }); // последняя отправка каждого поля
   const isLatest = f => fos[f] === seq && !(saveQueue[qk] && f in saveQueue[qk].fields);
   const params = Object.assign({ action:"save" }, rowKeyParams(q.r));
-  entries.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; });
+  entries.forEach((c,i)=>{ params["f"+(i+1)] = c[0]; params["v"+(i+1)] = c[1]; if (q.expected && q.expected[c[0]] !== undefined) params["e"+(i+1)] = q.expected[c[0]]; });
   inflightSaves++;
   try {
     const res = await wp(params);
@@ -8186,17 +8192,19 @@ async function flushRowSave(qk){
     softRender();
     setTimeout(()=>{ try { const sb = q.key != null ? document.getElementById("sv" + q.key) : null; if (sb) fxClass(sb, "saved", 1200); } catch(e){} }, 90); // v7.3: вспышка «сохранено» — после перерисовки карточки
   } catch(e){
+    const pending = saveQueue[qk];
+    if (pending) entries.forEach(c=>{ if (c[0] in pending.fields && q.expected && q.expected[c[0]] !== undefined) pending.expected[c[0]] = q.expected[c[0]]; });
     const keep = {};
     entries.forEach(c=>{ if (isLatest(c[0])) keep[c[0]] = c[1]; });
     const opt = state.optimistic[qk];
     if (opt){ Object.keys(keep).forEach(f=>{ delete opt.fields[f]; }); if (!Object.keys(opt.fields).length) delete state.optimistic[qk]; }
     if (Object.keys(keep).length){
       const prev = state.failedSaves[qk];
-      state.failedSaves[qk] = { fields: Object.assign({}, prev ? prev.fields : {}, keep), msg: e.message };
+      state.failedSaves[qk] = { fields: Object.assign({}, prev ? prev.fields : {}, keep), expected: Object.assign({}, prev ? prev.expected : {}, q.expected), msg: e.message };
     }
     toast("Не сохранилось: " + e.message + " — правка осталась (черновик), нажми «повторить»", true);
     softRender();
-  } finally { inflightSaves--; }
+  } finally { inflightSaves--; delete rowSaveBusy[qk]; if (saveQueue[qk]) flushRowSave(qk); }
 }
 function applyOptimistic_(qk, fields){ // после обновления данных возвращаем несохранённые правки на место
   const r = state.rows.find(x=>rk(x)===qk);
@@ -8239,6 +8247,7 @@ async function saveRow(x, key){
   if (lkEl && linksNew !== normLinks(x.r.linksTxt||"")) changes.push(["links", linksNew]);
   if (!changes.length){ toast("Изменений нет", true); return; }
   changes.forEach(c=>{ const j = FIELDCODES.indexOf(c[0]); if (j >= 0) acLearn(j, c[1]); }); // v6.6: свои формулировки — в автоподсказки
+  changes.forEach(c=>{ const j = FIELDCODES.indexOf(c[0]); const prop = {comment:"obs",score:"scoreM",verdict:"verdictM",recs:"reco",links:"linksTxt"}[c[0]]; const failed = state.failedSaves[rk(x.r)]; c[2] = failed && failed.expected && failed.expected[c[0]] !== undefined ? failed.expected[c[0]] : String((j >= 0 ? x.r.cats[j] : x.r[prop]) ?? ""); });
   // оптимистично: значения применяем сразу, «Сохранено» показываем сразу, отправка — фоном пачкой
   changes.forEach(c=>{
     const j = FIELDCODES.indexOf(c[0]);
