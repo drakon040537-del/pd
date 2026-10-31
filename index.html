@@ -2226,6 +2226,9 @@
   .nsk-bar .nsk-off:hover{color:var(--ink)}
   .nsk-hint{font-size:12px;color:var(--faint);line-height:1.4;margin:2px 0 4px}
   .co-rcat .nsk-hint.ro,.co-rcat .ng-ro,.co-rcat .nsk-shots{grid-column:2/-1}
+  /* Read-only card: content after hints must not auto-place in the 22px number column. */
+  .co-rcat > .utext,.co-rcat > .ng-cnt,.co-rcat > .nsk-sc{grid-column:2/-1;min-width:0}
+  .co-rcat > .utext{overflow-wrap:anywhere}
   .nsk-shots{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap;justify-self:start}
   .nsk-shots.ok{color:var(--ok);background:var(--okbg)}.nsk-shots.miss{color:var(--warn);background:var(--warnbg)}
   .cat-scale .qsc{min-width:30px;font-weight:700}
