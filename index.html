@@ -2235,6 +2235,7 @@
   .nb-ro{table-layout:fixed;width:100%}.nb-ro td{white-space:pre-wrap!important;overflow-wrap:anywhere}.nb-ro td:first-child{width:30%}
   .nsk-choices{flex-wrap:wrap;max-width:100%}.nsk-choices .qbtn{white-space:normal!important}
   @media(max-width:700px){.nsk-bots{margin-left:0}.nb-row{grid-template-columns:minmax(0,1fr) 30px}.nb-row .nb-comment{grid-column:1;grid-row:2}.nb-del{grid-column:2;grid-row:1}.nb-head{display:none}.nsk-choices .qbtn{flex:1 1 100%}}
+  body.nsk-account .rbtn-del,body.nsk-account #viewas{display:none!important}
   .nsk-hint{font-size:12px;color:var(--faint);line-height:1.4;margin:2px 0 4px}
   .co-rcat .nsk-hint.ro,.co-rcat .ng-ro,.co-rcat .nsk-shots{grid-column:2/-1}
   /* Read-only card: content after hints must not auto-place in the 22px number column. */
@@ -2751,6 +2752,8 @@ function v7WeekLabel(el, wl){
 
 // ================== v7: оболочка по макету — меню, неделя, поиск, «глазами», телефон, окна ==================
 function v7TabLabel(c){
+  if (nskAccount() && c === "Новосибирск") return "VVCAM просмотр";
+  if (c === NSK_EDITOR_TAB) return "VVCAM редактор";
   if (c === "Смены") return "Смены";
   if (c === "Расписание") return "Расписание проверок";
   if (c === "Мои задачи") return AUTH.prod ? "Мои задачи" : "Задачи";
@@ -2773,7 +2776,7 @@ function v7WeekOpen(){
   d.innerHTML = item("latest", "Последняя неделя", wks[0] || "")
     + wks.slice(0, 12).map(w => item(w, w, "")).join("")
     + '<div class="v7w-sep"></div>' + item("__month__", "Месяц", "последние 4–5 недель") + item("all", "Все недели", "история")
-    + ((AUTH.edit && !viewAsActive()) ? '<div class="v7w-sep"></div><button class="v7w-i v7w-new" data-v7new="1"><b>＋ Новая неделя…</b><small>создать или удалить неделю</small></button>' : "");
+    + ((AUTH.edit && !viewAsActive() && !nskAccount()) ? '<div class="v7w-sep"></div><button class="v7w-i v7w-new" data-v7new="1"><b>＋ Новая неделя…</b><small>создать или удалить неделю</small></button>' : "");
   document.body.appendChild(d);
   const r = btn.getBoundingClientRect();
   d.style.top = (r.bottom + 6) + "px";
@@ -2845,7 +2848,7 @@ function v7BottomNav(){
   if (!AUTH.prod && list.length < 4){ const c = T.find(t => CITY_ORDER.includes(t)); if (c && !list.includes(c)) list.splice(1, 0, c); }
   // v7.1: бейдж — только сигнал «надо сделать» (задачи 📌, возвраты/новые ↩📥, просрочки ⏰), а не общее число команд
   const cnt = t => { const b = document.querySelector('#tabs .tab[data-t="' + CSS.escape(t) + '"] .cnt.due'); const n = b ? b.textContent.replace(/[^\d]/g, "") : ""; return n && n !== "0" ? `<span class="bdg">${esc(n)}</span>` : ""; };
-  nav.innerHTML = list.slice(0, 4).map(t => `<button class="v7bn-i${state.tab === t ? " on" : ""}" data-v7t="${esc(t)}" aria-current="${state.tab === t ? "page" : "false"}">${v7RailIcon(t)}<span>${esc(AUTH.prod && t === prodTabName() ? "Главная" : t === PM_TAB_PROD ? "Мониторинг" : v7TabLabel(t))}</span>${cnt(t)}</button>`).join("")
+  nav.innerHTML = list.slice(0, 4).map(t => `<button class="v7bn-i${activeNavTab() === t ? " on" : ""}" data-v7t="${esc(t)}" aria-current="${activeNavTab() === t ? "page" : "false"}">${v7RailIcon(t)}<span>${esc(AUTH.prod && t === prodTabName() ? "Главная" : t === PM_TAB_PROD ? "Мониторинг" : v7TabLabel(t))}</span>${cnt(t)}</button>`).join("")
     + `<button class="v7bn-i" data-v7more="1" aria-label="Все разделы">${v7svg("M5 12h.01M12 12h.01M19 12h.01", 20)}<span>Ещё</span></button>`;
   nav.querySelectorAll("[data-v7t]").forEach(b => b.onclick = ()=>{ v7Sheet(false); switchTab(b.dataset.v7t); window.scrollTo({ top: 0, behavior: "smooth" }); });
   nav.querySelector("[data-v7more]").onclick = ()=>v7Sheet(!document.body.classList.contains("v7rail-open"));
@@ -2903,7 +2906,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-10-31.80"
+  VER: "2026-11-03.81"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2918,18 +2921,19 @@ const AUTH = {
   user: lsGet("dash_user") || "",
   token: lsGet("dash_token") || "",
   name: lsGet("dash_name") || "",
-  edit: lsGet("dash_edit") === "1",
+  edit: lsGet("dash_edit") === "1" && lsGet("dash_user") !== "nsk",
+  nskCanEdit: lsGet("dash_edit") === "1",
   cities: lsJson("dash_cities", []),
   prod: lsGet("dash_prod") === "1",
   admin: lsGet("dash_admin") === "1", // Обновление 6: админ (ADMIN_LOGINS на сервере) — только для показа меню; права проверяет сервер
   ok(){ return !!(this.user && this.token); },
-  set(u,tok,edit,cities,name){ this.user=u; this.token=tok; this.edit=edit; this.cities=cities; this.name=name||u;
+  set(u,tok,edit,cities,name){ this.user=u; this.token=tok; this.nskCanEdit=!!edit; this.edit=edit && (u !== "nsk" || (!!state.nskEditing && state.tab === "Новосибирск")); this.cities=cities; this.name=name||u;
     try{ localStorage.setItem("dash_user",u); localStorage.setItem("dash_token",tok);
     localStorage.setItem("dash_edit",edit?"1":"0"); localStorage.setItem("dash_cities",JSON.stringify(cities));
     localStorage.setItem("dash_name",this.name); }catch(e){} // приватный режим iOS — хранилище может бросать
     return true; },
   clear(){ try{ ["dash_user","dash_token","dash_edit","dash_cities","dash_name","dash_prod","dash_admin"].forEach(k=>localStorage.removeItem(k)); sessionStorage.removeItem("dash_pass"); localStorage.removeItem("dash_pass_keep"); }catch(e){}
-    this.user=""; this.token=""; this.edit=false; this.cities=[]; this.name=""; this.prod=false; }
+    this.user=""; this.token=""; this.edit=false; this.nskCanEdit=false; state.nskEditing=false; this.cities=[]; this.name=""; this.prod=false; }
 };
 
 
@@ -3024,7 +3028,15 @@ try{ window.matchMedia("(max-width:700px)").addEventListener("change", ()=>{ con
 
 // у продюсера вкладка называется ЕГО ИМЕНЕМ (а не городом), внутри — его команды
 function prodTabName(){ return (state.viewAs && state.viewAs.type==="prod") ? state.viewAs.name : (AUTH.name || AUTH.user); } // 2b: в «глазами» — имя продюсера, а не смотрящего
+const NSK_EDITOR_TAB = "VVCAM редактор";
+function nskAccount(){ return AUTH.user === "nsk" && !viewAsActive(); }
+function activeNavTab(){ return nskAccount() && state.nskEditing && state.tab === "Новосибирск" ? NSK_EDITOR_TAB : state.tab; }
+function syncNskView(){
+  if (nskAccount()) { AUTH.edit = !!AUTH.nskCanEdit && !!state.nskEditing && state.tab === "Новосибирск"; AUTH.prod = false; AUTH.admin = false; }
+  document.body.classList.toggle("nsk-account",nskAccount());
+}
 function tabs(){
+  if (nskAccount()) return ["Обзор","Новосибирск",NSK_EDITOR_TAB,"Операторы","Рекомендации","Карта"];
   if (AUTH.prod) return [prodTabName(), PM_TAB_PROD, "Мои задачи", "Рекомендации"]; // v6: «📋 Мой мониторинг»
   let cities = AUTH.cities.includes("all")
     ? ["Томск","Новосибирск","Онлайн"]
@@ -3472,7 +3484,7 @@ function openWeekName(){
 }
 function weekOpen_(r){ const w = openWeekName(); return !!w && r.week === w; }
 // строку можно править: редактор, не режим «глазами», строка из открытой недели
-function rowEditable(r){ return AUTH.edit && !viewAsActive() && weekOpen_(r) && !r._lite; } // v6: облегчённую (урезанную) строку править нельзя — сначала полный текст
+function rowEditable(r){ return (!nskAccount() || (state.nskEditing && state.tab === "Новосибирск" && r.city === "Новосибирск")) && AUTH.edit && !viewAsActive() && weekOpen_(r) && !r._lite; } // v6: облегчённую (урезанную) строку править нельзя — сначала полный текст
 // ---------- v6.6: общие метки и закрепление команд (ставит смотрящий, видят все), метка «новичок» ----------
 const MARK_COLORS = ["", "#e5655f", "#e5b455", "#3ecf8e", "#5b9dff", "#b07cff", "#9aa3b2"];
 function markOf(r){ return (r && (state.marks||{})[teamKey(r)]) || null; }
@@ -3492,6 +3504,7 @@ function teamBadges(r){
 }
 // недели: «latest» (по умолчанию — сервер отдал только открытую), «all», «__month__» или точное название
 function rowsOf(tab){
+  if (tab === NSK_EDITOR_TAB) tab = "Новосибирск";
   let rs;
   if (AUTH.prod){ rs = state.rows; } // сервер уже отдал только его команды
   else rs = (tab==="Обзор"||tab==="Сводка"||tab==="Расписание"||tab==="Операторы"||tab==="Сравнение") ? state.rows : state.rows.filter(r=>r.city===tab);
@@ -3658,6 +3671,8 @@ function restoreUi(ui){
   if (f.st) el.scrollTop = f.st;
 }
 function render(){
+  syncNskView();
+  if (nskAccount()) updateLoginBtn();
   const ui = captureUi();
   draftCacheReset();
   renderMain();
@@ -3888,7 +3903,7 @@ function updateLoginBtn(){
   const ab = document.getElementById("addbtn");
   if (ab) ab.style.display = AUTH.edit ? "" : "none";
   const wb = document.getElementById("weekbtn");
-  if (wb) wb.style.display = AUTH.edit ? "" : "none";
+  if (wb) wb.style.display = AUTH.edit && !nskAccount() ? "" : "none";
   const pb = document.getElementById("pwbtn"); // v6.1: смена своего пароля — любому вошедшему, не в режиме «глазами»
   if (pb) pb.style.display = AUTH.ok() && !state.viewAs ? "" : "none";
   const prb = document.getElementById("presbtn"); // v6.6: презентация — смотрящему и директору
@@ -3944,7 +3959,7 @@ function renderMain(){
     else if (pmIsTab(c)){ const nb = state.pmBadge || 0; if (nb) badge = `<span class="cnt due" title="${AUTH.prod ? "вернули на доработку" : "новые записи продюсеров"}: ${nb}">${AUTH.prod ? "↩" : "📥"}${nb}</span>`; } // v6
     else if (c==="Мои задачи"){ const nt = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan).length; if (nt) badge = `<span class="cnt due" title="открытых задач: ${nt}">📌${nt}</span>`; }
     else if (CITY_ORDER.includes(c)){ const od = overdueCount(c); if (od) badge = `<span class="cnt due" title="просрочено перепроверок в компании: ${od}">⏰${od}</span>`; }
-    return `<button class="tab ${state.tab===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${v7RailIcon(c)}</span><span>${v7TabLabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${(NO_TEAM_COUNT_TABS.includes(c) ? "" : n) || ""}</span>${badge}</button>`;
+    return `<button class="tab ${activeNavTab()===c?"on":""}" data-t="${c}" ${CITY_ORDER.includes(c)?`draggable="true" data-city="${c}"`:""} title="${clabel(c)}: ${n} команд${crit?" · критичных "+crit:""}"><span>${v7RailIcon(c)}</span><span>${v7TabLabel(c)}</span><span class="cnt ${crit?"crit":""}" ${crit?`title="критичных: ${crit}"`:""}>${(NO_TEAM_COUNT_TABS.includes(c) ? "" : n) || ""}</span>${badge}</button>`;
   };
   const sect = t => `<div class="rsect">${t}</div>`;
   // Обновление 4: CRM-меню — группы сворачиваются (состояние в localStorage), в свёрнутом рельсе группа открывает всплывающий список.
@@ -3952,7 +3967,7 @@ function renderMain(){
   const T = tabs();
   const prodTabs = AUTH.prod ? [prodTabName()] : []; // 2b: закреплённая кнопка продюсера
   const mainTabs = T.filter(c=>["Обзор","Итог"].includes(c));
-  const cityTabs = T.filter(c=>CITY_ORDER.includes(c));
+  const cityTabs = T.filter(c=>CITY_ORDER.includes(c) || c === NSK_EDITOR_TAB);
   const toolTabs = T.filter(c=>!prodTabs.includes(c) && !mainTabs.includes(c) && !cityTabs.includes(c));
   const weekLabel = state.week==="latest" ? "последняя" : state.week==="all" ? "все" : state.week==="__month__" ? "месяц" : state.week;
   const RG = railGroups();
@@ -5058,7 +5073,12 @@ document.addEventListener("click", ev=>{
   else if (t.dataset.aibx){ if (state.aiBatch && !state.aiBatch.running) state.aiBatch = null; render(); }
 });
 function switchTab(t){
-  if (state.tab !== t && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
+  if (activeNavTab() !== t && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
+  if (nskAccount()) {
+    if (t === NSK_EDITOR_TAB && !AUTH.nskCanEdit) { toast("Редактор ещё не включён для аккаунта — обратись к администратору", true); return; }
+    state.nskEditing = t === NSK_EDITOR_TAB;
+    if (state.nskEditing) t = "Новосибирск";
+  }
   state.tab = t; state.page = 1;
   if (pmIsTab(t) && state.pm && state.pm.at && !state.pm.loading && Date.now() - state.pm.at > 3000) loadPM({ quiet: true }); // v6.6: при входе во вкладку — свежие записи
   if (HISTORY_TABS.includes(t) && !state.fullLoaded){ render(); ensureFull().then(render); return; }
