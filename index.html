@@ -2906,7 +2906,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-11-03.81"
+  VER: "2026-11-03.82"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -5072,10 +5072,32 @@ document.addEventListener("click", ev=>{
   else if (t.dataset.aibdrafts){ state.quick = "draft"; state.page = 1; render(); }
   else if (t.dataset.aibx){ if (state.aiBatch && !state.aiBatch.running) state.aiBatch = null; render(); }
 });
+let nskProfileRequest = null;
+function refreshNskProfile(){
+  if (nskProfileRequest) return nskProfileRequest;
+  const user = AUTH.user, token = AUTH.token;
+  nskProfileRequest = wp({action:"check"}).then(res=>{
+    if (AUTH.user !== user || AUTH.token !== token) return false;
+    AUTH.set(user, token, !!res.editor, res.cities || [], res.name || user);
+    AUTH.prod = !!res.prod; AUTH.admin = !!res.admin;
+    state.lastCheck = Date.now(); updateLoginBtn();
+    if (!AUTH.nskCanEdit) {
+      toast(res.serverVersion === CONFIG.VER ? "Право редактора отключено в настройках аккаунта" : "Сервер ещё не обновлён: установи новый Code.gs и разверни новую версию Apps Script",true);
+      return false;
+    }
+    return true;
+  }).catch(e=>{toast("Не удалось проверить права: " + e.message,true);return false;})
+    .finally(()=>{nskProfileRequest=null;});
+  return nskProfileRequest;
+}
 function switchTab(t){
   if (activeNavTab() !== t && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
   if (nskAccount()) {
-    if (t === NSK_EDITOR_TAB && !AUTH.nskCanEdit) { toast("Редактор ещё не включён для аккаунта — обратись к администратору", true); return; }
+    if (t === NSK_EDITOR_TAB && !AUTH.nskCanEdit) {
+      const from = activeNavTab(), token = AUTH.token;
+      toast("Проверяю права редактора…");
+      return refreshNskProfile().then(ok=>{ if(ok && AUTH.token === token && activeNavTab() === from) switchTab(NSK_EDITOR_TAB); });
+    }
     state.nskEditing = t === NSK_EDITOR_TAB;
     if (state.nskEditing) t = "Новосибирск";
   }
