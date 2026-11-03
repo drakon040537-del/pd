@@ -2271,6 +2271,9 @@
     .nsk-goals input{padding:6px 5px;font-size:14px}
     .cat-scale .qsc{min-width:34px;min-height:34px}
   }
+
+.rv-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.rv-complete{margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:12px}.rv-complete summary{cursor:pointer;font-weight:600}.rv-complete li{margin:5px 0}.rv-dialog{margin:auto;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(1100px,94vw);max-height:90vh;padding:18px;box-sizing:border-box}.rv-dialog::backdrop{background:#0009}.rv-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.rv-dialog h2{font-size:19px}.rv-dialog h3{font-size:14px}.rv-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.rv-pair>div,.rv-pair>label{min-width:0;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere}.rv-pair table{width:100%;table-layout:fixed}.rv-section{margin:16px 0}.rv-dialog textarea{display:block;box-sizing:border-box;width:100%;min-height:110px;background:var(--bg);color:var(--ink);padding:10px;border:1px solid var(--line);border-radius:8px}.rv-shot{display:block;margin:8px 0;max-width:100%}.rv-shot img{display:block;max-width:100%;max-height:140px}.rv-original{display:block;max-width:100%;height:auto}.rv-head{position:sticky;top:0;background:var(--panel);padding:8px;z-index:1}@media(max-width:640px){.rv-dialog{padding:12px}.rv-pair{grid-template-columns:minmax(0,1fr)}.rv-pair>div:first-child:before{content:'Раньше';display:block;color:var(--dim);font-size:11px;margin-bottom:6px}.rv-pair>div:last-child:before{content:'Сейчас';display:block;color:var(--dim);font-size:11px;margin-bottom:6px}.rv-head{position:static}}
+
 </style>
 </head>
 <body>
@@ -2652,7 +2655,7 @@ function v7CatSync(ta){
   if (!/^ed.+_\d$/.test(ta.id || "")) return; // v7.3: поле совета (adv…) не меняет статус категории
   var f = ta.closest(".f.cat"); if (!f) return;
   var ns = v7CatState(ta.value), changed = f.dataset.st !== ns;
-  f.dataset.st = ns; v7AriaSeg(f);
+  f.dataset.st = ns; v7AriaSeg(f); const legacy=f.querySelector(".nsk-legacy"); if(legacy)legacy.hidden=ns!=="warn";
   if (f.querySelector(".qsc")){ var sc = scaleOf(ta.value); f.querySelectorAll(".qsc").forEach(function(b){ b.setAttribute("aria-pressed", String(+b.dataset.sc === sc)); }); } if (changed && ns) fxClass(f, "stflash", 700);
   var l = f.querySelector(".ta-len"); if (l) l.textContent = ta.value.length ? ta.value.length + " симв." : "";
   if (!("fieldSizing" in ta.style)){ ta.style.height = "auto"; ta.style.height = Math.min(Math.max(ta.scrollHeight + 2, 56), 300) + "px"; }
@@ -2906,7 +2909,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-11-03.82"
+  VER: "2026-11-03.83"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -2971,7 +2974,7 @@ const PH_NSK = [
   [["ловенс не подключён","bad"],["нет таблицы уровней","warn"],["уровни не настроены","warn"]],
   [["меньше 5 голов","warn"],["цены не растут","warn"],["голы не ставятся","bad"]],
   [["ботов нет","bad"],["боты спамят","warn"],["настройки ботов неадекватные","warn"]],
-  [["блокнот не используется","warn"],["микрофон выключен","bad"],["не работают с блокнотом и микрофоном","bad"]],
+  [["блокнот не используется","bad"],["микрофон выключен","bad"],["не работают с блокнотом и микрофоном","bad"]],
   [["меньше 4 позиций","warn"],["позиции однотипные","warn"]],
   [["постов нет","bad"],["1 пост в день","warn"],["посты не каждый день","warn"]],
   [["модель не общается","bad"],["общается мало","warn"],["не обращается по никам","warn"]],
@@ -3136,7 +3139,7 @@ const NSK_CHOICES = {
   7: [["ok","да"],["bad","нет"]]
 };
 function nskChoiceButtons(j, taId, st){
-  return NSK_CHOICES[j].map(([level,label])=>`<button type="button" class="qbtn q${level}" data-ta="${taId}" data-choice="${j}" data-level="${level}" aria-pressed="${st===level}">${esc(label)}</button>`).join("");
+  return (j === 7 ? `<span class="co-hint nsk-legacy"${st === "warn" ? "" : " hidden"}>Старая оценка: замечание — выбери да или нет</span>` : "") + NSK_CHOICES[j].map(([level,label])=>`<button type="button" class="qbtn q${level}" data-ta="${taId}" data-choice="${j}" data-level="${level}" aria-pressed="${st===level}">${esc(label)}</button>`).join("");
 }
 function nskChoiceApply(value, j, level){
   const choices = NSK_CHOICES[j], choice = choices && choices.find(x=>x[0]===level);
@@ -3161,7 +3164,7 @@ function botsJoin(head,bots){
 }
 function botsEditor(key, bots){
   const rows=bots.length ? bots : [{bot:"",comment:""}];
-  return `<div class="nsk-bots" data-bk="${key}"><div class="nb-head"><b>Какой бот</b><b>Комментарий</b></div>${rows.map((r,i)=>`<div class="nb-row"><input class="nb-name" value="${esc(r.bot)}" placeholder="Название бота" aria-label="Бот ${i+1}"><textarea class="nb-comment" placeholder="Как настроен и что исправить" aria-label="Комментарий к боту ${i+1}">${esc(r.comment)}</textarea><button type="button" class="nb-del" data-index="${i}" aria-label="Удалить бота ${i+1}">✕</button></div>`).join("")}<button type="button" class="nb-add">＋ бот</button></div>`;
+  return `<div class="nsk-bots" data-bk="${key}"><div class="nb-head"><b>Какой бот</b><b>Комментарий</b></div>${rows.map((r,i)=>`<div class="nb-row"><input class="nb-name" list="bot-names-${esc(key)}" value="${esc(r.bot)}" placeholder="Название бота" aria-label="Бот ${i+1}"><textarea class="nb-comment" placeholder="Как настроен и что исправить" aria-label="Комментарий к боту ${i+1}">${esc(r.comment)}</textarea><button type="button" class="nb-del" data-index="${i}" aria-label="Удалить бота ${i+1}">✕</button></div>`).join("")}<button type="button" class="nb-add">＋ бот</button>${botCatalogHtml(key)}</div>`;
 }
 function botsFromDom(box){return [...box.querySelectorAll('.nb-row')].map(r=>({bot:r.querySelector('.nb-name').value,comment:r.querySelector('.nb-comment').value}));}
 let botsBusy=false;
@@ -3428,8 +3431,8 @@ function rowStatsRaw(r){
     score = ok + warn * 0.5; // v7.2: замечание — полбалла
     verdict = verdictOf(bad, warn);
     // ручная оценка: число и строка читаются одинаково («7", " 7 ", 7 → 7)
-    const mScore = String(r.scoreM == null ? "" : r.scoreM).trim().match(/^(\d+)/);
-    if (mScore){ const n = Math.min(MAX_SCORE, Math.max(0, parseInt(mScore[1], 10))); score = n; }
+    const mScore = String(r.scoreM == null ? "" : r.scoreM).trim().replace(",",".").match(/^(\d+(?:\.\d+)?)$/);
+    if (mScore){ const n = Math.min(MAX_SCORE, Math.max(0, parseFloat(mScore[1]))); score = n; }
     if (r.verdictM) verdict = r.verdictM;
   }
   return {st, ok, warn, bad, score, verdict};
@@ -3527,7 +3530,7 @@ function ensureFull(opts){
   if (!silent) toast("Грузим все недели…");
   let tries = 0;
   const get = ()=>{ const s0 = writeSeq; return wp({ action:"read", week:"all", lite: 1 }, 90000).then(j=>{ // v6: прошлые недели — облегчённо (полный текст по раскрытию)
-    if (j.error) throw new Error(j.error);
+    if (j.error) throw Object.assign(new Error(j.error), {code:j.code,conflicts:j.conflicts});
     if (s0 !== writeSeq && ++tries < 3) return get(); // пока грузили, была запись — ответ устарел, берём свежий
     return j;
   }); };
@@ -4105,13 +4108,17 @@ function renderMain(){
     return { rs, ss, n: rs.length, ok: ws.filter(x=>x.verdict==="норма").length, warn: ws.filter(x=>x.verdict==="замечание").length, bad: ws.filter(x=>x.verdict==="критично").length, avg: avgOf(ss), cat: Object.fromEntries(CATS_ALL.map(n=>[n, rs.filter((r,i)=>isDev(stByName(r, ss[i].st, n))).length])) }; }; // v7.7: по названию категории (у НСК свой чек-лист)
   const ser = serW.map(w=> w===curW ? wStat(rows) : wStat(dedupeRows(state.rows.filter(r=>r.week===w && ovScope(r)))));
   const prevS = ser.length > 1 ? ser[ser.length-2] : null;
+  const comparisonPairs = prevS ? reviewPairs(rows,prevS.rs) : [];
+  const pairedNow = comparisonPairs.length ? wStat(comparisonPairs.map(p=>p[0])) : null;
+  const pairedPrev = comparisonPairs.length ? wStat(comparisonPairs.map(p=>p[1])) : null;
+  const comparisonNote = comparisonPairs.length ? "Сравнение: " + comparisonPairs.length + " одинаковых команд с заполненными пунктами; охват сейчас " + checkedN + "/" + rows.length + ", раньше " + prevS.ss.filter(s=>s.score!==null).length + "/" + prevS.n : "Недостаточно сопоставимых проверок для сравнения недель";
   const ovD = (d, goodUp, unit) => { if (d===null || d===undefined || isNaN(d)) return ""; if (!d) return `<span class="ov-d">— 0</span>`; const good = goodUp ? d > 0 : d < 0; return `<span class="ov-d ${good?"up":"down"}">${d>0?"▲ +":"▼ −"}${Math.abs(d)}${unit||""}</span>`; };
   const ovSpark = (arr, col) => { const v = arr.filter(x=>x!==null && x!==undefined); if (v.length < 2) return ""; const mn = Math.min(...v), mx = Math.max(...v), sp = (mx-mn) || 1;
     return `<svg class="ov-spark" width="104" height="32" viewBox="0 0 104 32" aria-hidden="true"><polyline points="${v.map((x,i)=>(4+i*96/(v.length-1)).toFixed(1)+","+(28-(x-mn)/sp*24).toFixed(1)).join(" ")}" style="stroke:${col}"/></svg>`; };
   const catList = catNamesFor(rows); // v7.7: один чек-лист — его 9 пунктов; ArtLife/DIAMOND вместе с НСК — оба списка
   const catNow = catList.map(n=>rows.filter((r,i)=>isDev(stByName(r, S[i].st, n))).length);
   const catBadN = catList.map(n=>rows.filter((r,i)=>stByName(r, S[i].st, n)==="bad").length);
-  const catCounts = catList.map((n,i)=>({n, i, c: catNow[i], b: catBadN[i], w: catNow[i] - catBadN[i], d: prevS && prevS.cat[n] !== undefined ? catNow[i] - prevS.cat[n] : null})).filter(x=>catList.length === 9 || rows.some(r=>catsOf(r).includes(x.n))).sort((a,b)=>b.b-a.b || b.c-a.c);
+  const catCounts = catList.map((n,i)=>({n, i, c: catNow[i], b: catBadN[i], w: catNow[i] - catBadN[i], d: pairedPrev && pairedPrev.cat[n] !== undefined ? pairedNow.cat[n] - pairedPrev.cat[n] : null})).filter(x=>catList.length === 9 || rows.some(r=>catsOf(r).includes(x.n))).sort((a,b)=>b.b-a.b || b.c-a.c);
   const taskDays = t => { const s = String(t.when||""); const d = /^\d{4}-\d{2}-\d{2}/.test(s) ? new Date(s.slice(0,10)+"T12:00:00") : parseUpd(s); return d ? Math.max(0, Math.floor((Date.now()-d)/864e5)) : null; };
   const scopeCity = isCityTab ? state.tab : ovCo;
   const openTasks = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan && (!scopeCity || t.city===scopeCity || String(t.sheet||"").indexOf(scopeCity) >= 0));
@@ -4150,7 +4157,7 @@ function renderMain(){
   // ---- полоса «Проверено» ----
   const W = v => rows.length ? (v*100/rows.length).toFixed(2) + "%" : "0";
   const topCats = catCounts.filter(x=>x.c > 0).slice(0, 3);
-  const strip = `<section class="ov-strip">
+  const strip = `<p class="co-hint">${esc(comparisonNote)}</p><section class="ov-strip">
     <div class="ov-chk"><span>Проверено${curW ? " за неделю" : ""}</span><b>${checkedN} <small>из ${rows.length} ${ovPl(rows.length, "команды", "команд", "команд")}</small></b></div>
     <div class="ov-chkbar"><div class="ov-bar" role="img" aria-label="норма ${nOk}, замечания ${nWarn}, критично ${nBad}, не проверено ${nNone}"><i class="o" style="width:${W(nOk)}"></i><i class="w" style="width:${W(nWarn)}"></i><i class="b" style="width:${W(nBad)}"></i></div>
       <div class="ov-leg">${qBtn("ok", "", `<b class="ok">${nOk}</b> норма`)}${qBtn("warn", "", `<b class="warn">${nWarn}</b> с замечаниями`)}${qBtn("crit", "", `<b class="bad">${nBad}</b> критично`)}${qBtn("none", "", `<b>${nNone}</b> не проверено`)}${!isOv && topCats.length ? `<span class="ov-top">чаще всего: ${topCats.map(x=>esc(x.n)+" "+x.c).join(" · ")}</span>` : ""}</div></div>
@@ -4163,7 +4170,7 @@ function renderMain(){
     const byProd = {};
     rows.forEach((r,i)=>{ const k = r.city+"|"+(r.producer||"—"); (byProd[k] = byProd[k] || { k, city:r.city, p:r.producer||"—", items:[] }).items.push({ r, s:S[i] }); });
     const alerts = [];
-    const prevProd = (g) => { if (!prevS) return null; const ss = prevS.ss.filter((x,i)=>prevS.rs[i].city===g.city && (prevS.rs[i].producer||"—")===g.p && x.score!==null); return ss.length ? ss.reduce((a,x)=>a+x.score,0)/ss.length : null; };
+    const prevProd = (g) => { if (!prevS || reviewPairs(g.items.map(x=>x.r),prevS.rs.filter(r=>r.city===g.city && r.producer===g.p)).length !== g.items.length) return null; const ss = prevS.ss.filter((x,i)=>prevS.rs[i].city===g.city && (prevS.rs[i].producer||"—")===g.p && x.score!==null); return ss.length ? ss.reduce((a,x)=>a+x.score,0)/ss.length : null; };
     const allCritP = new Set();
     Object.values(byProd).forEach(g=>{
       const ch = g.items.filter(x=>x.s.score!==null);
@@ -4191,15 +4198,15 @@ function renderMain(){
       alerts.push({ lv:"warn", w:3, title: `${oldT.t.producer||"Продюсер"}: задача без ответа ${oldT.d} ${ovPl(oldT.d,"день","дня","дней")}`, city: oldT.t.city || "", meta: String(oldT.t.text||"").slice(0, 80), go: tabs().includes("Мои задачи") ? ovGo.length-1 : -1 });
     }
     const alertsHtml = alerts.slice(0, 5).map(a=>`<div class="ov-alert"><span class="chip ${a.lv==="bad"?"c-bad":"c-warn"}">${a.lv==="bad"?"критично":"внимание"}</span><div class="ov-at"><b>${esc(a.title)}</b><span>${a.city && coLbl(a.city) ? `<em style="color:${OVC[a.city]||"var(--dim)"}"><i style="background:${OVC[a.city]||"var(--dim)"}"></i>${esc(coLbl(a.city))}</em>` : ""}${esc(a.meta)}</span></div>${a.go >= 0 ? `<button class="ov-open" data-ovgo="${a.go}">Открыть</button>` : ""}</div>`).join("")
-      || `<div class="ov-empty">Ничего не горит: критичных команд и долгих задач нет</div>`;
+      || `<div class="ov-empty">${checkedN ? "В проверенных командах критичных проблем и долгих задач не найдено" : "Команды ещё не проверены — данных о проблемах пока нет"}${nNone ? " · осталось проверить " + nNone : ""}</div>`;
     // плитки
-    const tile = (o) => `<div class="tile ov-tile${o.q ? " click" + (state.quick===o.q ? " on" : "") : ""}${o.tab ? " ov-tlink" : ""}"${o.q ? ` data-q="${o.q}" role="button" tabindex="0" aria-pressed="${state.quick===o.q}"` : ""}${o.tab ? ` data-ovtab="${esc(o.tab)}" role="button" tabindex="0"` : ""}><div class="ov-th"><div class="n" style="color:${o.col}">${o.n}</div>${o.sp}</div><div class="l">${o.l}</div><div class="ov-tdl">${o.d || `<span class="ov-d">${o.sub || (state.fullLoaded ? "нет данных прошлой недели" : "загружаю прошлые недели…")}</span>`}${o.d ? ' <span class="ov-dl">к прошлой неделе</span>' : ""}</div></div>`;
-    const prevAvg = prevS ? prevS.avg : null;
+    const tile = (o) => `<div class="tile ov-tile${o.q ? " click" + (state.quick===o.q ? " on" : "") : ""}${o.tab ? " ov-tlink" : ""}"${o.q ? ` data-q="${o.q}" role="button" tabindex="0" aria-pressed="${state.quick===o.q}"` : ""}${o.tab ? ` data-ovtab="${esc(o.tab)}" role="button" tabindex="0"` : ""}><div class="ov-th"><div class="n" style="color:${o.col}">${o.n}</div>${o.sp}</div><div class="l">${o.l}</div><div class="ov-tdl">${o.d || `<span class="ov-d">${o.sub || comparisonNote}</span>`}${o.d ? ' <span class="ov-dl">по сопоставимым командам</span>' : ""}</div></div>`;
+    const prevAvg = pairedPrev ? pairedPrev.avg : null;
     const oldN = openTasks.filter(t=>{ const d = taskDays(t); return d!==null && d >= 3; }).length;
     const tilesHtml = [
-      tile({ n: avgNow!==null ? avgNow + "%" : "–", l:"Средняя оценка", col:"var(--ink)", sp: ovSpark(ser.map(s=>s.avg), "var(--ink)"), d: (prevAvg!==null && avgNow!==null) ? ovD(avgNow - prevAvg, true, " п.п.") : "" }),
-      tile({ n: nBad, l:"Команд критично", col:"var(--bad-t)", q:"crit", sp: ovSpark(ser.map(s=>s.bad), "var(--bad-t)"), d: prevS ? ovD(nBad - prevS.bad, false) : "" }),
-      tile({ n: nOk, l:"Команд в норме", col:"var(--ok)", q:"ok", sp: ovSpark(ser.map(s=>s.ok), "var(--ok)"), d: prevS ? ovD(nOk - prevS.ok, true) : "" }),
+      tile({ n: avgNow!==null ? avgNow + "%" : "–", l:"Средняя оценка", col:"var(--ink)", sp: ovSpark(ser.map(s=>s.avg), "var(--ink)"), d: (prevAvg!==null && avgNow!==null) ? ovD(pairedNow.avg - prevAvg, true, " п.п.") : "" }),
+      tile({ n: nBad, l:"Команд критично", col:"var(--bad-t)", q:"crit", sp: "", d: pairedPrev ? ovD(pairedNow.bad - pairedPrev.bad, false) : "" }),
+      tile({ n: nOk, l:"Команд в норме", col:"var(--ok)", q:"ok", sp: "", d: pairedPrev ? ovD(pairedNow.ok - pairedPrev.ok, true) : "" }),
       tile({ n: openTasks.length, l:"Задач продюсерам в работе", col:"var(--warn)", tab: tabs().includes("Мои задачи") ? "Мои задачи" : "", sp:"", d:"", sub: oldN ? "без ответа 3+ дня: " + oldN : "открытые задачи" })
     ].join("");
     // где ошибаются
@@ -4211,9 +4218,9 @@ function renderMain(){
       coHtml = (ovCo ? [ovCo] : ovCities).map(c=>{
         const ix = rows.map((r,i)=>i).filter(i=>rows[i].city===c), ss = ix.map(i=>S[i]), n = ix.length;
         const o = ss.filter(x=>x.verdict==="норма").length, w = ss.filter(x=>x.verdict==="замечание").length, b = ss.filter(x=>x.verdict==="критично").length, av = avgOf(ss);
-        const pss = prevS ? prevS.ss.filter((x,i)=>prevS.rs[i].city===c) : null, pav = pss ? avgOf(pss) : null;
+        const cp = comparisonPairs.filter(p=>p[0].city===c), pav=cp.length?avgOf(cp.map(p=>rowStats(p[1]))):null, cav=cp.length?avgOf(cp.map(p=>rowStats(p[0]))):null;
         const ww = v => n ? (v*100/n).toFixed(2) + "%" : "0";
-        return `<button class="ov-co" data-ovtab="${esc(c)}"><span class="ov-coh"><i style="background:${OVC[c]}"></i><b>${esc(clabel(c))}</b><small>${n} ${ovPl(n,"команда","команды","команд")}</small><span class="sp"></span><b class="${av===null?"":av>=75?"ok":av>=60?"warn":"bad"}">${av===null?"–":av+"%"}</b>${(av!==null && pav!==null) ? ovD(av-pav, true, " п.п.") : ""}</span>
+        return `<button class="ov-co" data-ovtab="${esc(c)}"><span class="ov-coh"><i style="background:${OVC[c]}"></i><b>${esc(clabel(c))}</b><small>${n} ${ovPl(n,"команда","команды","команд")}</small><span class="sp"></span><b class="${av===null?"":av>=75?"ok":av>=60?"warn":"bad"}">${av===null?"–":av+"%"}</b>${(av!==null && pav!==null) ? ovD(cav-pav, true, " п.п.") : ""}</span>
           <span class="ov-bar"><i class="o" style="width:${ww(o)}"></i><i class="w" style="width:${ww(w)}"></i><i class="b" style="width:${ww(b)}"></i></span>
           <small>норма ${o}${w ? " · замечания " + w : ""} · критично ${b}${n-o-w-b ? " · не проверено " + (n-o-w-b) : ""}</small></button>`;
       }).join("");
@@ -4221,9 +4228,9 @@ function renderMain(){
     // продюсеры
     const pf = state.ovPf || "all";
     const prRows = Object.values(byProd).map(g=>{
-      const ss = g.items.map(x=>x.s), av = avgOf(ss), pss = prevS ? prevS.ss.filter((x,i)=>prevS.rs[i].city===g.city && (prevS.rs[i].producer||"—")===g.p) : null, pav = pss && pss.length ? avgOf(pss) : null;
+      const ss=g.items.map(x=>x.s),av=avgOf(ss),cp=comparisonPairs.filter(p=>p[0].city===g.city && p[0].producer===g.p && p[1].producer===g.p),pav=cp.length?avgOf(cp.map(p=>rowStats(p[1]))):null,cav=cp.length?avgOf(cp.map(p=>rowStats(p[0]))):null;
       const nt = (state.tasks||[]).filter(t=>t.status!=="сделана" && !t.orphan && t.producer===g.p && (!t.city || t.city===g.city || String(t.sheet||"").indexOf(g.city) >= 0)).length;
-      return Object.assign({}, g, { ss, av, d: (av!==null && pav!==null) ? av - pav : null, nt, hasBad: ss.some(x=>x.verdict==="критично") });
+      return Object.assign({}, g, { ss, av, d: (av!==null && pav!==null) ? cav - pav : null, nt, hasBad: ss.some(x=>x.verdict==="критично") });
     }).sort((a,b)=>(a.av===null?999:a.av)-(b.av===null?999:b.av));
     const pfDefs = [["all","Все",prRows.length],["bad","Есть критичные",prRows.filter(x=>x.hasBad).length],["down","Падение",prRows.filter(x=>x.d!==null && x.d<0).length],["task","С задачами",prRows.filter(x=>x.nt).length]];
     const prShown = prRows.filter(x=>pf==="all" || (pf==="bad" && x.hasBad) || (pf==="down" && x.d!==null && x.d<0) || (pf==="task" && x.nt));
@@ -4248,7 +4255,7 @@ function renderMain(){
       <section class="ov-tiles">${tilesHtml}</section>
     </div>
     <div class="ov-row2">
-      <section class="ov-card"><div class="ov-ch"><h2>Где ошибаются</h2><small>команд с отклонением${prevS ? " · к прошлой неделе" : ""}</small><span class="ov-lg2"><i style="background:var(--bad)"></i>плохо <i style="background:var(--warn-f)"></i>замечание</span></div><div class="ov-cats">${catsHtml}</div></section>
+      <section class="ov-card"><div class="ov-ch"><h2>Где ошибаются</h2><small>команд с отклонением${pairedPrev ? " · изменение по сопоставимым командам" : " · без сравнения недель"}</small><span class="ov-lg2"><i style="background:var(--bad)"></i>плохо <i style="background:var(--warn-f)"></i>замечание</span></div><div class="ov-cats">${catsHtml}</div></section>
       ${showCo ? `<section class="ov-card"><div class="ov-ch"><h2>Компании</h2></div><div class="ov-cos">${coHtml}</div></section>` : ""}
     </div>
     <section class="ov-card ov-prs"><div class="ov-ch"><h2>Продюсеры</h2><div class="ov-pfs">${pfDefs.map(f=>`<button class="ov-chip${pf===f[0]?" on":""}" data-ovpf="${f[0]}" aria-pressed="${pf===f[0]}">${f[1]} ${f[2]}</button>`).join("")}</div></div>
@@ -4492,8 +4499,8 @@ function renderMain(){
   const ovScore = (vals, msc, mvd, stsIn, names) => { // stsIn — готовые состояния (у облегчённой строки истории их посчитал сервер по полному тексту)
     const sts = stsIn || vals.map(catState), ok = sts.filter(v=>v==="ok").length, warn = sts.filter(v=>v==="warn").length, bad = sts.filter(v=>v==="bad").length, n = sts.filter(v=>v!==null).length;
     let score = n ? ok + warn * 0.5 : null, verdict = n ? verdictOf(bad, warn) : "";
-    const m = String(msc==null ? "" : msc).trim().match(/^(\d+)/);
-    if (n && m) score = Math.min(MAX_SCORE, Math.max(0, parseInt(m[1],10)));
+    const m = String(msc==null ? "" : msc).trim().replace(",",".").match(/^(\d+(?:\.\d+)?)$/);
+    if (n && m) score = Math.min(MAX_SCORE, Math.max(0, parseFloat(m[1])));
     if (n && mvd) verdict = mvd;
     return `<div class="ov-big"><b class="${vcls(verdict)}">${fmtSc(score)}<small>/${MAX_SCORE}</small></b>${verdict ? `<span class="chip ${chipCls[verdict]||""}">${VLX[verdict]||esc(verdict)}</span>` : '<span class="chip ov-nochip">не отмечено</span>'}</div>${segRow(sts, "big", null, names)}`;
   };
@@ -4531,7 +4538,7 @@ function renderMain(){
       // --- редактор ---
       const vals0 = CATS.map((n,j)=> dr && dr["f"+j] !== undefined ? dr["f"+j] : (x.r.cats[j]||""));
       const lv0 = liveEval(vals0);
-      const scV = (dr&&dr.score!==undefined?dr.score:String(x.r.scoreM==null?"":x.r.scoreM).trim());
+      const scV = String(dr&&dr.score!==undefined?dr.score:(x.r.scoreM??"")).trim().replace(",",".");
       const vdV = (dr&&dr.verdict!==undefined?dr.verdict:(x.r.verdictM||""));
       const comV = dr && dr.comment !== undefined ? dr.comment : (x.r.obs||"");
       const lkV = dr && dr.lk !== undefined ? dr.lk : (x.r.linksTxt||"");
@@ -4554,12 +4561,12 @@ function renderMain(){
           + (nsk ? `<div class="nsk-hint">${esc(NSK_HINT[j])}</div>` : "")
           + `<div class="cat-ta"><textarea id="${taId}" data-j="${j}" rows="2" placeholder="${bots ? "Общий комментарий; ниже добавь ботов по одному" : goals ? "комментарий к голам (необязательно)" : scale ? "что видно в общении — при 1–3 опиши, что не так" : "что увидел — при замечании или «плохо» опиши, что именно"}" aria-label="Комментарий: ${esc(n)}">${esc(goals ? gp.head : bots ? bp.head : val)}</textarea><div class="ta-meta"><span class="ta-len">${val.length ? val.length + " симв." : ""}</span>${goals || bots ? "" : `<button class="ta-exp" data-exp="ed${key}_${j}" data-n="${esc(n)}" data-num="${j+1}" title="развернуть на весь экран">⤢ развернуть</button>`}</div></div>`
           + (goals ? `<textarea id="ed${key}_${j}" hidden aria-hidden="true" tabindex="-1">${esc(val)}</textarea>${goalsEditor(key, gp.goals)}` : bots ? `<textarea id="ed${key}_${j}" hidden aria-hidden="true" tabindex="-1">${esc(val)}</textarea>${botsEditor(key,bp.bots)}` : "")
-          + `<div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${getPhrases(code).map(p=>`<span class="qchip myq" data-ta="${taId}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${code}">✕</span></span>`).join("")}${phList(x.r, j).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="${taId}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}<span class="qchip myadd" data-add="${key}_${j}" data-code="${code}" data-n="${esc(n)}">＋ своя</span></div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), false))}</div>`;
+          + `<div class="chips">${advBtn(key, j, rsp.adv[j], rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)).length)}${(nsk && NSK_CHOICES[j] ? [] : getPhrases(code)).map(p=>`<span class="qchip myq" data-ta="${taId}" data-p="${esc(p)}" title="своя фраза — клик добавит, ✕ удалит">${esc(p)}<span class="qx" data-qx="${esc(p)}" data-code="${code}">✕</span></span>`).join("")}${(nsk && NSK_CHOICES[j] ? [] : phList(x.r, j)).map(p=>`<span class="qchip lv-${phLv(p)}" data-ta="${taId}" data-p="${esc(p)}" data-lv="${phLv(p)}" title="${phLv(p)==="bad"?"добавит и поставит «✕ Плохо»":"добавит и поставит «! Замечание»"}">+ ${esc(p)}</span>`).join("")}${nsk && NSK_CHOICES[j] ? '<span class="co-hint">Выбери ответ выше; пояснение напиши в поле.</span>' : `<span class="qchip myadd" data-add="${key}_${j}" data-code="${code}" data-n="${esc(n)}">＋ своя</span>`}</div>${scrThumbs(rowScreens.filter(s=>String(s.cat)===n),n,true)}${advBlock(key, j, n, rsp.adv[j], scrThumbs(rowScreens.filter(s=>String(s.cat)===ADV_CAT(n)), ADV_CAT(n), false))}</div>`;
       }).join("");
       const failInfo = state.failedSaves[rk(x.r)];
-      const failBar = canEdit && failInfo ? `<div class="failbar">Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">↻ Повторить</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
+      const failBar = canEdit && failInfo ? `<div class="failbar">Не сохранилось: ${esc(failInfo.msg)} <button class="abtn2" id="retry${key}">${failInfo.code==="SAVE_CONFLICT"?"Сравнить версии":"↻ Повторить"}</button> <span style="color:var(--faint);font-size:11px">правка осталась в строке</span></div>` : "";
       const roNote = (AUTH.edit && !canEdit && !viewAsActive()) ? `<div class="editlive co-ro">Только просмотр: неделя «${esc(x.r.week||"—")}» не открыта для правок${weekPinned()?" (на «все недели»/«месяц» правки отключены)":""} — выбери её в списке недель</div>` : "";
-      const inner = canEdit ? `<div class="co-card">
+      const inner = canEdit ? `${reviewTools({...x.r,cats:vals0},key)}<div class="co-card">
         <div class="co-main">${failBar}
           <div class="co-tools"><span class="co-hint">Отметь каждую категорию — оценка и вердикт считаются сами</span><span class="sp"></span>${teamTools}<button class="ov-tbtn rbtn-op" data-rop="${key}" title="сменить оператора/модель">Сменить опера / модель</button><button class="ov-tbtn ov-allok" data-allok="${key}" title="поставить «всё хорошо» во все 9 категорий">✓ Всё хорошо по всем</button></div>
           <div class="edit-grid v7">${editDet}</div>
@@ -4576,7 +4583,7 @@ function renderMain(){
           <div class="editlive" id="live${key}" hidden>${lv0}</div>
           ${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}
           <label class="co-lbl" for="recg${key}">Рекомендации команде (видит продюсер)</label><textarea id="recg${key}" class="co-reco" placeholder="общие рекомендации; советы по категориям — кнопкой «💡 Совет» под категорией">${esc(rsp.gen)}</textarea><textarea id="ed${key}_reco" hidden aria-hidden="true" tabindex="-1">${esc(recoV)}</textarea>
-          <div class="co-man"><label>Оценка вручную<select id="ed${key}_score"><option value="">авто</option>${Array.from({length:MAX_SCORE+1},(_,n)=>n).map(n=>`<option ${(scV===String(n))?"selected":""}>${n}</option>`).join("")}</select></label><label>Вердикт вручную<select id="ed${key}_verdict"><option value="">авто</option>${["норма","замечание","критично"].map(v=>`<option ${(vdV===v)?"selected":""}>${v}</option>`).join("")}</select></label></div>
+          <div class="co-man"><label>Оценка вручную<select id="ed${key}_score"><option value="">авто</option>${Array.from({length:MAX_SCORE*2+1},(_,n)=>n/2).map(n=>`<option ${(scV===String(n))?"selected":""}>${n}</option>`).join("")}</select></label><label>Вердикт вручную<select id="ed${key}_verdict"><option value="">авто</option>${["норма","замечание","критично"].map(v=>`<option ${(vdV===v)?"selected":""}>${v}</option>`).join("")}</select></label></div>
           <button class="savebtn" id="sv${key}">Сохранить в таблицу</button>
           <div class="co-2"><button class="abtn2" id="tc${key}" title="поставить штамп «Обновлено» без правок">Проверено сегодня</button><button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">Поручить продюсеру</button></div>
           <div class="aimenu"><button class="abtn2 aimbtn" data-aim="${key}" title="все функции ИИ для этой команды">${V7I.spark} ИИ-помощник <span class="car">▾</span></button>
@@ -4592,7 +4599,7 @@ function renderMain(){
           <div class="aibox" id="aibox${key}" style="display:none"></div>
           <div class="co-draft"><i class="${dr ? "w" : "o"}" id="ovdd${key}"></i><span id="ovds${key}">${dr ? "Черновик от " + esc(draftTime(dr)) + " — не сохранён в таблицу" : "Без несохранённых правок"}</span><span id="svmsg${key}" class="co-svmsg"></span></div>
         </aside></div>`
-        : roNote + `<div class="co-card ro">${readDet}</div>`;
+        : roNote + reviewTools(x.r,key) + `<div class="co-card ro">${readDet}</div>`;
       const cityCell = showCoCol ? `<td class="ov-cocell"><span style="color:${OVC[x.r.city]||"var(--dim)"}">${esc(clabel(x.r.city))}</span>${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
       const draftMark = canEdit && dr ? ' <span class="draftmark">черновик</span>' : "";
       const icons = ((x.r.obs||"").trim() ? `<span class="ov-ico" title="${esc(x.r.obs)}">комм.</span>` : "") + (()=>{ const sp = recoSplit(x.r.reco, catsOf(x.r)), na = x.r._lite && x.r._advN != null ? +x.r._advN : sp.adv.filter(Boolean).length; /* у облегчённой строки число советов посчитал сервер */ return (sp.gen ? '<span class="ov-ico" title="есть рекомендации">реком.</span>' : "") + (na ? `<span class="ov-ico ov-adv" title="советы по категориям: ${esc(CATS.filter((n,j)=>sp.adv[j]).join(", "))}">советы ${na}</span>` : ""); })() + (x.r.scoreM ? `<span class="ov-ico" title="оценка выставлена вручную: ${esc(x.r.scoreM)}/${MAX_SCORE}">вручную</span>` : "");
@@ -4852,6 +4859,7 @@ function renderMain(){
     if (rt) rt.onclick = (ev)=>{
       ev.stopPropagation();
       const f = state.failedSaves[rk(x.r)]; if (!f) return;
+      if (f.code === "SAVE_CONFLICT") { reviewConflict(x,key); return; }
       delete state.failedSaves[rk(x.r)];
       toast("Повторяю отправку…");
       queueRowSave(x, key, Object.entries(f.fields).map(c=>[c[0], c[1], (f.expected || {})[c[0]]]));
@@ -7897,10 +7905,12 @@ function renderCompare(rows, st){
     rows.forEach(r=>{ if (r.week!==w) return; const k=teamKey(r); seen[k]=r; }); // D: с городом — одноимённые команды разных компаний не склеиваются
     return Object.values(seen);
   };
+  const comparePairs=reviewPairs(teamsOf(b),teamsOf(a));
+  const comparedTeams=w=>comparePairs.map(p=>w===a?p[1]:p[0]);
   const agg = w=>{
-    const uRows = teamsOf(w);
+    const uRows = comparedTeams(w);
     const checked = uRows.map(r=>rowStats(r)).filter(x=>x.score!==null);
-    return { total: uRows.length, checked: checked.length,
+    return { total: teamsOf(w).length, checked: teamsOf(w).filter(r=>rowStats(r).score!==null).length,
       ok: checked.filter(x=>x.verdict==="норма").length,
       warn: checked.filter(x=>x.verdict==="замечание").length,
       bad: checked.filter(x=>x.verdict==="критично").length,
@@ -7916,9 +7926,9 @@ function renderCompare(rows, st){
     ["🔴 критично", A.bad, B.bad, -1, {ok:A.ok,warn:A.warn,bad:A.bad}, {ok:B.ok,warn:B.warn,bad:B.bad}],
     ["средняя оценка", A.avg===null?null:A.avg, B.avg===null?null:B.avg, 1, null, null, "pct"]
   ];
-  const catRows = catNamesFor(teamsOf(a).concat(teamsOf(b))).map(n=>({ n, a: teamsOf(a).filter(r=>isDev(stByName(r, rowStats(r).st, n))).length, b: teamsOf(b).filter(r=>isDev(stByName(r, rowStats(r).st, n))).length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
+  const catRows = catNamesFor(teamsOf(a).concat(teamsOf(b))).map(n=>({ n, a: comparedTeams(a).filter(r=>isDev(stByName(r, rowStats(r).st, n))).length, b: comparedTeams(b).filter(r=>isDev(stByName(r, rowStats(r).st, n))).length })).filter(x=>x.a||x.b).sort((x,y)=>(y.b-y.a)-(x.b-x.a));
   document.getElementById("content").innerHTML = `
-    <div class="card"><h2>Сравнение недель</h2>
+    <div class="card"><h2>Сравнение недель</h2><p>${comparePairs.length ? "Оценки и проблемы сопоставлены по " + comparePairs.length + " одинаковым командам с заполненными пунктами. Охват указан отдельно." : "Недостаточно сопоставимых проверок. Нули не означают улучшение."}</p>
       <div class="filters">
         <select id="cmp-a">${weeks.map(w=>`<option ${w===a?"selected":""}>${esc(w)}</option>`).join("")}</select>
         <span style="color:var(--faint)">против</span>
@@ -7927,7 +7937,7 @@ function renderCompare(rows, st){
       <table><thead><tr><th>Метрика</th><th>${esc(a)}</th><th>${esc(b)}</th><th>Δ</th></tr></thead><tbody>
       ${rowsM.map(m=>{
         const va = typeof m[1]==="number"?m[1]:null, vb = typeof m[2]==="number"?m[2]:null;
-        const d = (va!==null&&vb!==null) ? vb-va : null;
+        const d = (va!==null&&vb!==null && (!m[3] || comparePairs.length)) ? vb-va : null;
         const good = (d===null || d===0 || !m[3]) ? null : (m[3]>0 ? d>0 : d<0);
         const dc = good===null ? "var(--faint)" : (good ? "var(--ok)" : "var(--bad)");
         const ar = d===null ? "" : (d>0?"▲":d<0?"▼":"—");
@@ -7937,7 +7947,7 @@ function renderCompare(rows, st){
       }).join("")}
       </tbody></table>
       <h2 style="margin-top:16px">Проблемные категории (недели A → B)</h2>
-      ${catRows.length?`<table><thead><tr><th>Категория</th><th>${esc(a)}</th><th>${esc(b)}</th><th>Δ</th></tr></thead><tbody>${catRows.map(x=>{ const d=x.b-x.a; return `<tr><td>${esc(x.n)}</td><td>${x.a}</td><td>${x.b}</td><td style="color:${d>0?"var(--bad)":d<0?"var(--ok)":"var(--faint)"};font-weight:600">${d>0?"+":""}${d}</td></tr>`; }).join("")}</tbody></table>`:`<div class="empty">Проблемных категорий нет 🎉</div>`}
+      ${catRows.length?`<table><thead><tr><th>Категория</th><th>${esc(a)}</th><th>${esc(b)}</th><th>Δ</th></tr></thead><tbody>${catRows.map(x=>{ const d=x.b-x.a; return `<tr><td>${esc(x.n)}</td><td>${x.a}</td><td>${x.b}</td><td style="color:${d>0?"var(--bad)":d<0?"var(--ok)":"var(--faint)"};font-weight:600">${d>0?"+":""}${d}</td></tr>`; }).join("")}</tbody></table>`:`<div class="empty">${comparePairs.length ? "У сопоставленных команд проблемных категорий нет" : "Недостаточно сопоставимых проверок"}</div>`}
       <p style="color:var(--faint);font-size:12px;margin-top:10px">Новые недели добавляются сами (лист компании) или кнопкой 🗓 Новая неделя.</p>
     </div>`;
   const sa=document.getElementById("cmp-a"), sb=document.getElementById("cmp-b");
@@ -8107,7 +8117,7 @@ function wp(params, timeoutMs){
     .then(j => {
       if (j && j.error){
         if (/требуется вход/.test(j.error) && a !== "logout") sessionExpired();
-        throw new Error(j.error);
+        throw Object.assign(new Error(j.error), {code:j.code,conflicts:j.conflicts});
       }
       return j;
     });
@@ -8304,6 +8314,8 @@ async function flushRowSave(qk){
   try {
     const res = await wp(params);
     if (res.error) throw new Error(res.error);
+    if (res.historyWarning) toast(res.historyWarning,true);
+    if (isNskRow(q.r) && q.fields[FIELDCODES[3]] !== undefined) botCatalogLearn(botsParse(q.fields[FIELDCODES[3]]).bots);
     const opt = state.optimistic[qk];
     if (opt){ entries.forEach(c=>{ if (isLatest(c[0])) delete opt.fields[c[0]]; }); if (!Object.keys(opt.fields).length) delete state.optimistic[qk]; }
     const fs = state.failedSaves[qk];
@@ -8311,7 +8323,8 @@ async function flushRowSave(qk){
     const cur = rowByRk(qk) || q.r;
     if (res.stamp) cur.updated = res.stamp;
     const d = getDraft(cur);
-    if (d && !(d.ts > q.queuedAt) && !saveQueue[qk]) clearDraft(cur); // правки после «Сохранить» остаются в черновике
+    if (d && !q.preserveDraft && !(d.ts > q.queuedAt) && !saveQueue[qk]) clearDraft(cur); // правки после «Сохранить» остаются в черновике
+    if (q.preserveDraft && !saveQueue[qk]) reviewPruneResolvedDraft(cur,q);
     toast("✔ Сохранено в таблицу (" + entries.length + " " + (entries.length===1?"поле":"полей") + ")");
     softRender();
     setTimeout(()=>{ try { const sb = q.key != null ? document.getElementById("sv" + q.key) : null; if (sb) fxClass(sb, "saved", 1200); } catch(e){} }, 90); // v7.3: вспышка «сохранено» — после перерисовки карточки
@@ -8324,9 +8337,9 @@ async function flushRowSave(qk){
     if (opt){ Object.keys(keep).forEach(f=>{ delete opt.fields[f]; }); if (!Object.keys(opt.fields).length) delete state.optimistic[qk]; }
     if (Object.keys(keep).length){
       const prev = state.failedSaves[qk];
-      state.failedSaves[qk] = { fields: Object.assign({}, prev ? prev.fields : {}, keep), expected: Object.assign({}, prev ? prev.expected : {}, q.expected), msg: e.message };
+      state.failedSaves[qk] = { fields: Object.assign({}, prev ? prev.fields : {}, keep), expected: Object.assign({}, prev ? prev.expected : {}, q.expected), msg: e.message, code: e.code };
     }
-    toast("Не сохранилось: " + e.message + " — правка осталась (черновик), нажми «повторить»", true);
+    toast("Не сохранилось: " + e.message + (e.code === "SAVE_CONFLICT" ? " — нажми «Сравнить версии»" : " — правка осталась в черновике, нажми «Повторить»"), true);
     softRender();
   } finally { inflightSaves--; delete rowSaveBusy[qk]; if (saveQueue[qk]) flushRowSave(qk); }
 }
@@ -8346,6 +8359,7 @@ function applyOptimistic_(qk, fields){ // после обновления дан
 async function saveRow(x, key){
   if (!AUTH.edit){ toast("Править может только редактор", true); return; }
   if (!rowEditable(x.r)){ toast("Эта неделя открыта только для просмотра — выбери её в списке недель", true); return; }
+  if (state.failedSaves[rk(x.r)]?.code === "SAVE_CONFLICT") { reviewConflict(x,key); return; }
   const btn = document.getElementById("sv"+key);
   const need = needText(CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j), v = el ? el.value : ""; return v === (x.r.cats[j]||"") ? "" : v; })); // проверяем только изменённые поля: старый голый «❌» в таблице не блокирует
   if (need.length){ markNeed(need.map(j=>document.getElementById("ed"+key+"_"+j))); toast("Допиши, что не так: " + need.map(j=>catsOf(x.r)[j]).join(", "), true); return; }
@@ -8360,7 +8374,7 @@ async function saveRow(x, key){
   // ручная оценка/вердикт сравниваются с нормализованным значением сервера —
   // иначе «7» и " 7 " считались разными и сохранение чужого поля стирало оценку
   const sco = document.getElementById("ed"+key+"_score").value;
-  if (sco !== String(x.r.scoreM == null ? "" : x.r.scoreM).trim()) changes.push(["score", sco]);
+  if (sco !== String(x.r.scoreM == null ? "" : x.r.scoreM).trim().replace(",",".")) changes.push(["score", sco]);
   const ver = document.getElementById("ed"+key+"_verdict").value;
   if (ver !== String(x.r.verdictM == null ? "" : x.r.verdictM).trim()) changes.push(["verdict", ver]);
   const rec = document.getElementById("ed"+key+"_reco").value;
@@ -9518,7 +9532,7 @@ async function load(opts){
         if (weekReq === "all") rq.lite = 1;
         if (auto && state.gen && state.genWeek === weekReq && Date.now() - (state.lastFullAt||0) < LITE_FULL_MS) rq.gen = state.gen;
         j = await wp(rq, 120000);
-        if (j.error) throw new Error(j.error);
+        if (j.error) throw Object.assign(new Error(j.error), {code:j.code,conflicts:j.conflicts});
       } catch(eRead){
         lastErr = eRead;
         if (readAttempt >= 2 || String(eRead.message).indexOf("сервер не ответил") < 0) throw eRead;
@@ -9627,6 +9641,154 @@ document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
   window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js", { scope: "./" }).catch(()=>{}); });
 }
+// Release 83: review comparison, history, conflicts, completeness, bot names.
+function reviewIdentity(r) {
+  return JSON.stringify([r.city, r.opNick, r.opName, r.model].map(v=>String(v||'').trim().toLowerCase()));
+}
+function reviewPairs(now, before) {
+  const index = rows => { const m=new Map(); rows.forEach(r=>{ const k=reviewIdentity(r); m.set(k,m.has(k)?null:r); }); return m; };
+  const a=index(now), b=index(before), pairs=[];
+  a.forEach((r,k)=>{ const p=b.get(k); if (!r || !p || catsOf(r).join('|')!==catsOf(p).join('|')) return;
+    const x=rowStats(r), y=rowStats(p);
+    if (x.st.length===9 && y.st.length===9 && x.st.every(Boolean) && y.st.every(Boolean)) pairs.push([r,p]);
+  });
+  return pairs;
+}
+function reviewValue(r,f) {
+  const j=FIELDCODES.indexOf(f);
+  return String((j>=0?r.cats[j]:r[({comment:'obs',score:'scoreM',verdict:'verdictM',recs:'reco',links:'linksTxt',status:'status'})[f]])??'');
+}
+function reviewFieldName(r,f) { const j=FIELDCODES.indexOf(f); return j>=0?catsOf(r)[j]:({comment:'Комментарий',score:'Оценка',verdict:'Вердикт',recs:'Рекомендации',links:'Ссылки',status:'Статус'})[f]||f; }
+function reviewCurrent(r,key) {
+  const c={...r,cats:r.cats.slice()};
+  for(let j=0;j<9;j++){ const el=document.getElementById('ed'+key+'_'+j); if(el)c.cats[j]=el.value; }
+  for(const [suffix,prop] of [['comment','obs'],['reco','reco']]){const el=document.getElementById('ed'+key+'_'+suffix);if(el)c[prop]=el.value;}
+  return c;
+}
+function reviewGaps(r) {
+  const gaps=[], st=rowStats(r).st;
+  catsOf(r).forEach((n,j)=>{if(!st[j])gaps.push('Не отмечено: '+n);});
+  if(isNskRow(r)){
+    const shots=(state.screens||{})[skey(r)]||[];
+    Object.entries(NSK_SHOTS).forEach(([j,n])=>{const have=shots.filter(s=>s.cat===CATS_NSK[j]).length;if(have<n)gaps.push(CATS_NSK[j]+': скриншоты '+have+' из '+n);});
+    const g=goalsParse(r.cats[NSK_GOALS]).goals.filter(x=>x.g||x.p||x.o);
+    if(g.length<5)gaps.push('Голы: '+g.length+' из 5');
+    if(g.some(x=>!x.g||!x.p||!x.o))gaps.push('В голах есть незаполненные название, цена или онлайн');
+    if(!scaleOf(r.cats[NSK_SCALE]))gaps.push('Не указана оценка оператора 1–5');
+    if(catState(r.cats[7])==='warn')gaps.push('Модель ↔ мемберы: уточни старую оценку кнопкой «да» или «нет»');
+    const bots=botsParse(r.cats[3]).bots;
+    if(bots.some(x=>!x.bot.trim()||!x.comment.trim()))gaps.push('У каждого бота нужны название и комментарий');
+  }
+  return gaps;
+}
+function reviewCompleteness(r) {
+  const gaps=reviewGaps(r);
+  return `<details class="rv-complete"><summary>${gaps.length?'Разбор неполный · '+gaps.length:'Обязательные пункты заполнены'}</summary><p>Полнота заполнения не меняет оценку работы.</p>${gaps.length?'<ul>'+gaps.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>':'<p>Пропусков по правилам чек-листа не найдено.</p>'}</details>`;
+}
+function reviewTools(r,key) {
+  return `<div class="rv-tools"><button type="button" class="abtn2" data-rv-compare="${esc(key)}">Прошлый и текущий разбор</button><button type="button" class="abtn2" data-rv-history="${esc(key)}">История правок</button></div><div data-rv-complete="${esc(key)}">${reviewCompleteness(r)}</div>`;
+}
+function reviewDialog(title) {
+  const old=document.getElementById('review-dialog');if(old)old.remove();
+  const dialog=document.createElement('dialog');dialog.id='review-dialog';dialog.className='rv-dialog';
+  dialog.setAttribute('aria-label',title);
+  dialog.innerHTML='<div class="rv-dialog-head"><h2>'+esc(title)+'</h2><button type="button" class="abtn2" aria-label="Закрыть">Закрыть</button></div><div class="rv-body">Загружаю…</div>';
+  document.body.appendChild(dialog);dialog.querySelector('.rv-dialog-head button').onclick=()=>dialog.close();
+  dialog.addEventListener('keydown',ev=>ev.stopPropagation());
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();return dialog;
+}
+function reviewScreens(r) {
+  return ((state.screens||{})[skey(r)]||[]).filter(s=>!isAdvCat(s.cat)&&!isVideoLink(s.link)).map(s=>{
+    const preview=(state.thumbData||{})[s.mini||s.link];
+    return `<button type="button" class="abtn2 rv-shot" data-rv-shot="${esc(driveId(s.link)||'')}">${preview?'<img alt="Миниатюра" src="'+esc(preview)+'">':''}<span>${esc(s.cat||'Скриншот')} · открыть оригинал</span></button>`;
+  }).join('')||'<p>Скриншотов нет</p>';
+}
+async function reviewCompare(r,key) {
+  const current=reviewCurrent(r,key), user=AUTH.user, d=reviewDialog('Прошлый и текущий разбор'), box=d.querySelector('.rv-body');
+  try{
+    await ensureFull(); if(!d.isConnected || AUTH.user!==user)return;
+    if(!state.fullLoaded)throw Error('История недель не загрузилась. Повтори позже.');
+    const weeks=[...new Set(state.rows.filter(x=>x.city===r.city && weekKey(x.week)<weekKey(r.week)).map(x=>x.week))].sort((a,b)=>weekKey(b)-weekKey(a));
+    const week=weeks[0];
+    const found=state.rows.filter(x=>x.week===week&&reviewIdentity(x)===reviewIdentity(r));
+    if(found.length!==1){box.textContent=found.length?'В прошлой неделе несколько совпадающих команд. Однозначное сравнение невозможно.':'Для этой команды нет разбора в предыдущей доступной неделе'+(week?' '+week:'')+'.';return;}
+    const previous=await ensureRowFull(found[0]);if(!d.isConnected || AUTH.user!==user)return;
+    const previousNames=catsOf(previous), same=catsOf(current).join('|')===previousNames.join('|');
+    const cell=(row,j)=>j<0?'—':nskRoBody(row,j,row.cats[j]||'—');
+    box.innerHTML=`<p>${esc(r.opName||r.opNick)} · ${esc(r.model)}. Справа — текущие поля, включая несохранённые изменения.</p>${same?'':'<p>Чек-листы различаются: сопоставлены только одинаковые названия пунктов.</p>'}<div class="rv-pair rv-head"><b>${esc(week)}</b><b>${esc(r.week)} · текущий разбор</b></div>`+catsOf(current).map((n,j)=>{
+      const k=previousNames.indexOf(n), a=k>=0?catState(previous.cats[k]):null,b=catState(current.cats[j]);
+      return `<section class="rv-section"><h3>${esc(n)}${a&&b&&a!=='ok'&&b!=='ok'?' <span class="chip c-warn">Повторное замечание</span>':''}</h3><div class="rv-pair"><div>${cell(previous,k)}</div><div>${cell(current,j)}</div></div></section>`;
+    }).join('')+`<section class="rv-section"><h3>Общий комментарий</h3><div class="rv-pair"><div>${esc(previous.obs||'—')}</div><div>${esc(current.obs||'—')}</div></div></section><section class="rv-section"><h3>Скриншоты</h3><div class="rv-pair"><div>${reviewScreens(previous)}</div><div>${reviewScreens(current)}</div></div></section>`;
+  }catch(e){if(d.isConnected)box.textContent=e.message;}
+}
+async function reviewHistory(r) {
+  const user=AUTH.user,d=reviewDialog('История правок разбора'),box=d.querySelector('.rv-body');
+  try{const res=await wp(Object.assign({action:'reviewhistory'},rowKeyParams(r)));if(!d.isConnected||AUTH.user!==user)return;
+    box.innerHTML='<p>Последние 100 изменений полей этого разбора. Запись истории началась с версии 2026-11-03.83. Загрузка скриншотов и смена состава команды сюда не входят.</p>'+(res.items.length?res.items.map(x=>`<section class="rv-section"><h3>${esc(reviewFieldName(r,x.field))}</h3><p>${esc(x.when)} · ${esc(x.actor)}</p><div class="rv-pair"><div><b>Было</b><p>${esc(x.before||'—')}</p></div><div><b>Стало</b><p>${esc(x.after||'—')}</p></div></div></section>`).join(''):'<p>После обновления изменений этого разбора ещё нет.</p>');
+  }catch(e){if(d.isConnected)box.textContent=e.message;}
+}
+async function reviewConflict(x,key) {
+  const r=x.r,qk=rk(r),failure=state.failedSaves[qk];if(!failure)return;
+  if(rowSaveBusy[qk]||saveQueue[qk]){toast('Дождись завершения отправки',true);return;}
+  const user=AUTH.user,d=reviewDialog('Сравнить версии перед сохранением'),box=d.querySelector('.rv-body');
+  try{
+    const res=await wp(Object.assign({action:'rowfull'},rowKeyParams(r)));if(!d.isConnected||user!==AUTH.user)return;
+    const fields=Object.keys(failure.fields), server=res.row;
+    const mine=reviewCurrent(r,key);
+    box.innerHTML='<p>Выбери значение для каждого поля. Новая отправка снова проверит, не изменил ли кто-то запись.</p>'+fields.map((f,i)=>{
+      const value=FIELDCODES.includes(f)||['comment','recs'].includes(f)?reviewValue(mine,f):failure.fields[f];
+      return `<section class="rv-section"><h3>${esc(reviewFieldName(r,f))}</h3><div class="rv-pair"><label><input type="radio" name="rv-conf-${i}" value="server" checked> Оставить серверное<p>${esc(reviewValue(server,f)||'—')}</p></label><label><input type="radio" name="rv-conf-${i}" value="mine"> Мой вариант<textarea data-rv-value="${i}">${esc(value)}</textarea></label></div></section>`;
+    }).join('')+'<button type="button" class="savebtn" id="rv-resolve">Применить выбранные значения</button>';
+    box.querySelector('#rv-resolve').onclick=()=>{
+      if(user!==AUTH.user||!rowEditable(r)||state.failedSaves[qk]!==failure){toast('Состояние изменилось. Открой сравнение заново.',true);d.close();return;}
+      const changes=[], draft=getDraft(r)||{}, adopted={};
+      fields.forEach((f,i)=>{const useMine=box.querySelector(`input[name="rv-conf-${i}"]:checked`).value==='mine';const base=reviewValue(server,f),value=useMine?box.querySelector(`[data-rv-value="${i}"]`).value:base;
+        adopted[f]=value;const j=FIELDCODES.indexOf(f),dk=j>=0?'f'+j:({comment:'comment',score:'score',verdict:'verdict',recs:'reco',links:'lk'})[f];if(dk)draft[dk]=value;
+        if(value!==base)changes.push([f,value,base]);
+      });
+      delete state.failedSaves[qk];applyOptimistic_(qk,adopted);setDraft(r,draft);
+      if(changes.length){queueRowSave(x,key,changes);saveQueue[qk].preserveDraft=true;saveQueue[qk].resolvedBase=server;}
+      else reviewPruneResolvedDraft(r,{fields:adopted,resolvedBase:server});
+      d.close();render();toast(changes.length?'Отправляю выбранные значения…':'Приняты серверные значения; остальные черновики сохранены');
+    };
+  }catch(e){if(d.isConnected)box.textContent=e.message;}
+}
+function reviewPruneResolvedDraft(r,q){
+  const d=getDraft(r);if(!d)return;
+  const mapping=Object.fromEntries(FIELDCODES.map((f,j)=>['f'+j,f]));
+  Object.assign(mapping,{comment:'comment',score:'score',verdict:'verdict',reco:'recs',lk:'links'});
+  Object.entries(mapping).forEach(([dk,f])=>{const expected=Object.hasOwn(q.fields,f)?q.fields[f]:reviewValue(q.resolvedBase,f);const normalize=v=>f==='score'?String(v??'').trim().replace(',','.'):String(v??'');if(normalize(d[dk])===normalize(expected))delete d[dk];});
+  if(Object.keys(mapping).some(k=>Object.hasOwn(d,k)))setDraft(r,d);else clearDraft(r);
+}
+function botCatalogRead() {try{const x=JSON.parse(localStorage.getItem('dash_bot_names:'+AUTH.user)||'[]');return Array.isArray(x)?x.filter(v=>typeof v==='string').slice(0,80):[];}catch(e){return [];} }
+function botCatalogLearn(bots) {
+  const names=[...new Set(botCatalogRead().concat(bots.map(b=>b.bot.trim()).filter(Boolean)))].slice(-80);
+  try{localStorage.setItem('dash_bot_names:'+AUTH.user,JSON.stringify(names));}catch(e){toast('Не удалось сохранить каталог в браузере',true);}
+}
+function botCatalogHtml(key) {
+  return `<datalist id="bot-names-${esc(key)}">${botCatalogRead().map(n=>'<option value="'+esc(n)+'"></option>').join('')}</datalist><p class="co-hint">Названия запоминаются в этом браузере для твоего аккаунта. Комментарии заполняются заново. <button type="button" class="abtn2" data-rv-bot-catalog>Каталог ботов</button></p>`;
+}
+document.addEventListener('click',async ev=>{
+  const button=ev.target.closest('[data-rv-compare],[data-rv-history],[data-rv-bot-catalog],[data-rv-shot]');if(!button)return;
+  if(button.hasAttribute('data-rv-bot-catalog')){
+    const d=reviewDialog('Мой каталог ботов'),box=d.querySelector('.rv-body');
+    box.innerHTML='<p>Одно название в строке. Каталог хранится только в этом браузере и не меняет разборы.</p><textarea aria-label="Названия ботов" rows="12">'+esc(botCatalogRead().join('\n'))+'</textarea><button class="savebtn">Сохранить каталог</button>';
+    box.querySelector('button').onclick=()=>{try{localStorage.setItem('dash_bot_names:'+AUTH.user,JSON.stringify([...new Set(box.querySelector('textarea').value.split('\n').map(s=>s.trim().slice(0,150)).filter(Boolean))].slice(0,80)));d.close();document.querySelectorAll('datalist[id^="bot-names-"]').forEach(l=>l.innerHTML=botCatalogRead().map(n=>'<option value="'+esc(n)+'"></option>').join(''));toast('Каталог сохранён');}catch(e){toast('Не удалось сохранить каталог',true);}};return;
+  }
+  if(button.hasAttribute('data-rv-shot')){
+    if(!button.dataset.rvShot)return;button.disabled=true;
+    try{const res=await wp({action:'thumb',id:button.dataset.rvShot,full:'1'},90000);if(!res.d)throw Error('Оригинал недоступен');if(button.isConnected){const im=document.createElement('img');im.src=b64Img(res.d);im.alt='Оригинал скриншота';im.className='rv-original';button.after(im);button.remove();}}
+    catch(e){button.disabled=false;toast(e.message,true);}return;
+  }
+  const key=button.dataset.rvCompare??button.dataset.rvHistory,x=state.lastView[key];if(!x)return;
+  if(button.hasAttribute('data-rv-compare'))reviewCompare(x.r,key);else reviewHistory(x.r);
+});
+document.addEventListener('input',ev=>{
+  const m=/^ed(?:b|c)?(.+)_(\d)$/.exec(ev.target.id||'');if(!m)return;
+  const x=state.lastView[m[1]],box=document.querySelector('[data-rv-complete="'+m[1]+'"]');
+  if(x&&box){const open=box.querySelector('details')?.open;box.innerHTML=reviewCompleteness(reviewCurrent(x.r,m[1]));if(open)box.querySelector('details').open=true;}
+});
+
 </script>
 </body>
 </html>
