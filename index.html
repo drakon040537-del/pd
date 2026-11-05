@@ -2772,7 +2772,6 @@ function v7WeekOpen(){
   if (!AUTH.ok()) return;
   const btn = document.getElementById("tb-week");
   const wks = rememberWeeks().slice().reverse();
-  if (!state.fullLoaded && !state.fullLoading) ensureFull().then(()=>{ if (document.getElementById("v7wdrop")){ v7WeekClose(); v7WeekOpen(); } });
   const item = (w, label, sub) => `<button class="v7w-i${state.week === w ? " on" : ""}" data-v7w="${esc(w)}" role="menuitemradio" aria-checked="${state.week === w}"><b>${esc(label)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</button>`;
   const d = document.createElement("div");
   d.id = "v7wdrop"; d.className = "v7wdrop"; d.setAttribute("role", "menu");
@@ -2909,7 +2908,7 @@ document.getElementById("tabs").addEventListener("click", ev=>{ if (ev.target.cl
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxmWb1EW8be1Y-6WFMM_ZIRFN7lt4c06GJoamKwxOloWR4xg4XyYZJmFwbbkGQ5OZ3q/exec",
   REFRESH_MIN: 5,
-  VER: "2026-11-03.83"
+  VER: "2026-11-05.85"
 };
 
 try{ localStorage.removeItem("dash_key"); }catch(e){} // ключ больше не используется — вход по логину
@@ -4584,7 +4583,7 @@ function renderMain(){
           ${pmBlk ? `<div class="co-pm">${pmBlk}</div>` : ""}
           <label class="co-lbl" for="recg${key}">Рекомендации команде (видит продюсер)</label><textarea id="recg${key}" class="co-reco" placeholder="общие рекомендации; советы по категориям — кнопкой «💡 Совет» под категорией">${esc(rsp.gen)}</textarea><textarea id="ed${key}_reco" hidden aria-hidden="true" tabindex="-1">${esc(recoV)}</textarea>
           <div class="co-man"><label>Оценка вручную<select id="ed${key}_score"><option value="">авто</option>${Array.from({length:MAX_SCORE*2+1},(_,n)=>n/2).map(n=>`<option ${(scV===String(n))?"selected":""}>${n}</option>`).join("")}</select></label><label>Вердикт вручную<select id="ed${key}_verdict"><option value="">авто</option>${["норма","замечание","критично"].map(v=>`<option ${(vdV===v)?"selected":""}>${v}</option>`).join("")}</select></label></div>
-          <button class="savebtn" id="sv${key}">Сохранить в таблицу</button>
+          <button class="savebtn" id="sv${key}">Сохранить сейчас</button>
           <div class="co-2"><button class="abtn2" id="tc${key}" title="поставить штамп «Обновлено» без правок">Проверено сегодня</button><button class="abtn2" id="tsk${key}" title="поставить задачу продюсеру (появится в «Мои задачи»)">Поручить продюсеру</button></div>
           <div class="aimenu"><button class="abtn2 aimbtn" data-aim="${key}" title="все функции ИИ для этой команды">${V7I.spark} ИИ-помощник <span class="car">▾</span></button>
           <div class="aimpop" id="aimp${key}">
@@ -4597,7 +4596,7 @@ function renderMain(){
             <button id="aitone${key}"><b>Тон комментария</b><small>проверка тона общего комментария</small></button>
           </div></div>
           <div class="aibox" id="aibox${key}" style="display:none"></div>
-          <div class="co-draft"><i class="${dr ? "w" : "o"}" id="ovdd${key}"></i><span id="ovds${key}">${dr ? "Черновик от " + esc(draftTime(dr)) + " — не сохранён в таблицу" : "Без несохранённых правок"}</span><span id="svmsg${key}" class="co-svmsg"></span></div>
+          <div class="co-draft"><i class="${dr ? "w" : "o"}" id="ovdd${key}"></i><span id="ovds${key}">${dr ? "Есть неотправленные изменения — сохранение при следующей правке или кнопкой" : "Все изменения сохранены"}</span><span id="svmsg${key}" class="co-svmsg"></span></div>
         </aside></div>`
         : roNote + reviewTools(x.r,key) + `<div class="co-card ro">${readDet}</div>`;
       const cityCell = showCoCol ? `<td class="ov-cocell"><span style="color:${OVC[x.r.city]||"var(--dim)"}">${esc(clabel(x.r.city))}</span>${(!state.week||state.week==="all")&&x.r.week?` <span style="color:var(--faint);font-size:10.5px;white-space:nowrap">· ${esc(x.r.week)}</span>`:""}</td>` : "";
@@ -4844,10 +4843,11 @@ function renderMain(){
         lv.textContent = liveEval(vals);
         const ovb = document.getElementById("ovsc"+det.dataset.d); // v7: крупная оценка справа — живьём
         if (ovb){ const sc0 = document.getElementById("ed"+det.dataset.d+"_score"), vd0 = document.getElementById("ed"+det.dataset.d+"_verdict"); const was = (ovb.querySelector(".ov-big b")||{}).textContent; ovb.innerHTML = ovScore(vals, sc0 ? sc0.value : "", vd0 ? vd0.value : "", null, catsOf(x.r)); const nb = ovb.querySelector(".ov-big b"); if (nb && was !== undefined && was !== nb.textContent) fxClass(nb, "bump", 500); }
-        const ods = document.getElementById("ovds"+det.dataset.d); if (ods) ods.textContent = "Есть изменения — черновик хранится в браузере";
+        const ods = document.getElementById("ovds"+det.dataset.d); if (ods) ods.textContent = "Сохраняется автоматически…";
         const odd = document.getElementById("ovdd"+det.dataset.d); if (odd) odd.className = "w";
       }
       setDraft(x.r, d);
+      if(rowEditable(x.r) && !x.r._lite) saveRow(x,det.dataset.d,true);
     };
   });
   view.forEach((x)=>{
@@ -5394,12 +5394,9 @@ function railGroups(){
 function railGroupToggle(key){
   const g = railGroups(); g[key] = !g[key];
   try{ localStorage.setItem("rail_groups", JSON.stringify(g)); }catch(e){}
-  if (key === "weeks" && g[key] && !state.fullLoaded && !state.fullLoading) ensureFull().then(render); // подтянуть полный список недель
 }
 function railPickWeek(w){
-  state.week = w; state.page = 1; closeRailFly(); closeWeekDrop();
-  if (w !== "latest" && !state.fullLoaded){ render(); ensureFull().then(render); return; }
-  render();
+  closeRailFly(); closeWeekDrop(); pickWeek85(w);
 }
 function railPickProducer(p){
   if (state.tab !== "Обзор" && anyDirty() && !confirm("Есть несохранённые правки. Правки уже в черновике и не пропадут. Переключить вкладку?")) return;
@@ -5415,7 +5412,6 @@ function openRailFly(head){
   if (was && was.dataset.g === key) return; // повторный клик — закрыть
   const body = head.parentElement.querySelector(".rgbody");
   if (!body) return;
-  if (key === "weeks" && !state.fullLoaded && !state.fullLoading) ensureFull().then(render);
   const r = head.getBoundingClientRect();
   const f = document.createElement("div");
   f.id = "railfly"; f.className = "rflyout"; f.dataset.g = key;
@@ -5459,9 +5455,7 @@ function toggleWeekDrop(){
   const btn = document.getElementById("weekdrop-btn");
   if (!btn) return;
   const wks = rememberWeeks();
-  if (!state.fullLoaded && !state.fullLoading){
-    ensureFull().then(()=>{ const d = document.getElementById("weekdrop"); if (d){ toggleWeekDrop(); toggleWeekDrop(); } }); // список обновится, как придёт история
-  }
+
   if (!wks.length) return;
   const tabs = document.getElementById("tabs");
   const tr = tabs.getBoundingClientRect(), br = btn.getBoundingClientRect();
@@ -5476,9 +5470,7 @@ function toggleWeekDrop(){
     + wks.map(w=>`<button class="witem ${wlab(w)}" data-w="${esc(w)}">${esc(w)}</button>`).join("");
   tabs.appendChild(div);
   div.querySelectorAll(".witem").forEach(b=>b.onclick=()=>{
-    state.week = b.dataset.w; state.page = 1; closeWeekDrop();
-    if ((b.dataset.w !== "latest") && !state.fullLoaded){ render(); ensureFull().then(render); return; }
-    render();
+    closeWeekDrop(); pickWeek85(b.dataset.w);
   });
 }
 document.addEventListener("click", e=>{
@@ -6058,6 +6050,7 @@ function renderStatus(){
       <button class="o7-btn" id="stp-ref">Обновить</button> <button class="o7-btn" id="stp-deep" title="открыть таблицы расписаний (только чтение)">Доступ к расписаниям</button> <button class="o7-pri" id="stp-self"${st.selfRun ? " disabled" : ""}>Проверить сейчас</button></div>
     ${d && d.ver !== CONFIG.VER ? `<section class="st7-ban"><b>Версии разные</b><span>сайт ${esc(CONFIG.VER)} · сервер ${esc(d.ver)} — обнови Code.gs или страницу.</span></section>` : ""}
     ${st.err ? `<section class="st7-ban bad"><b>Ошибка</b><span>${esc(st.err)}</span></section>` : ""}
+    ${performancePanel85()}
     ${!d ? '<div class="o7-card o7-empty">Загружаю…</div>' : body}
   </div>`;
   const load = deep => { st.loading = true; st.err = ""; wp({ action:"status", deep: !!deep }, 60000).then(r=>{ if (r && r.error) throw new Error(r.error); r = r || {}; r.counters = r.counters || {}; r.errors = Array.isArray(r.errors) ? r.errors : []; r.props = r.props || {}; st.d = r; }).catch(e=>{ st.err = e.message; }).finally(()=>{ st.loading = false; if (state.tab==="Состояние") renderStatus(); }); };
@@ -7706,14 +7699,7 @@ function devName(){ // «Windows · Chrome 129 · ПК» — без точных
 
 // ---------- предзагрузка истории в фоне (переключение недель без ожидания) ----------
 let prefetchT = null;
-function schedulePrefetch(){
-  clearTimeout(prefetchT);
-  prefetchT = setTimeout(()=>{
-    if (state.fullLoaded || state.fullLoading || !AUTH.ok() || document.visibilityState !== "visible") return;
-    const c = navigator.connection; if (c && (c.saveData || /2g/.test(c.effectiveType || ""))) return; // экономия трафика
-    ensureFull({ silent: true });
-  }, 8000);
-}
+function schedulePrefetch(){ clearTimeout(prefetchT); }
 
 // ---------- плашка самопроверки сервера (смотрящему) ----------
 function healthShow(h){
@@ -8107,12 +8093,58 @@ function sessionExpired(){ // C: сессия истекла/погашена �
   try { document.getElementById("l-user").value = keepUser || ""; document.getElementById("l-msg").textContent = "Сессия истекла — войди снова (несохранённые черновики остались в этом браузере)"; } catch(e){}
   setTimeout(()=>{ sessionGone = false; }, 3000);
 }
+const readBases85=new Map(), readMetrics85=[];
+function mergeDelta85(base,j){
+  if(!base || base.base85!==j.from85)throw Error('DELTA_BASE_MISSING');
+  const m=new Map((base.rows||[]).map(r=>[JSON.stringify([r._sheet,r._row]),r]));
+  j.rows.forEach(r=>m.set(JSON.stringify([r._sheet,r._row]),r));
+  const rows=j.order85.map(k=>{if(!m.has(k))throw Error('DELTA_ROW_MISSING');return m.get(k);});
+  const result=Object.assign({},base,j.patch85,{rows,gen:j.gen,base85:j.base85});
+  (j.unset85||[]).forEach(k=>delete result[k]);return result;
+}
+async function readTransport85(params,timeoutMs){
+  if(params.action!=='read')return postJSON(params,timeoutMs);
+  const key=JSON.stringify([params.token,params.viewAs||0,params.week||'latest',!!params.lite]);
+  const base=readBases85.get(key), request=Object.assign({},params,{delta85:1});
+  if(base)request.base85=base.base85;else delete request.gen;
+  const t=performance.now();
+  let j=await postJSON(request,timeoutMs);
+  if(params.token!==AUTH.token)throw Error('Сессия изменилась, повторите загрузку');
+  let bytes=new TextEncoder().encode(JSON.stringify(j)).length, mode=j.same?'без изменений':j.delta85?'изменения':'полный ответ';
+  const perf=j.perf85;
+  if(j.delta85){
+    try{j=mergeDelta85(base,j);}catch(e){
+      const retry=Object.assign({},params,{delta85:1});delete retry.gen;
+      j=await postJSON(retry,timeoutMs);bytes+=new TextEncoder().encode(JSON.stringify(j)).length;mode='полный после сбоя кэша';
+      if(params.token!==AUTH.token)throw Error('Сессия изменилась, повторите загрузку');
+    }
+  }
+  if(j && !j.error && !j.same && Array.isArray(j.rows)){
+    const clean=JSON.parse(JSON.stringify(j));delete clean.perf85;
+    readBases85.delete(key);readBases85.set(key,clean);
+    while(readBases85.size>3)readBases85.delete(readBases85.keys().next().value);
+  }
+  if(!j.error){readMetrics85.push({ms:Math.round(performance.now()-t),server:perf?perf.totalMs:null,handler:perf?perf.handlerMs:null,source:perf?perf.source:'',bytes,mode,week:params.week||'latest'});if(readMetrics85.length>20)readMetrics85.shift();}
+  delete j.perf85;return j;
+}
+function performancePanel85(){
+  const m=readMetrics85.slice(-5).reverse();
+  return '<section class="o7-card"><h3>Скорость загрузки данных</h3><p>Последние запросы в этом браузере. Полное время включает сеть и ожидание Google. Размер — JSON-ответ, без сетевых заголовков.</p>'+(!m.length?'<p>Замеров пока нет.</p>':m.map(x=>'<p>'+esc(x.week)+' · '+esc(x.mode)+' · '+(x.ms/1000).toFixed(2)+' с всего · '+(x.server===null?'сервер: нет замера':(x.server/1000).toFixed(2)+' с на сервере')+' · '+(x.bytes/1024).toFixed(1)+' КБ · '+esc(x.source)+'</p>').join(''))+'</section>';
+}
+function pickWeek85(w){
+  if(loadingNow){toast('Дождитесь завершения загрузки недели',true);return;}
+  state.week=w;state.page=1;
+  if(w==='all'||w==='__month__'){render();ensureFull().then(render);return;}
+  // A specific week is fetched on demand. Do not download every other week.
+  state.dataFp='';render();load();
+}
+
 function wp(params, timeoutMs){
   const a = String(params && params.action || "");
   if (viewAsActive() && WRITE_ACTIONS_FE.indexOf(a) >= 0) return Promise.reject(new Error("в режиме «глазами …» изменения отключены — выйди из режима"));
   // v6 (исправление 10): в режиме «глазами» запрос помечается — сервер тоже откажет в любой записи
   const isW = WRITE_ACTIONS_FE.indexOf(a) >= 0 && a !== "tpl"; if (isW) writeSeq++;
-  return postJSON(Object.assign({}, params, { token: AUTH.token }, viewAsActive() ? { viewAs: 1 } : {}), timeoutMs)
+  return readTransport85(Object.assign({}, params, { token: AUTH.token }, viewAsActive() ? { viewAs: 1 } : {}), timeoutMs)
     .finally(() => { if (isW) writeSeq++; })
     .then(j => {
       if (j && j.error){
@@ -8325,7 +8357,7 @@ async function flushRowSave(qk){
     const d = getDraft(cur);
     if (d && !q.preserveDraft && !(d.ts > q.queuedAt) && !saveQueue[qk]) clearDraft(cur); // правки после «Сохранить» остаются в черновике
     if (q.preserveDraft && !saveQueue[qk]) reviewPruneResolvedDraft(cur,q);
-    toast("✔ Сохранено в таблицу (" + entries.length + " " + (entries.length===1?"поле":"полей") + ")");
+    autoSaveStatus84(q.key, saveQueue[qk] || getDraft(cur) ? "Есть изменения, ожидающие сохранения…" : "Сохранено");
     softRender();
     setTimeout(()=>{ try { const sb = q.key != null ? document.getElementById("sv" + q.key) : null; if (sb) fxClass(sb, "saved", 1200); } catch(e){} }, 90); // v7.3: вспышка «сохранено» — после перерисовки карточки
   } catch(e){
@@ -8339,6 +8371,14 @@ async function flushRowSave(qk){
       const prev = state.failedSaves[qk];
       state.failedSaves[qk] = { fields: Object.assign({}, prev ? prev.fields : {}, keep), expected: Object.assign({}, prev ? prev.expected : {}, q.expected), msg: e.message, code: e.code };
     }
+    if(pending){
+      if(pending.timer) clearTimeout(pending.timer);
+      const f=state.failedSaves[qk] || {fields:{},expected:{}};
+      f.fields=Object.assign({},q.fields,pending.fields);
+      f.expected=Object.assign({},pending.expected,q.expected); f.msg=e.message; f.code=e.code;
+      state.failedSaves[qk]=f; delete saveQueue[qk];
+    }
+    autoSaveStatus84(q.key,e.code === "SAVE_CONFLICT" ? "Конфликт — сравните версии" : "Не сохранено — проверьте связь");
     toast("Не сохранилось: " + e.message + (e.code === "SAVE_CONFLICT" ? " — нажми «Сравнить версии»" : " — правка осталась в черновике, нажми «Повторить»"), true);
     softRender();
   } finally { inflightSaves--; delete rowSaveBusy[qk]; if (saveQueue[qk]) flushRowSave(qk); }
@@ -8356,14 +8396,14 @@ function applyOptimistic_(qk, fields){ // после обновления дан
     else if (f === "links") r.linksTxt = v;
   });
 }
-async function saveRow(x, key){
+async function saveRow(x, key, automatic=false){
   if (!AUTH.edit){ toast("Править может только редактор", true); return; }
   if (!rowEditable(x.r)){ toast("Эта неделя открыта только для просмотра — выбери её в списке недель", true); return; }
-  if (state.failedSaves[rk(x.r)]?.code === "SAVE_CONFLICT") { reviewConflict(x,key); return; }
+  if (state.failedSaves[rk(x.r)]?.code === "SAVE_CONFLICT") { if(!automatic) reviewConflict(x,key); return; }
   const btn = document.getElementById("sv"+key);
   const need = needText(CATS.map((n,j)=>{ const el = document.getElementById("ed"+key+"_"+j), v = el ? el.value : ""; return v === (x.r.cats[j]||"") ? "" : v; })); // проверяем только изменённые поля: старый голый «❌» в таблице не блокирует
-  if (need.length){ markNeed(need.map(j=>document.getElementById("ed"+key+"_"+j))); toast("Допиши, что не так: " + need.map(j=>catsOf(x.r)[j]).join(", "), true); return; }
-  if (isNskRow(x.r)){ const gaps = nskGaps(x, key); if (gaps.length) toast("Сохраняю, но в разборе не хватает: " + gaps.join("; "), true); } // v7.7: не блокируем — напоминаем
+  if (!automatic && need.length){ markNeed(need.map(j=>document.getElementById("ed"+key+"_"+j))); toast("Допиши, что не так: " + need.map(j=>catsOf(x.r)[j]).join(", "), true); return; }
+  if (!automatic && isNskRow(x.r)){ const gaps = nskGaps(x, key); if (gaps.length) toast("Сохраняю, но в разборе не хватает: " + gaps.join("; "), true); } // v7.7: не блокируем — напоминаем
   const changes = [];
   for (let j=0;j<9;j++){
     const val = document.getElementById("ed"+key+"_"+j).value;
@@ -8383,7 +8423,9 @@ async function saveRow(x, key){
   const lkEl = document.getElementById("lk"+key);
   const linksNew = lkEl ? normLinks(lkEl.value) : "";
   if (lkEl && linksNew !== normLinks(x.r.linksTxt||"")) changes.push(["links", linksNew]);
-  if (!changes.length){ toast("Изменений нет", true); return; }
+  const failed84=state.failedSaves[rk(x.r)];
+  if(failed84) Object.entries(failed84.fields).forEach(([f,v])=>{if(!changes.some(c=>c[0]===f)) changes.push([f,v]);});
+  if (!changes.length){ if(!automatic) toast("Изменений нет", true); return; }
   changes.forEach(c=>{ const j = FIELDCODES.indexOf(c[0]); if (j >= 0) acLearn(j, c[1]); }); // v6.6: свои формулировки — в автоподсказки
   changes.forEach(c=>{ const j = FIELDCODES.indexOf(c[0]); const prop = {comment:"obs",score:"scoreM",verdict:"verdictM",recs:"reco",links:"linksTxt"}[c[0]]; const failed = state.failedSaves[rk(x.r)]; c[2] = failed && failed.expected && failed.expected[c[0]] !== undefined ? failed.expected[c[0]] : String((j >= 0 ? x.r.cats[j] : x.r[prop]) ?? ""); });
   // оптимистично: значения применяем сразу, «Сохранено» показываем сразу, отправка — фоном пачкой
@@ -8399,9 +8441,10 @@ async function saveRow(x, key){
   // черновик НЕ удаляем — он удалится после подтверждения сервера (flushRowSave)
   const fs = state.failedSaves[rk(x.r)];
   if (fs){ changes.forEach(c=>{ delete fs.fields[c[0]]; }); if (!Object.keys(fs.fields).length) delete state.failedSaves[rk(x.r)]; }
-  toast("⏳ Отправляю в таблицу…");
+  if(!automatic) toast("⏳ Отправляю в таблицу…");
   queueRowSave(x, key, changes);
-  render();
+  autoSaveStatus84(key,"Сохраняется…");
+  if(!automatic) render();
 }
 
 // v7.6: продюсеры компании из блоков листа (в том числе новые, у которых ещё нет команд)
@@ -9502,7 +9545,7 @@ async function load(opts){
       if (f.tab && names.includes(f.tab)) state.tab = f.tab;
       state.producer = f.producer || ""; state.quick = f.quick || "";
       // неделя: «» из старых сохранений = последняя; «all»/месяц/конкретная требуют полной загрузки
-      state.week = (f.week && f.week !== "latest") ? f.week : "latest";
+      state.week = "latest"; // Start with current week; archive is explicitly selected.
       if (state.week !== "latest") state.fullLoaded = false; // историю подтянет ensureFull
     }
   }catch(e){}
@@ -9724,7 +9767,7 @@ async function reviewCompare(r,key) {
 async function reviewHistory(r) {
   const user=AUTH.user,d=reviewDialog('История правок разбора'),box=d.querySelector('.rv-body');
   try{const res=await wp(Object.assign({action:'reviewhistory'},rowKeyParams(r)));if(!d.isConnected||AUTH.user!==user)return;
-    box.innerHTML='<p>Последние 100 изменений полей этого разбора. Запись истории началась с версии 2026-11-03.83. Загрузка скриншотов и смена состава команды сюда не входят.</p>'+(res.items.length?res.items.map(x=>`<section class="rv-section"><h3>${esc(reviewFieldName(r,x.field))}</h3><p>${esc(x.when)} · ${esc(x.actor)}</p><div class="rv-pair"><div><b>Было</b><p>${esc(x.before||'—')}</p></div><div><b>Стало</b><p>${esc(x.after||'—')}</p></div></div></section>`).join(''):'<p>После обновления изменений этого разбора ещё нет.</p>');
+    box.innerHTML='<p>Последние 100 изменений полей этого разбора. Запись истории началась с версии 2026-11-05.85. Загрузка скриншотов и смена состава команды сюда не входят.</p>'+(res.items.length?res.items.map(x=>`<section class="rv-section"><h3>${esc(reviewFieldName(r,x.field))}</h3><p>${esc(x.when)} · ${esc(x.actor)}</p><div class="rv-pair"><div><b>Было</b><p>${esc(x.before||'—')}</p></div><div><b>Стало</b><p>${esc(x.after||'—')}</p></div></div></section>`).join(''):'<p>После обновления изменений этого разбора ещё нет.</p>');
   }catch(e){if(d.isConnected)box.textContent=e.message;}
 }
 async function reviewConflict(x,key) {
@@ -9789,6 +9832,19 @@ document.addEventListener('input',ev=>{
   if(x&&box){const open=box.querySelector('details')?.open;box.innerHTML=reviewCompleteness(reviewCurrent(x.r,m[1]));if(open)box.querySelector('details').open=true;}
 });
 
+
+function autoSaveStatus84(key,message){
+  const el=document.getElementById('ovds'+key);if(el)el.textContent=message;
+}
+window.addEventListener('online',()=>{
+  if(!AUTH.edit)return;
+  Object.entries(state.failedSaves).forEach(([k,f])=>{
+    const r=rowByRk(k);if(!r||!rowEditable(r)||f.code==='SAVE_CONFLICT')return;
+    const x=Object.values(state.lastView).find(x=>rk(x.r)===k);
+    if(x) saveRow(x,x.id,true);
+  });
+});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushAllSaves();});
 </script>
 </body>
 </html>
